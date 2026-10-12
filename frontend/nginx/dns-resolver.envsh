@@ -1,0 +1,7 @@
+#!/bin/sh
+# Sourced by the nginx image entrypoint before the templates are rendered. Exports the container's own DNS
+# server for the `resolver` line in nginx.conf: 127.0.0.11 under Docker, the network gateway (aardvark-dns)
+# under Podman. Only the first nameserver is used: nginx round-robins its resolvers, and a public fallback
+# such as 1.1.1.1 would answer NXDOMAIN for the compose aliases.
+NGINX_RESOLVER="$(awk '/^nameserver/ { print $2; exit }' /etc/resolv.conf)"
+export NGINX_RESOLVER="${NGINX_RESOLVER:-127.0.0.11}"
