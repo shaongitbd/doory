@@ -27,7 +27,7 @@ backend/.venv/bin/python licenses/audit.py --write  # after changing a dependenc
 `--check` fails when a package has no licence information or a non-permissive licence without a decision in
 `licenses/exceptions.json`, when a licence file mentions a copyleft licence that the package metadata does not
 (for example an MPL text hidden behind an "MIT" field), when a direct dependency has no one-line purpose in `exceptions.json`
-(the tables below are generated from it), when `licenses/DEPENDENCIES.md` or `licenses/bundled-licenses.txt` are out of date, and when this file
+(the tables below are generated from it), when `licenses/DEPENDENCIES.md` or `licenses/bundled-licenses.txt` is out of date, and when this file
 disagrees with the data manifests: every pack of `backend/data/element_packs.json` (licence, notice, exact
 release), every model of `backend/data/ml_models.json`, the licence and size of `backend/data/audio_library.json`,
 and the fonts the starter templates use. It builds the frontend once (about 25 s) with source maps to find out
