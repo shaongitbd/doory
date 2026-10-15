@@ -7,6 +7,7 @@ tested without HTTP.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -23,6 +24,8 @@ from apps.designs.services import record_auto_version_if_due
 from apps.designs.validators import describe_document, validate_document
 
 from .models import ShareLink
+
+logger = logging.getLogger(__name__)
 
 TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 MAX_ACTIVE_LINKS_PER_DESIGN = 20
@@ -72,9 +75,11 @@ def count_active_links(design: Design) -> int:
 
 def record_access(link: ShareLink) -> None:
     """One UPDATE per successful view; never read-modify-write."""
-    ShareLink.objects.filter(pk=link.pk).update(
+    updated = ShareLink.objects.filter(pk=link.pk).update(
         access_count=F("access_count") + 1, last_accessed_at=timezone.now()
     )
+    if not updated:
+        logger.warning("record_access: link %s no longer exists, access not counted", link.pk)
 
 
 # ---------------------------------------------------------------------------------------------
