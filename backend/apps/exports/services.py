@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
 from apps.core.svg import SvgError, sanitize_svg
+from apps.designs.validators import MAX_DIMENSION
 
 from .exceptions import InvalidExport
 from .fonts import load_fonts
@@ -48,11 +49,21 @@ def sanitize_pages(pages: Sequence[bytes]) -> list[bytes]:
     return clean
 
 
+def _validate_page_sizes(sizes: list[tuple[float, float]]) -> None:
+    for i, (width, height) in enumerate(sizes, start=1):
+        if width < 1 or height < 1 or width > MAX_DIMENSION or height > MAX_DIMENSION:
+            raise InvalidExport(
+                "invalid_sizes",
+                f"Page {i} dimensions must be between 1 and {MAX_DIMENSION} px.",
+            )
+
+
 def export_pdf(request: ExportRequest) -> RenderResult:
     """Run the whole pipeline; the browser part holds one render slot (`ExportBusy` when none is free)."""
     sizes = request.page_sizes()
     if len(sizes) != len(request.pages):
         raise InvalidExport("invalid_sizes", "Give exactly one size per page.")
+    _validate_page_sizes(sizes)
     geometries = [
         PageGeometry.create(width, height, request.bleed_mm, request.crop_marks) for width, height in sizes
     ]
