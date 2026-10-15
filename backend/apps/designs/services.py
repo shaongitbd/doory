@@ -8,6 +8,7 @@ from io import BytesIO
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import F, QuerySet
@@ -71,6 +72,10 @@ def _lock(design_id, owner, *, defer_document: bool = True) -> Design:
 
 
 def _check_design_limit(owner) -> None:
+    """Must be called inside ``transaction.atomic()``. Locks the owner row so concurrent requests
+    serialise their count-then-insert sequence — same pattern used by ``assets.services.create_asset``.
+    """
+    get_user_model().objects.select_for_update().filter(pk=owner.pk).first()
     if Design.objects.filter(owner=owner).count() >= settings.MAX_DESIGNS_PER_USER:
         raise LimitReached(f"You can keep at most {settings.MAX_DESIGNS_PER_USER} designs.")
 
