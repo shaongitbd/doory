@@ -9,6 +9,7 @@ from django.core.files.base import ContentFile
 from django.utils.text import slugify
 
 from apps.core.images import make_thumbnail, process_image_upload
+from apps.core.storage import delete_file_after_commit
 
 from .models import Template
 
@@ -43,7 +44,7 @@ def replace_thumbnail(template: Template, content: ContentFile) -> None:
     previous = template.thumbnail.name if template.thumbnail else ""
     template.thumbnail.save(content.name, content, save=False)
     if previous and previous != template.thumbnail.name:
-        template.thumbnail.storage.delete(previous)
+        delete_file_after_commit(template.thumbnail.storage, previous)
 
 
 def duplicate_template(template: Template, *, created_by=None) -> Template:
