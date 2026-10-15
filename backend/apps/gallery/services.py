@@ -6,6 +6,7 @@ import copy
 from typing import Any
 
 from django.core.files.base import ContentFile
+from django.db import IntegrityError
 from django.utils.text import slugify
 
 from apps.core.images import make_thumbnail, process_image_upload
@@ -46,26 +47,39 @@ def replace_thumbnail(template: Template, content: ContentFile) -> None:
         template.thumbnail.storage.delete(previous)
 
 
+_SLUG_RETRIES = 3
+
+
 def duplicate_template(template: Template, *, created_by=None) -> Template:
-    """Unpublished copy of `template` ("Copy of …") with a fresh slug and a zero use count."""
+    """Unpublished copy of `template` ("Copy of …") with a fresh slug and a zero use count.
+
+    Retries with a fresh slug on ``IntegrityError`` so concurrent duplicates of the same template
+    don't collide.
+    """
     title = f"Copy of {template.title}"[:200]
-    copy_ = Template(
-        slug=unique_template_slug(title),
-        title=title,
-        description=template.description,
-        category=template.category,
-        tags=list(template.tags),
-        width=template.width,
-        height=template.height,
-        preset=template.preset,
-        document=copy.deepcopy(template.document),
-        page_count=template.page_count,
-        is_featured=False,
-        is_published=False,
-        created_by=created_by,
-    )
-    if template.thumbnail:
-        with template.thumbnail.open("rb") as handle:
-            copy_.thumbnail.save(f"{copy_.slug}.webp", ContentFile(handle.read()), save=False)
-    copy_.save()
-    return copy_
+    for attempt in range(_SLUG_RETRIES):
+        copy_ = Template(
+            slug=unique_template_slug(title),
+            title=title,
+            description=template.description,
+            category=template.category,
+            tags=list(template.tags),
+            width=template.width,
+            height=template.height,
+            preset=template.preset,
+            document=copy.deepcopy(template.document),
+            page_count=template.page_count,
+            is_featured=False,
+            is_published=False,
+            created_by=created_by,
+        )
+        if template.thumbnail:
+            with template.thumbnail.open("rb") as handle:
+                copy_.thumbnail.save(f"{copy_.slug}.webp", ContentFile(handle.read()), save=False)
+        try:
+            copy_.save()
+            return copy_
+        except IntegrityError:
+            if attempt == _SLUG_RETRIES - 1:
+                raise
+    return copy_  # unreachable, keeps type checkers happy
