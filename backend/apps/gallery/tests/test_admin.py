@@ -108,7 +108,9 @@ def test_thumbnail_that_is_not_an_image_is_rejected(staff_client):
     assert response.status_code == 200 and not Template.objects.exists()
 
 
-def test_replacing_a_thumbnail_removes_the_old_file(staff_client):
+def test_replacing_a_thumbnail_removes_the_old_file_once_saved(
+    staff_client, django_capture_on_commit_callbacks
+):
     staff_client.post(
         reverse("admin:gallery_template_add"),
         form_data(document_file=upload_json(make_document()), thumbnail=png_upload()),
@@ -117,13 +119,18 @@ def test_replacing_a_thumbnail_removes_the_old_file(staff_client):
     old_name, storage = template.thumbnail.name, template.thumbnail.storage
     assert storage.exists(old_name)
 
-    staff_client.post(
-        reverse("admin:gallery_template_change", args=[template.pk]),
-        form_data(thumbnail=png_upload((500, 500))),
-    )
-
+    with django_capture_on_commit_callbacks() as callbacks:
+        staff_client.post(
+            reverse("admin:gallery_template_change", args=[template.pk]),
+            form_data(thumbnail=png_upload((500, 500))),
+        )
     template.refresh_from_db()
     assert template.thumbnail.name != old_name
+    # The old file stays until the change is committed, so a failed save cannot leave the template without one.
+    assert storage.exists(old_name)
+
+    for callback in callbacks:
+        callback()
     assert not storage.exists(old_name) and storage.exists(template.thumbnail.name)
 
 
