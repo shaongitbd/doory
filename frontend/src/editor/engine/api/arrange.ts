@@ -96,8 +96,10 @@ export class ArrangeApi {
     const objs = view.selectedObjects().filter((o) => !isLocked(o))
     if (objs.length === 0) return
     const offset = DUPLICATE_OFFSET
-    const clones = await Promise.all(objs.map((o) => o.clone(getExtraProps())))
+    // Leave the multi-selection before cloning: inside it, objects are placed relative to its centre, and copies
+    // taken there would land around the page's top-left corner (#39). Copying does the same.
     view.canvas.discardActiveObject()
+    const clones = await Promise.all(objs.map((o) => o.clone(getExtraProps())))
     for (const c of clones) {
       reidTree(c)
       c.set({ left: c.left + offset, top: c.top + offset })

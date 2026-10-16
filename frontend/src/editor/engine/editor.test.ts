@@ -2,6 +2,7 @@ import { FabricImage, type IText } from 'fabric'
 import { createBlankDocument } from '@/lib/document'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { installImageStub } from '../test/imageStub'
+import { DUPLICATE_OFFSET } from './api/arrange'
 import { EditorEngine } from './editor'
 import { AUTOSAVE_DELAY_MS } from './persistence'
 
@@ -145,6 +146,24 @@ describe('EditorEngine', () => {
     expect(objs[1].id).not.toBe(id)
     expect(objs[1].shapeKind).toBe('star')
     expect(engine.state.selection.ids).toEqual([objs[1].id])
+    engine.dispose()
+  })
+
+  it('duplicates a multi-selection next to the originals, not in the corner', async () => {
+    const { engine } = await setup()
+    await engine.insert.shape('rect')
+    await engine.insert.shape('star')
+    engine.arrange.align('right', 'page')
+    engine.selectAll()
+    const before = objectsOf(engine).map((o) => [o.left as number, o.top as number])
+    await engine.arrange.duplicate()
+    const objs = objectsOf(engine)
+    expect(objs).toHaveLength(4)
+    for (const [i, [left, top]] of before.entries()) {
+      expect(objs[i + 2].left).toBeCloseTo(left + DUPLICATE_OFFSET)
+      expect(objs[i + 2].top).toBeCloseTo(top + DUPLICATE_OFFSET)
+    }
+    expect(engine.state.selection.ids).toEqual([objs[2].id, objs[3].id])
     engine.dispose()
   })
 
