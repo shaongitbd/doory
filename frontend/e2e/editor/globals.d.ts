@@ -12,9 +12,24 @@ interface CommentRow {
   resolved: boolean
 }
 
+/** Input and answer of the headless render page (src/editor/headless): restated here, the e2e project does not compile src. */
+export interface RenderInput {
+  document: unknown
+  page?: number | string
+  multiplier?: number
+  transparent?: boolean
+  fonts?: unknown[]
+}
+export type RenderResponse =
+  | { ok: true; png: string; width: number; height: number; pageId: string; pageIndex: number; placeholders: number; missingFonts: string[] }
+  | { ok: false; error: { code: string; message: string } }
+
 /** Shape of `window.__doory`, installed by the dev harness (src/editor/dev/HarnessApp.tsx). */
 declare global {
   interface Window {
+    /** The headless render page (render.html, src/editor/headless/main.ts). */
+    __dooryRender?: (input: RenderInput) => Promise<RenderResponse>
+    __dooryRenderReady?: boolean
     __doory?: {
       saves: SaveInput[]
       uploads: { name: string; size: number }[]

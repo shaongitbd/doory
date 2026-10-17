@@ -17,11 +17,12 @@ from PIL import Image
 from apps.exports import services
 from apps.exports.exceptions import ExportTimeout, ExportUnavailable
 from apps.exports.layout import PX_PER_MM
-from apps.exports.renderer import render_pdf
-from apps.exports.services import ExportRequest
+from apps.exports.renderer import render_image, render_pdf
+from apps.exports.services import ExportRequest, export_image
+from apps.fonts.models import FontFamily, FontVariant
 
 from .conftest import requires_chromium
-from .helpers import PNG_RED_10X10, build_test_font, payload, svg_page
+from .helpers import PNG_RED_10X10, RenderSite, build_test_font, payload, svg_page
 
 pytestmark = [requires_chromium, pytest.mark.chromium]
 
@@ -744,3 +745,159 @@ def test_browser_processes_that_outlive_the_worker_are_killed_with_their_work_di
         for process in (stray, bystander):
             process.kill()
             process.wait()
+
+
+# ---- image export: the frontend's render page in the same locked-down browser -------------------
+
+DIST = Path(__file__).resolve().parents[4] / "frontend" / "dist"
+requires_dist = pytest.mark.skipif(
+    not (DIST / "render.html").is_file(),
+    reason=f"no built frontend at {DIST}; run `npm run build` in frontend/",
+)
+
+
+@pytest.fixture
+def render_site(settings, chromium):
+    site = RenderSite(DIST, Path(settings.MEDIA_ROOT))
+    settings.SERVER_IMAGE_EXPORT_ENABLED = True
+    settings.EXPORT_RENDER_PAGE_URL = f"{site.origin}/render.html"
+    yield site
+    site.close()
+
+
+def rect(left, top, width, height, fill) -> dict:
+    return {
+        "id": f"rect-{left}-{top}",
+        "type": "rect",
+        "left": left,
+        "top": top,
+        "width": width,
+        "height": height,
+        "fill": fill,
+        "stroke": None,
+        "strokeWidth": 0,
+        "originX": "left",
+        "originY": "top",
+    }
+
+
+def picture(src, left=0, top=0, size=10) -> dict:  # the size of PNG_RED_10X10
+    return {
+        "id": f"img-{left}",
+        "type": "image",
+        "src": src,
+        "left": left,
+        "top": top,
+        "width": size,
+        "height": size,
+        "originX": "left",
+        "originY": "top",
+    }
+
+
+def design_of(owner, *objects, width=200, height=100, color="#00ff00"):
+    from apps.designs.tests.helpers import make_design
+
+    page = {"id": "p1", "background": {"type": "solid", "color": color}, "objects": list(objects)}
+    return make_design(
+        owner, document={"schemaVersion": 1, "width": width, "height": height, "unit": "px", "pages": [page]}
+    )
+
+
+def pixel(data: bytes, x: int, y: int) -> tuple:
+    return Image.open(io.BytesIO(data)).convert("RGBA").getpixel((x, y))
+
+
+@requires_dist
+def test_a_design_page_is_drawn_with_the_editors_engine(render_site, user):
+    design = design_of(user, rect(10, 10, 40, 30, "#ff0000"))
+    result = export_image(design)
+    assert (result.width, result.height, result.page_id, result.placeholders) == (200, 100, "p1", 0)
+    assert pixel(result.data, 20, 20) == (255, 0, 0, 255)
+    assert pixel(result.data, 150, 80) == (0, 255, 0, 255)
+    assert "/render.html" in render_site.hits and any(hit.startswith("/assets/") for hit in render_site.hits)
+
+    double = export_image(design, scale=2, format="jpg")
+    assert (double.width, double.height) == (400, 200)
+    image = Image.open(io.BytesIO(double.data))
+    assert (image.format, image.mode, image.size) == ("JPEG", "RGB", (400, 200))
+
+    clear = export_image(design, transparent=True, format="webp")
+    assert pixel(clear.data, 150, 80)[3] == 0 and pixel(clear.data, 20, 20)[3] == 255
+
+
+@requires_dist
+def test_external_images_are_blocked_like_in_the_pdf_export(render_site, canary, user, settings):
+    name = default_storage.save("uploads/e2e-red.png", ContentFile(PNG_RED_10X10))
+    try:
+        design = design_of(
+            user,
+            picture(f"/media/{name}", left=0),  # the render page's own origin: allowed
+            picture(f"{canary.origin}/media/pixel.png", left=100),  # another origin: blocked
+            picture("/api/v1/auth/me/", left=150),  # the render page's origin, outside its paths: blocked
+        )
+        result = render_image(
+            {"document": design.document, "page": 0, "multiplier": 1, "transparent": False, "fonts": []},
+            render_url=settings.EXPORT_RENDER_PAGE_URL,
+        )
+    finally:
+        default_storage.delete(name)
+    assert canary.hits == []
+    assert f"/media/{name}" in render_site.hits and "/api/v1/auth/me/" not in render_site.hits
+    reasons = {(b.reason, b.url.split("/", 3)[-1]) for b in result.blocked}
+    assert ("origin", "media/pixel.png") in reasons and ("path", "api/v1/auth/me/") in reasons
+    assert result.placeholders == 2
+    assert pixel(result.data, 5, 5) == (255, 0, 0, 255)  # the allowed picture was drawn
+
+
+@requires_dist
+def test_stand_ins_reach_the_export_result_as_warnings(render_site, canary, user):
+    result = export_image(design_of(user, picture(f"{canary.origin}/media/pixel.png")))
+    assert result.placeholders == 1 and result.blocked_total >= 1
+    assert result.warnings and canary.hits == []
+
+
+def dark_pixels(data: bytes) -> int:
+    image = Image.open(io.BytesIO(data)).convert("L")
+    return sum(1 for value in image.getdata() if value < 64)
+
+
+@requires_dist
+def test_fonts_of_the_manifest_are_drawn_and_missing_ones_reported(render_site, user):
+    text = {
+        "id": "t",
+        "type": "textbox",
+        "text": "A",
+        "left": 10,
+        "top": 10,
+        "width": 180,
+        "height": 90,
+        "originX": "left",
+        "originY": "top",
+        "fontFamily": "'Doory Test Sans', serif",
+        "fontSize": 80,
+        "fill": "#000000",
+        "textAlign": "left",
+        "lineHeight": 1,
+    }
+    design = design_of(user, text, color="#ffffff")
+    fallback = export_image(design)
+    assert fallback.missing_fonts == ("Doory Test Sans",)
+
+    family = FontFamily.objects.create(family="Doory Test Sans", slug="doory-test-sans", owner=user)
+    FontVariant.objects.create(
+        family=family, weight=400, format="ttf", file=ContentFile(build_test_font(), name="e2e.ttf")
+    )
+    drawn = export_image(design)
+    assert drawn.missing_fonts == () and drawn.warnings == ()
+    # The test font's "A" is a solid 40 x 56 px block at this size; any real font's "A" is mostly white.
+    assert dark_pixels(drawn.data) > 1500 > dark_pixels(fallback.data)
+
+
+@requires_dist
+def test_a_page_that_never_becomes_ready_hits_the_deadline(chromium, canary, settings, user):
+    settings.EXPORT_TIMEOUT_SECONDS = 3
+    settings.SERVER_IMAGE_EXPORT_ENABLED = True
+    settings.EXPORT_RENDER_PAGE_URL = f"{canary.origin}/render.html"  # answers, but is not the render page
+    with pytest.raises(ExportTimeout):
+        export_image(design_of(user))

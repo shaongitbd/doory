@@ -97,3 +97,75 @@ def test_build_ignores_garbage_origins_and_fixes_prefixes():
 )
 def test_normalize_origin(value, expected):
     assert normalize_origin(value) == expected
+
+
+# ---- image mode: the render page and its bundle, on its own origin only ------------------------
+
+PAGE = "http://frontend.test:8080"
+IMAGE_POLICY = RequestPolicy.build([ORIGIN], ["/media/", "/static/"], page_url=f"{PAGE}/render.html")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        f"{PAGE}/render.html",
+        f"{PAGE}/render.html?v=1",
+        f"{PAGE}/assets/render-abc123.js",
+        f"{PAGE}/assets/fonts/inter.woff2",
+        f"{PAGE}/media/uploads/a.png",  # relative URLs in the design resolve against the render page
+        f"{ORIGIN}/media/a.png",
+        "data:image/png;base64,AAAA",
+    ],
+)
+def test_image_mode_allows_the_render_page_and_its_bundle(url):
+    decision = IMAGE_POLICY.evaluate(url)
+    assert decision.allowed and decision.fetch == (not url.startswith("data:"))
+
+
+@pytest.mark.parametrize(
+    ("url", "reason"),
+    [
+        (f"{ORIGIN}/assets/app.js", "path"),  # the bundle prefix belongs to the render page's origin only
+        (f"{ORIGIN}/render.html", "path"),
+        (f"{PAGE}/index.html", "path"),
+        (f"{PAGE}/presenter-view.html", "path"),
+        (f"{PAGE}/src/editor/headless/main.ts", "path"),  # the Vite dev server's module paths
+        (f"{PAGE}/@vite/client", "path"),
+        (f"{PAGE}/api/v1/designs/", "path"),
+        (f"{PAGE}/assets/../api/v1/auth/me/", "path-traversal"),
+        (f"{PAGE}/render.html/../api/", "path-traversal"),
+        ("http://frontend.test:9090/render.html", "origin"),
+        ("https://frontend.test:8080/render.html", "origin"),
+        ("http://evil.example/assets/x.js", "origin"),
+        ("http://169.254.169.254/latest/meta-data/", "origin"),
+    ],
+)
+def test_image_mode_blocks_everything_else(url, reason):
+    decision = IMAGE_POLICY.evaluate(url)
+    assert not decision.allowed
+    assert decision.reason == reason
+
+
+def test_image_mode_still_refuses_writes_to_the_render_page():
+    assert IMAGE_POLICY.evaluate(f"{PAGE}/render.html", "POST").reason == "method"
+
+
+def test_the_pdf_policy_knows_nothing_of_the_render_page():
+    pdf = RequestPolicy.build([ORIGIN, PAGE], ["/media/", "/static/"])
+    assert pdf.page_origin is None
+    for path in ("/render.html", "/assets/app.js"):
+        assert pdf.evaluate(f"{PAGE}{path}").reason == "path"
+    assert pdf.evaluate(f"{PAGE}/media/a.png").allowed
+
+
+@pytest.mark.parametrize("page_url", ["", None])
+def test_no_page_url_is_the_pdf_policy(page_url):
+    assert RequestPolicy.build([ORIGIN], ["/media/"], page_url=page_url) == RequestPolicy.build(
+        [ORIGIN], ["/media/"]
+    )
+
+
+@pytest.mark.parametrize("page_url", ["file:///srv/render.html", "http://frontend.test/", "render.html"])
+def test_a_bad_render_page_url_is_refused(page_url):
+    with pytest.raises(ValueError):
+        RequestPolicy.build([ORIGIN], ["/media/"], page_url=page_url)
