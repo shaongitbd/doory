@@ -157,6 +157,17 @@ jobs:
             -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
             -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' http://localhost:8080/mcp || true)
           test "$status" = "401"
+      - name: Image export is wired up
+        run: |
+          # The headless render page is served by the web container, which the API container reaches by its
+          # alias (EXPORT_RENDER_PAGE_URL); the export endpoint itself refuses anonymous callers.
+          curl --fail --silent --show-error http://localhost:8080/render.html | grep -q '<title>Doory render</title>'
+          docker compose exec -T api python -c \
+            "import urllib.request; urllib.request.urlopen('http://doory-web:8080/render.html', timeout=5)"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 -X POST \
+            -H 'Content-Type: application/json' -d '{}' \
+            http://localhost:8080/api/v1/designs/00000000-0000-4000-8000-000000000000/export/image/ || true)
+          test "$status" = "401"
       - name: Show logs on failure
         if: failure()
         run: docker compose logs --no-color --tail 200

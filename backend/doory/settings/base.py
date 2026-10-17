@@ -209,6 +209,7 @@ REST_FRAMEWORK = {
         "auth": "20/min",  # login / register / password reset
         "upload": "60/min",
         "stock": "60/min",
+        "export": "30/min",  # server-side image renders (REST and MCP)
     },
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": [
@@ -281,6 +282,16 @@ EXPORT_ALLOWED_ORIGINS = env.list(
     default=["/".join(SITE_URL.split("/")[:3]), "http://127.0.0.1:8000", "http://localhost:8000"],
 )
 
+# Server-side PNG/JPG/WebP export of a saved design page (apps.exports.services.export_image). The same
+# browser opens the frontend's headless render page and draws the page with the editor's engine. It must be
+# the *built* frontend's `render.html`: the Vite dev server serves modules from paths it may not load.
+SERVER_IMAGE_EXPORT_ENABLED = env.bool("SERVER_IMAGE_EXPORT_ENABLED", default=SERVER_PDF_ENABLED)
+EXPORT_RENDER_PAGE_URL = env(
+    "EXPORT_RENDER_PAGE_URL", default="/".join(SITE_URL.split("/")[:3]) + "/render.html"
+)
+EXPORT_IMAGE_MAX_PIXELS = env.int("EXPORT_IMAGE_MAX_PIXELS", default=40_000_000)  # output width x height
+EXPORT_IMAGE_MAX_DOCUMENT_BYTES = env.int("EXPORT_IMAGE_MAX_DOCUMENT_BYTES", default=5 * 1024 * 1024)
+
 # ---- In-browser background removal (apps.core.mlmodels; `manage.py sync_models` installs the model) ----
 BACKGROUND_REMOVAL_ENABLED = env.bool("BACKGROUND_REMOVAL_ENABLED", default=True)
 BACKGROUND_REMOVAL_MODEL = env("BACKGROUND_REMOVAL_MODEL", default="")  # empty: the best installed model
@@ -328,3 +339,6 @@ MCP_PATH = "/mcp"
 MCP_CALLS_PER_MINUTE = env.int("MCP_CALLS_PER_MINUTE", default=120)  # per user; 0 = unlimited
 MCP_MAX_REQUEST_BYTES = env.int("MCP_MAX_REQUEST_BYTES", default=4 * 1024 * 1024)
 MCP_URL_UPLOADS = env.bool("MCP_URL_UPLOADS", default=True)  # upload_image_from_url (public https only)
+# export_design: larger images are sent as a download link instead of inline; links expire after the TTL.
+MCP_EXPORT_INLINE_MAX_BYTES = env.int("MCP_EXPORT_INLINE_MAX_BYTES", default=1024 * 1024)
+MCP_EXPORT_URL_TTL_SECONDS = env.int("MCP_EXPORT_URL_TTL_SECONDS", default=600)

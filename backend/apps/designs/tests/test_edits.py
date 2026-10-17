@@ -8,7 +8,7 @@ from django.utils import timezone
 from pydantic import TypeAdapter
 
 from apps.designs.doc.ops import EditError, ImageSource, Operation
-from apps.designs.edits import apply_edit
+from apps.designs.edits import apply_edit, current_document
 from apps.designs.exceptions import DesignTrashed, RevisionConflict
 from apps.designs.models import Design, DesignVersion
 
@@ -75,3 +75,10 @@ def test_only_the_owner_can_edit_and_not_in_the_trash(design, user, other):
     Design.objects.filter(pk=design.pk).update(trashed_at=timezone.now())
     with pytest.raises(DesignTrashed):
         edit(design, user, {"op": "set_notes", "notes": "x"})
+
+
+def test_the_current_document_of_a_design_nobody_has_open_is_the_saved_one(design, settings):
+    settings.REALTIME_ENABLED = True
+    assert current_document(design) == design.document
+    edit(design, design.owner, {"op": "set_notes", "notes": "saved"})
+    assert current_document(Design.objects.get(pk=design.pk))["pages"][0]["notes"] == "saved"

@@ -109,3 +109,31 @@ def validate_page_files(files: list) -> None:
         raise serializers.ValidationError(
             {"pages": [f"The pages must total at most {MAX_TOTAL_BYTES // (1024 * 1024)} MB."]}
         )
+
+
+class PageRefField(serializers.Field):
+    """A page by its id or by its number counting from 1 (as the MCP tools name pages)."""
+
+    default_error_messages = {"invalid": "Give a page id or a page number counting from 1."}
+
+    def to_internal_value(self, data):
+        if isinstance(data, bool):
+            self.fail("invalid")
+        if isinstance(data, int):
+            if data < 1:
+                self.fail("invalid")
+            return data
+        if isinstance(data, str) and 0 < len(data.strip()) <= 100:
+            return data.strip()
+        self.fail("invalid")
+
+    def to_representation(self, value):
+        return value
+
+
+class ImageExportSerializer(serializers.Serializer):
+    page = PageRefField(required=False, default=None, allow_null=True)
+    format = serializers.ChoiceField(choices=["png", "jpg", "jpeg", "webp"], default="png")
+    quality = serializers.IntegerField(min_value=1, max_value=100, default=90)
+    scale = FiniteFloatField(min_value=0.1, max_value=4, default=1)
+    transparent = serializers.BooleanField(default=False)

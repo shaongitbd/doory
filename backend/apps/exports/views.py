@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation, TooManyFilesSent
-from django.http import HttpResponse
+from django.core.files.storage import default_storage
+from django.http import FileResponse, Http404, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils.http import content_disposition_header
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -12,22 +14,27 @@ from rest_framework.settings import api_settings
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from apps.designs.models import Design
+
+from . import delivery
 from .exceptions import ExportDisabled, PayloadTooLarge
-from .filenames import pdf_filename
+from .filenames import export_filename, pdf_filename
 from .serializers import (
     MAX_PAGES,
     MAX_TOTAL_BYTES,
+    ImageExportSerializer,
     PdfExportDocumentation,
     PdfExportSerializer,
     validate_page_files,
 )
-from .services import ExportRequest, export_pdf
+from .services import ExportRequest, export_image, export_pdf, page_index
+from .throttling import ExportRateThrottle
 
 MULTIPART_OVERHEAD_BYTES = 2 * 1024 * 1024
 
 
 class AnyAcceptNegotiation(DefaultContentNegotiation):
-    """Success responses are PDFs and errors are JSON whatever the Accept header says (no 406)."""
+    """Success responses are files and errors are JSON whatever the Accept header says (no 406)."""
 
     def select_renderer(self, request, renderers, format_suffix=None):
         return renderers[0], renderers[0].media_type
@@ -82,3 +89,62 @@ class PdfExportView(APIView):
         response["Cache-Control"] = "no-store"
         response["X-Content-Type-Options"] = "nosniff"
         return response
+
+
+def _file_headers(response: HttpResponse, filename: str, *, attachment: bool) -> HttpResponse:
+    response["Content-Disposition"] = content_disposition_header(attachment, filename)
+    response["Cache-Control"] = "no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+class ImageExportView(APIView):
+    """Render one page of a saved design as PNG, JPG or WebP on the server, as the editor draws it."""
+
+    permission_classes = [IsAuthenticated]
+    content_negotiation_class = AnyAcceptNegotiation
+    throttle_classes = [*api_settings.DEFAULT_THROTTLE_CLASSES, ExportRateThrottle]
+
+    @extend_schema(
+        request=ImageExportSerializer,
+        responses={
+            (200, "image/png"): OpenApiTypes.BINARY,
+            (200, "image/jpeg"): OpenApiTypes.BINARY,
+            (200, "image/webp"): OpenApiTypes.BINARY,
+        },
+        tags=["exports"],
+    )
+    def post(self, request, pk):
+        design = get_object_or_404(Design.objects.filter(owner=request.user, trashed_at__isnull=True), pk=pk)
+        body = ImageExportSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        result = export_image(
+            design,
+            page=page_index(data["page"]),
+            format=data["format"],
+            quality=data["quality"],
+            scale=data["scale"],
+            transparent=data["transparent"],
+        )
+        title = design.title if design.page_count <= 1 else f"{design.title} - page {result.page_index + 1}"
+        response = HttpResponse(result.data, content_type=result.mime)
+        response["X-Doory-Placeholders"] = str(result.placeholders)
+        return _file_headers(response, export_filename(title, result.format), attachment=True)
+
+
+class ImageDownloadView(APIView):
+    """An exported image behind a signed, expiring link (`apps.exports.delivery`); the link is the key."""
+
+    authentication_classes = []
+    permission_classes = []
+    content_negotiation_class = AnyAcceptNegotiation
+
+    @extend_schema(exclude=True)
+    def get(self, request, token):
+        found = delivery.open_link(token)
+        if found is None:
+            raise Http404
+        name, mime = found
+        response = FileResponse(default_storage.open(name, "rb"), content_type=mime)
+        return _file_headers(response, name.rsplit("/", 1)[-1], attachment=False)

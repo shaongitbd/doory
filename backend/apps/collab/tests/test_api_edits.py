@@ -7,7 +7,7 @@ from pydantic import TypeAdapter
 
 from apps.collab import store
 from apps.designs.doc.ops import ImageSource, Operation
-from apps.designs.edits import apply_edit, read_current
+from apps.designs.edits import apply_edit, current_document, read_current
 from apps.designs.models import Design, DesignVersion
 
 from .peer import settle
@@ -124,6 +124,8 @@ async def test_reading_while_live_sees_the_live_state(env):
 
     document, live = await env.db(read)
     assert live is True and document["pages"][0]["objects"][0]["top"] == 123
+    current = await env.db(lambda: current_document(Design.objects.get(pk=env.design.pk)))
+    assert current == document
     stored = await env.db(lambda: Design.objects.get(pk=env.design.pk).document)
     assert stored["pages"][0]["objects"][0]["top"] != 123  # not flushed yet: the database copy lags
 

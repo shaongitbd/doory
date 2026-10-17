@@ -327,7 +327,8 @@ trash and restore them; add text (curved, with shadows, outlines, glows or highl
 catalogue's hearts, arrows, speech bubbles…), lines, pictures (cropped to a shape if wanted), QR codes and
 pages; group and ungroup objects; set backgrounds and speaker notes; search templates, the element catalogue,
 fonts and stock photos, and copy images from public https URLs; read, add, edit, resolve and delete comments;
-create and change brand kits; create and revoke share links; and restore earlier versions. Designs are also MCP
+create and change brand kits; create and revoke share links; restore earlier versions; and look at a page as a
+PNG, JPG or WebP image (`export_design`), drawn on the server exactly as the editor draws it. Designs are also MCP
 resources (`doory://designs/{id}`), and two prompts, "Make a design from a brief" and "Review a design", show up in
 clients that offer prompts. Creating or changing a share link is marked as destructive, so clients ask you before
 an assistant does it, and comment text reaches the assistant labelled as untrusted. The state before every edit is
@@ -336,7 +337,10 @@ in your editor, the change appears live, like a co-editor's; with Redis it arriv
 seconds.
 
 Text heights reported to the assistant are estimates until the design is opened in the editor, which measures
-text exactly. Revoke a token in the same settings page. Changing or resetting your password revokes all your
+text exactly. `export_design` needs the server-side Chromium (`INSTALL_CHROMIUM=true`, the default) and reaches the
+web container's `render.html` (`EXPORT_RENDER_PAGE_URL`); images over 1 MB come back as a download link that
+expires after ten minutes. The same render is available to signed-in users at
+`POST /api/v1/designs/{id}/export/image/`. Revoke a token in the same settings page. Changing or resetting your password revokes all your
 tokens.
 
 ## FAQ

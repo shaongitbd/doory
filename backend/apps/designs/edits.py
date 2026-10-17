@@ -80,10 +80,25 @@ def read_current(design: Design) -> tuple[dict, bool]:
     """The design's content as editors see it now, and whether that is a live room's state (which can be up
     to a flush ahead of `design.document`)."""
     if settings.REALTIME_ENABLED and store.room_is_live(design.pk):
-        stored = store.load_current(design.pk)
-        if stored is not None:
-            return schema.read_document(engine.open_doc(*stored).doc)[0], True
+        live = _live_document(design.pk)
+        if live is not None:
+            return live[1], True
     return design.document, False
+
+
+def current_document(design: Design) -> dict:
+    """The design's content as editors see it now: the live room's state while the design is open in the
+    editor, else the saved document."""
+    return read_current(design)[0]
+
+
+def _live_document(design_id: uuid.UUID):
+    """The live room's Y document and its content, or None when the room has no state."""
+    stored = store.load_current(design_id)
+    if stored is None:
+        return None
+    doc = engine.open_doc(*stored).doc
+    return doc, schema.read_document(doc)[0]
 
 
 def _apply(document: dict, ops: list, resolver: Resolver) -> EditOutcome:
@@ -105,11 +120,10 @@ def _apply_saved(design_id, owner, ops, resolver, base_revision, label) -> EditR
 
 def _apply_live(design: Design, owner, ops, resolver, label) -> EditResult | None:
     """Apply the edit to the live state; None when there is no live state to apply it to after all."""
-    stored = store.load_current(design.pk)
-    if stored is None:
+    live = _live_document(design.pk)
+    if live is None:
         return None
-    doc = engine.open_doc(*stored).doc
-    current, _ = schema.read_document(doc)
+    doc, current = live
     outcome = _apply(current, ops, resolver)
     if schema.json_equal(current, outcome.document):
         return EditResult(outcome.document, outcome.results, live=True)  # nothing changed

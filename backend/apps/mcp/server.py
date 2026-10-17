@@ -20,7 +20,8 @@ Doory is a design editor (posters, social posts, slides, cards…). These tools 
 designs.
 
 Typical flow: list_designs or create_design → get_design (pages, object ids and boxes) → edit_design with a
-list of operations → get_design again to check. Coordinates are page pixels from the top-left corner; an
+list of operations → get_design again to check, or export_design to see the page as an image (it is drawn
+exactly as in the editor). Coordinates are page pixels from the top-left corner; an
 object's x, y is the top-left corner of its box. Text wraps at its box width and its height follows the text;
 heights the server reports for new or changed text are estimates until the design is opened in the editor.
 
@@ -35,7 +36,7 @@ user asks for it."""
 def _register() -> None:
     # Importing the modules runs their @tool and @resource decorators.
     from . import resources  # noqa: F401
-    from .tools import assets, brand, catalog, comments, designs, history, organize, sharing  # noqa: F401
+    from .tools import assets, brand, catalog, comments, designs, export, history, organize, sharing  # noqa: F401
 
 
 def _transport_security() -> TransportSecuritySettings:

@@ -47,6 +47,8 @@ services:
       CACHE_URL: dbcache://doory_cache
       MEDIA_ROOT: /app/media
       REDIS_URL: ${REDIS_URL:-}
+      # The headless render page of the image export, on the web container (see .env.example).
+      EXPORT_RENDER_PAGE_URL: ${EXPORT_RENDER_PAGE_URL:-http://doory-web:8080/render.html}
     volumes:
       - media:/app/media
       # Your own size presets (DOORY_SIZE_PRESETS_FILE=/config/size-presets.json in .env):
@@ -157,6 +159,8 @@ services:
       CACHE_URL: dbcache://doory_cache
       MEDIA_ROOT: /app/media
       REDIS_URL: ${REDIS_URL:-}
+      # The headless render page of the image export, on the web container (see .env.example).
+      EXPORT_RENDER_PAGE_URL: ${EXPORT_RENDER_PAGE_URL:-http://doory-web:8080/render.html}
       HEALTH_PORT: "8002"
       HEALTH_PATH: /mcp/health
     volumes:
@@ -164,6 +168,8 @@ services:
     networks:
       default:
         aliases: [doory-mcp]
+    # export_design renders in Chromium, which needs more shared memory than Docker's 64 MB default.
+    shm_size: "512m"
     command:
       - uvicorn
       - doory.mcp_asgi:application
@@ -210,6 +216,10 @@ services:
       - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:8080"
     volumes:
       - media:/srv/media:ro
+    networks:
+      default:
+        # The API's image export opens render.html here (EXPORT_RENDER_PAGE_URL).
+        aliases: [doory-web]
 
 volumes:
   pgdata:

@@ -60,7 +60,7 @@ def render_calls(monkeypatch) -> list[dict]:
     def fake_render_pdf(html, *, width_px, height_px):
         calls.append({"html": html, "width_px": width_px, "height_px": height_px})
         return RenderResult(
-            pdf=FAKE_PDF, blocked=(BlockedRequest("http://x.test/", "origin"),), blocked_total=1
+            data=FAKE_PDF, blocked=(BlockedRequest("http://x.test/", "origin"),), blocked_total=1
         )
 
     monkeypatch.setattr("apps.exports.services.render_pdf", fake_render_pdf)

@@ -1,7 +1,10 @@
 import io
+import mimetypes
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from fontTools.fontBuilder import FontBuilder
@@ -91,6 +94,47 @@ class Canary:
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.port = self.server.server_address[1]
         self.origin = f"http://127.0.0.1:{self.port}"
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def close(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+
+
+class RenderSite:
+    """Serves the built frontend (`dist/`) and `/media/` from the media root, like the web container, and records
+    every request path: the render page of the image export, in the tests."""
+
+    def __init__(self, dist: Path, media_root: Path) -> None:
+        site = self
+        self.hits: list[str] = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                site.hits.append(self.path)
+                path = unquote(urlsplit(self.path).path)
+                root, name = (
+                    (media_root, path[len("/media/") :]) if path.startswith("/media/") else (dist, path[1:])
+                )
+                target = (root / name).resolve()
+                if not target.is_file() or not target.is_relative_to(root.resolve()):
+                    self.send_error(404)
+                    return
+                body = target.read_bytes()
+                self.send_response(200)
+                self.send_header(
+                    "Content-Type", mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+                )
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.origin = f"http://127.0.0.1:{self.server.server_address[1]}"
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
 

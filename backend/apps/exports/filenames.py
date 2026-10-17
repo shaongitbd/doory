@@ -9,6 +9,10 @@ _SPACES = re.compile(r"[\s._]{2,}")
 
 
 def pdf_filename(title: str | None) -> str:
+    return export_filename(title, "pdf")
+
+
+def export_filename(title: str | None, extension: str) -> str:
     """Download name from a user supplied title: letters, digits, spaces, dashes, dots and brackets only."""
     text = unicodedata.normalize("NFC", title or "")
     text = _WHITESPACE.sub(" ", text)
@@ -16,4 +20,4 @@ def pdf_filename(title: str | None) -> str:
     text = _DISALLOWED.sub("", text)
     text = _SPACES.sub(" ", text).strip(" .-_")
     text = text[:MAX_STEM_LENGTH].strip(" .-_")
-    return f"{text or DEFAULT_STEM}.pdf"
+    return f"{text or DEFAULT_STEM}.{extension}"

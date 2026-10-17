@@ -1,4 +1,4 @@
-"""Runs the print worker in a child process with a hard deadline and bounded concurrency."""
+"""Runs the render worker (PDF or image) in a child process with a hard deadline and bounded concurrency."""
 
 from __future__ import annotations
 
@@ -20,7 +20,8 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 
-from .exceptions import ExportBusy, ExportFailed, ExportTimeout, ExportUnavailable
+from .exceptions import ExportBusy, ExportFailed, ExportTimeout, ExportUnavailable, InvalidExport
+from .policy import RequestPolicy
 
 logger = logging.getLogger("doory.exports")
 
@@ -29,6 +30,8 @@ KILL_GRACE_SECONDS = 3
 # the path of a unix socket stops at 107 characters.
 MAX_WORKDIR_CHARS = 60
 MAX_ASSET_BYTES = 10 * 1024 * 1024
+# Error codes of the render page that describe the request (a 400), not a broken renderer.
+RENDER_PAGE_INPUT_ERRORS = frozenset({"invalid_document", "page_not_found", "invalid_options"})
 _ENV_ALLOWLIST = (
     "PATH",
     "HOME",
@@ -52,10 +55,22 @@ class BlockedRequest:
 
 @dataclass(frozen=True)
 class RenderResult:
-    pdf: bytes
+    data: bytes
+    mime: str = "application/pdf"
     allowed_total: int = 0
     blocked_total: int = 0
     blocked: tuple[BlockedRequest, ...] = field(default_factory=tuple)
+    # Image mode only, as the render page reports them.
+    width: int = 0
+    height: int = 0
+    page_id: str = ""
+    page_index: int = 0
+    placeholders: int = 0  # objects drawn as grey stand-ins (usually a picture that did not load)
+    missing_fonts: tuple[str, ...] = ()
+
+    @property
+    def pdf(self) -> bytes:
+        return self.data
 
 
 # ---- bounded concurrency -----------------------------------------------------------------------
@@ -172,8 +187,8 @@ def _new_workdir() -> Path:
     if len(str(workdir)) > MAX_WORKDIR_CHARS:
         shutil.rmtree(workdir, ignore_errors=True)
         logger.error(
-            "The PDF work directory %s is longer than %d characters: Chromium keeps a unix socket (at most "
-            "107 characters) below it and would not start. Point EXPORT_WORK_DIR at a shorter path.",
+            "The export work directory %s is longer than %d characters: Chromium keeps a unix socket (at "
+            "most 107 characters) below it and would not start. Point EXPORT_WORK_DIR at a shorter path.",
             workdir,
             MAX_WORKDIR_CHARS,
         )
@@ -183,24 +198,64 @@ def _new_workdir() -> Path:
 
 def render_pdf(html: str, *, width_px: float, height_px: float) -> RenderResult:
     """Print `html` to a PDF with locked-down headless Chromium. Raises the `Export*` API exceptions."""
+
+    def prepare(workdir: Path) -> tuple[dict, Path]:
+        html_path, pdf_path = workdir / "input.html", workdir / "output.pdf"
+        html_path.write_text(html, encoding="utf-8")
+        spec = {
+            "html_path": str(html_path),
+            "pdf_path": str(pdf_path),
+            "width_px": round(width_px, 4),
+            "height_px": round(height_px, 4),
+        }
+        return spec, pdf_path
+
+    return _run_worker(prepare, "application/pdf", "PDF export")
+
+
+def render_image(payload: dict, *, render_url: str) -> RenderResult:
+    """Draw one design page as a PNG on the frontend's headless render page at `render_url`.
+
+    `payload` is the render page's input (`document`, `page`, `multiplier`, `transparent`, `fonts`). Raises
+    the `Export*` API exceptions, and `InvalidExport` with the page's code when it refuses the input."""
+    try:
+        if not render_url:
+            raise ValueError
+        RequestPolicy.build([], [], page_url=render_url)
+    except ValueError:
+        logger.error("EXPORT_RENDER_PAGE_URL must be the http(s) URL of render.html, not %r", render_url)
+        raise ExportUnavailable
+
+    def prepare(workdir: Path) -> tuple[dict, Path]:
+        payload_path, png_path = workdir / "payload.json", workdir / "output.png"
+        payload_path.write_text(json.dumps(payload), encoding="utf-8")
+        spec = {
+            "mode": "image",
+            "render_url": render_url,
+            "payload_path": str(payload_path),
+            "png_path": str(png_path),
+        }
+        return spec, png_path
+
+    return _run_worker(prepare, "image/png", "Image export")
+
+
+def _run_worker(prepare, mime: str, label: str) -> RenderResult:
+    """Run the worker on the spec `prepare(workdir)` writes the inputs for, and read its output file."""
     timeout = float(settings.EXPORT_TIMEOUT_SECONDS)
     workdir = _new_workdir()
     try:
-        html_path, pdf_path = workdir / "input.html", workdir / "output.pdf"
+        spec, output_path = prepare(workdir)
         report_path, spec_path, log_path = (
             workdir / "report.json",
             workdir / "spec.json",
             workdir / "worker.log",
         )
-        html_path.write_text(html, encoding="utf-8")
         spec_path.write_text(
             json.dumps(
                 {
-                    "html_path": str(html_path),
-                    "pdf_path": str(pdf_path),
+                    **spec,
                     "report_path": str(report_path),
-                    "width_px": round(width_px, 4),
-                    "height_px": round(height_px, 4),
                     "executable_path": settings.EXPORT_CHROMIUM_PATH,
                     "no_sandbox": bool(settings.EXPORT_CHROMIUM_NO_SANDBOX),
                     "allowed_origins": allowed_origins(),
@@ -225,48 +280,63 @@ def render_pdf(html: str, *, width_px: float, height_px: float) -> RenderResult:
                 process.wait(timeout=timeout + KILL_GRACE_SECONDS)
             except subprocess.TimeoutExpired:
                 _kill_group(process)
-                logger.warning("PDF export killed after %.0fs", timeout + KILL_GRACE_SECONDS)
+                logger.warning("%s killed after %.0fs", label, timeout + KILL_GRACE_SECONDS)
                 raise ExportTimeout
             finally:
                 if process.poll() is None:
                     _kill_group(process)
-        return _read_result(report_path, pdf_path, log_path, process.returncode)
+        return _read_result(report_path, output_path, log_path, process.returncode, mime, label)
     finally:
         _kill_browser_leftovers(workdir)
         shutil.rmtree(workdir, ignore_errors=True)
 
 
-def _read_result(report_path: Path, pdf_path: Path, log_path: Path, returncode: int) -> RenderResult:
+def _read_result(
+    report_path: Path, output_path: Path, log_path: Path, returncode: int, mime: str, label: str
+) -> RenderResult:
     try:
         report = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         tail = log_path.read_bytes()[-2000:].decode("utf-8", "replace") if log_path.exists() else ""
-        logger.error("PDF worker exited with %s and no report: %s", returncode, tail)
+        logger.error("%s worker exited with %s and no report: %s", label, returncode, tail)
         raise ExportUnavailable if "ModuleNotFoundError" in tail else ExportFailed
     blocked = tuple(BlockedRequest(item["url"], item["reason"]) for item in report.get("blocked", []))
     if blocked:
         logger.warning(
-            "PDF export blocked %d request(s): %s",
+            "%s blocked %d request(s): %s",
+            label,
             report.get("blocked_total", len(blocked)),
             "; ".join(f"{b.reason} {b.url[:120]}" for b in blocked[:5]),
         )
     if report.get("fonts_ready") is False:
         logger.warning("PDF export printed before all fonts finished loading")
     if report.get("status") != "ok":
-        logger.error("PDF export failed (%s): %s", report.get("kind"), report.get("message"))
         kind = report.get("kind")
+        error = report.get("error") if isinstance(report.get("error"), dict) else {}
+        logger.error("%s failed (%s): %s", label, kind, report.get("message") or error)
         if kind == "timeout":
             raise ExportTimeout
         if kind == "unavailable":
             raise ExportUnavailable
+        if kind == "render" and error.get("code") in RENDER_PAGE_INPUT_ERRORS:
+            raise InvalidExport(
+                str(error["code"]), str(error.get("message") or "The design cannot be drawn.")
+            )
         raise ExportFailed
     try:
-        pdf = pdf_path.read_bytes()
+        data = output_path.read_bytes()
     except OSError:
         raise ExportFailed
     return RenderResult(
-        pdf=pdf,
+        data=data,
+        mime=mime,
         allowed_total=int(report.get("allowed_total", 0)),
         blocked_total=int(report.get("blocked_total", 0)),
         blocked=blocked,
+        width=int(report.get("width", 0)),
+        height=int(report.get("height", 0)),
+        page_id=str(report.get("page_id", "")),
+        page_index=int(report.get("page_index", 0)),
+        placeholders=int(report.get("placeholders", 0)),
+        missing_fonts=tuple(str(name) for name in report.get("missing_fonts", [])),
     )

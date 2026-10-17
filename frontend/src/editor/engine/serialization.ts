@@ -83,6 +83,8 @@ export function getExtraProps(): string[] {
 
 export interface LoadContext extends KindLoadContext {
   ensureFonts(fonts: FontUse[]): Promise<void>
+  /** Told about every object that could not be rebuilt and is drawn as a grey stand-in (e.g. its picture failed to load). */
+  onFallback?(json: DocObject): void
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -236,6 +238,7 @@ export async function deserializeObjects(docs: readonly DocObject[], ctx: LoadCo
         const cls = classRegistry.getClass<{ fromObject(o: DocObject): Promise<FabricObject> }>(String(json.type))
         return await cls.fromObject(json)
       } catch {
+        ctx.onFallback?.(docs[i])
         return fallbackObject(docs[i])
       }
     }),
