@@ -1,28 +1,38 @@
 version: 2
+# Security updates only. `open-pull-requests-limit: 0` turns off the routine version-bump PRs for each
+# ecosystem; security updates are switched on in the repository settings and ignore this limit, so a known
+# vulnerability still gets a PR. Security fixes for one ecosystem arrive together in one PR.
 updates:
   - package-ecosystem: pip
     directory: /backend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
     groups:
-      python-minor-and-patch:
-        update-types: [minor, patch]
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
     groups:
-      npm-minor-and-patch:
-        update-types: [minor, patch]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /backend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   - package-ecosystem: docker
     directory: /frontend
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
