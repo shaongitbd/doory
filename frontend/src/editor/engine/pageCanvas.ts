@@ -809,6 +809,7 @@ export class PageCanvas {
     syncDirection(t)
     const d = asDory(t)
     if (d.listStyle === 'bullet' || d.listStyle === 'number') {
+      const before = t.text
       const caret = t.selectionStart
       const next = continueList(t.text, caret)
       if (next) {
@@ -817,6 +818,12 @@ export class PageCanvas {
         t.selectionEnd = next.caret
       }
       if (d.listStyle === 'number') t.set('text', renumber(t.text))
+      // Fabric reads each keystroke back from its hidden textarea: unless the marker is written there too, the
+      // next letter typed brings back the text without it (#55).
+      if (t.text !== before && t.hiddenTextarea) {
+        t.hiddenTextarea.value = t.text
+        t._updateTextarea()
+      }
     }
   }
 

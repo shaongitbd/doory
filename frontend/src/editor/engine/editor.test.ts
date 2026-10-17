@@ -394,6 +394,28 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('keeps the marker of a list line added while typing (#55)', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.list('bullet')
+    const text = view.canvas.getActiveObject() as IText
+    text.enterEditing()
+    const area = text.hiddenTextarea as HTMLTextAreaElement
+    // What the browser does for a keystroke: change the hidden textarea at the caret, then fire `input`.
+    const type = (chars: string): void => {
+      const at = area.selectionStart
+      area.value = area.value.slice(0, at) + chars + area.value.slice(area.selectionEnd)
+      area.selectionStart = area.selectionEnd = at + chars.length
+      area.dispatchEvent(new Event('input'))
+    }
+    area.selectionStart = area.selectionEnd = area.value.length
+    type('\n')
+    expect(text.text.endsWith('\n• ')).toBe(true)
+    type('Fourth')
+    expect(text.text.split('\n')).toEqual(['• First point', '• Second point', '• Third point', '• Fourth'])
+    text.exitEditing()
+    engine.dispose()
+  })
+
   it('inserts text presets with their default sizes on an A5 page', async () => {
     const handle = createMemoryAdapter()
     const engine = new EditorEngine({ adapter: handle.adapter, document: createBlankDocument(559, 794), meta: { id: 'a5', title: 'A5', mode: 'guest' }, ephemeral: true })
