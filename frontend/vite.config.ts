@@ -27,8 +27,13 @@ export default defineConfig({
     // dist/.vite/manifest.json: the chunk graph that scripts/bundleReport.mjs measures against the budgets.
     manifest: true,
     rollupOptions: {
-      // The second page of the app: the presenter view window that "Present with notes" opens (a plain page, no router).
-      input: { main: fileURLToPath(new URL('./index.html', import.meta.url)), 'presenter-view': fileURLToPath(new URL('./presenter-view.html', import.meta.url)) },
+      // The other pages of the app: the presenter view window that "Present with notes" opens (a plain page, no router)
+      // and the headless page the server draws design pages on for image export (no UI).
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        'presenter-view': fileURLToPath(new URL('./presenter-view.html', import.meta.url)),
+        render: fileURLToPath(new URL('./render.html', import.meta.url)),
+      },
       output: {
         // The editor's entry module gets a recognisable file name: scripts/bundleReport.mjs finds the chunk by it.
         chunkFileNames: (chunk) => (chunk.moduleIds.some((id) => id.endsWith('/src/editor/index.tsx')) ? 'assets/editor-[hash].js' : 'assets/[name]-[hash].js'),
