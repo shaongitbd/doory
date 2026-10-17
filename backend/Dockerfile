@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- builder: resolve and install Python dependencies into a virtualenv ----
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN python -m venv /opt/venv
@@ -10,7 +10,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # ---- runtime ----
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Build with `--build-arg INSTALL_CHROMIUM=true` to add headless Chromium, which server-side PDF
 # export needs. The image then advertises the feature through SERVER_PDF_ENABLED. Chromium runs without
