@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # ---- serve it (unprivileged nginx on :8080) and reverse-proxy the API ----
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
 # Rendered into conf.d/default.conf at start-up; only ${NGINX_RESOLVER} is substituted.
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY nginx/dns-resolver.envsh /docker-entrypoint.d/05-dns-resolver.envsh
