@@ -68,7 +68,7 @@ def search_stock_photos(
     return stock.search(provider, query, page, per_page)
 
 
-@tool(scope=ASSETS_WRITE, title="Import a stock photo", idempotent=True)
+@tool(scope=ASSETS_WRITE, title="Import a stock photo")
 def import_stock_photo(
     provider: Literal["unsplash", "pexels", "pixabay"],
     photo_id: Annotated[
