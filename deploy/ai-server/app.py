@@ -22,8 +22,10 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Form, Request, Response, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from PIL import Image
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO").upper(), format="%(asctime)s %(levelname)s %(message)s"
@@ -69,6 +71,8 @@ MAX_BODY_BYTES = MAX_IMAGE_BYTES + 64 * 1024  # the image plus the form's other 
 WORKERS = _env_int("WORKERS", 1)
 TIMEOUT_SECONDS = _env_int("TIMEOUT_SECONDS", 60)
 API_KEY = os.environ.get("API_KEY", "").strip()
+# Without a key anyone who reaches the server can use it, so it only starts keyless when told to.
+ALLOW_NO_KEY = os.environ.get("ALLOW_NO_KEY", "").strip().lower() in ("1", "true", "yes")
 
 _sessions: dict[str, Any] = {}
 _session_lock = threading.Lock()
@@ -108,6 +112,8 @@ def _run_in_slot(image_bytes: bytes, model: str) -> bytes:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not API_KEY and not ALLOW_NO_KEY:
+        raise RuntimeError("Set API_KEY (or ALLOW_NO_KEY=true for a server nobody else can reach).")
     for model in [m.strip() for m in os.environ.get("PRELOAD_MODELS", "").split(",") if m.strip()]:
         if model in ACTIVE_MODELS:
             await asyncio.to_thread(get_session, model)
@@ -117,7 +123,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Doory-compatible AI server", version="1.0.0", lifespan=lifespan, docs_url=None, redoc_url=None
+    title="Doory-compatible AI server",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 
@@ -135,12 +146,39 @@ class _TooLarge(Exception):
     pass
 
 
+def _all_busy() -> bool:
+    """Whether every slot is taken; checked before an upload is read, so a busy server doesn't take it in."""
+    if _slots.acquire(blocking=False):
+        _slots.release()
+        return False
+    return True
+
+
+_CODES = {400: "invalid_request", 404: "not_found", 405: "method_not_allowed"}
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException):
+    """FastAPI's own errors in the contract's shape. A body cut at the limit while the form is parsed comes
+    here as a 400 (FastAPI wraps the error), so it is answered as the 413 it is."""
+    if request.scope.get("doory_too_large"):
+        return error(413, "too_large", "The image is too large.")
+    return error(exc.status_code, _CODES.get(exc.status_code, "error"), "The request was not accepted.")
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request: Request, exc: RequestValidationError):
+    return error(400, "invalid_request", "Send the image as the `image` field of a multipart form.")
+
+
 @app.middleware("http")
 async def guard(request: Request, call_next):
     """Checks the key and the body size before anything reads the body."""
     if request.url.path != "/health" and not _authorized(request):
         return error(401, "unauthorized", "Missing or invalid credentials.")
     if request.method == "POST":
+        if request.url.path.startswith("/v1/") and _all_busy():
+            return error(429, "busy", "The server is busy. Try again shortly.", {"Retry-After": "5"})
         length = request.headers.get("content-length")
         if length is not None and (not length.isdigit() or int(length) > MAX_BODY_BYTES):
             return error(413, "too_large", "The image is too large.")
@@ -152,6 +190,7 @@ async def guard(request: Request, call_next):
             message = await receive()
             received += len(message.get("body", b""))
             if received > MAX_BODY_BYTES:
+                request.scope["doory_too_large"] = True
                 raise _TooLarge
             return message
 

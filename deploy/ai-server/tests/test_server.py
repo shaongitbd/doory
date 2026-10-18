@@ -31,6 +31,7 @@ def png(width: int = 20, height: int = 20, fmt: str = "PNG") -> bytes:
 def client(monkeypatch):
     monkeypatch.setattr(server, "run_background_removal", lambda data, model: png(5, 5))
     monkeypatch.setattr(server, "API_KEY", "")
+    monkeypatch.setattr(server, "ALLOW_NO_KEY", True)
     with TestClient(server.app) as test_client:
         yield test_client
 
@@ -166,3 +167,49 @@ def test_errors_never_carry_exception_text(client, monkeypatch):
 def test_no_cors(client):
     res = client.get("/v1/models", headers={"Origin": "https://evil.example"})
     assert "access-control-allow-origin" not in res.headers
+
+
+def test_it_does_not_start_without_a_key_unless_told_to(monkeypatch):
+    monkeypatch.setattr(server, "API_KEY", "")
+    monkeypatch.setattr(server, "ALLOW_NO_KEY", False)
+    with pytest.raises(RuntimeError, match="API_KEY"), TestClient(server.app):
+        pass
+    monkeypatch.setattr(server, "API_KEY", "k-123")
+    with TestClient(server.app) as test_client:
+        assert test_client.get("/health").status_code == 200
+
+
+def test_a_chunked_body_over_the_limit_is_a_413(client, monkeypatch):
+    monkeypatch.setattr(server, "MAX_BODY_BYTES", 1000)
+    boundary = b"xyz"
+
+    def body():
+        yield b'--xyz\r\nContent-Disposition: form-data; name="image"; filename="a.png"\r\n\r\n'
+        for _ in range(10):
+            yield b"\0" * 500
+        yield b"\r\n--xyz--\r\n"
+
+    res = client.post(
+        "/v1/background-removal",
+        content=body(),
+        headers={"Content-Type": "multipart/form-data; boundary=" + boundary.decode()},
+    )
+    assert res.status_code == 413 and res.json()["error"]["code"] == "too_large"
+
+
+def test_a_busy_server_answers_before_reading_the_upload(client, monkeypatch):
+    read = []
+    monkeypatch.setattr(server, "_checked_image", lambda data: read.append(data))
+    assert server._slots.acquire(blocking=False)
+    try:
+        res = post(client)
+    finally:
+        server._slots.release()
+    assert res.status_code == 429 and read == []
+
+
+def test_framework_errors_use_the_contract_shape(client):
+    assert client.get("/openapi.json").json()["error"]["code"] == "not_found"
+    assert client.get("/v1/background-removal").json()["error"]["code"] == "method_not_allowed"
+    missing = client.post("/v1/background-removal", data={"model": "u2netp"})
+    assert missing.status_code == 400 and missing.json()["error"]["code"] == "invalid_request"
