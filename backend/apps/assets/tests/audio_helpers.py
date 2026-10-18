@@ -16,14 +16,29 @@ def wav_bytes(seconds: float = 0.25, rate: int = 8000, channels: int = 1, bits: 
     return b"RIFF" + struct.pack("<I", len(body)) + body
 
 
-def mp3_bytes(frames: int = 6, *, id3: bool = False, trailer: bytes = b"") -> bytes:
-    """MPEG-1 Layer III, 128 kbit/s, 44.1 kHz, joint stereo: every frame is 417 bytes (no padding)."""
-    frame = b"\xff\xfb\x90\x44" + b"\x00" * 413
+def mp3_bytes(
+    frames: int = 6,
+    *,
+    id3: bool = False,
+    trailer: bytes = b"",
+    mono: bool = False,
+    xing: tuple[bytes, int] | None = None,
+) -> bytes:
+    """MPEG-1 Layer III, 128 kbit/s, 44.1 kHz, joint stereo (or mono): every frame is 417 bytes (no padding).
+    `xing=(b"Xing" or b"Info", frames)` puts that tag with its frame count in the first frame, where encoders
+    write it: after the 4-byte header and the side information (32 bytes in stereo, 17 in mono)."""
+    frame = b"\xff\xfb\x90" + (b"\xc4" if mono else b"\x44") + b"\x00" * 413
+    first = frame
+    if xing is not None:
+        offset = 21 if mono else 36
+        tag = xing[0] + struct.pack(">II", 1, xing[1])
+        first = frame[:offset] + tag + frame[offset + len(tag) :]
     head = b""
     if id3:
         payload = b"TIT2" + struct.pack(">I", 6) + b"\x00\x00" + b"\x00hello"
         head = b"ID3\x03\x00\x00" + bytes([0, 0, 0, len(payload)]) + payload
-    return head + frame * frames + trailer
+    body = first + frame * (frames - 1) if frames else b""
+    return head + body + trailer
 
 
 def _ogg_page(packet: bytes, *, header_type: int, granule: int, sequence: int, serial: int = 7) -> bytes:

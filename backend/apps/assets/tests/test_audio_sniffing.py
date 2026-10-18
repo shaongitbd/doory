@@ -105,6 +105,19 @@ class TestMp3:
         )
         assert info.duration_ms == round(10 * 1152 * 1000 / 44100)
 
+    @pytest.mark.parametrize("mono", [False, True])
+    @pytest.mark.parametrize("name", [b"Xing", b"Info"])
+    def test_the_frame_count_of_a_xing_or_info_tag(self, name, mono):
+        # 288,000 frames of 1152 samples at 44.1 kHz, about 2 h 05 min, declared in a single frame.
+        data = mp3_bytes(frames=1, mono=mono, xing=(name, 288_000), trailer=b"TAG" + b"\x00" * 125)
+        info = parse_audio(data)
+        assert info.channels == (1 if mono else 2)
+        assert info.duration_ms == round(288_000 * 1152 * 1000 / 44100)
+
+    def test_a_xing_count_past_a_day_is_not_believed(self):
+        info = parse_audio(mp3_bytes(frames=3, xing=(b"Xing", 0xFFFFFFFF)))
+        assert info.duration_ms == round(3 * 1152 * 1000 / 44100)
+
     def test_with_an_id3_tag(self):
         assert parse_audio(mp3_bytes(frames=4, id3=True)).codec == "mp3"
 

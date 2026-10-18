@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 MAX_ID3_BYTES = 4 * 1024 * 1024
 MAX_FRAME_WALK = 400_000
+MAX_DURATION_MS = 24 * 60 * 60 * 1000  # the longest track a design may hold
 MAX_CHUNKS = 256
 MAX_BOX_DEPTH = 8
 MAX_BOXES = 50_000
@@ -165,8 +166,9 @@ def _mp3_frame(data: bytes, pos: int) -> _Mp3Frame | None:
         length, samples = 144 * bitrate // sample_rate + padding, 1152
     if length < 8:
         return None
+    # Where a Xing/Info tag starts, counted from the frame start: the 4-byte header plus the side information.
     side = 36 if (version == 1 and channels == 2) else 21 if version == 1 else 21 if channels == 2 else 13
-    return _Mp3Frame(length, sample_rate, channels, samples, layer, pos + 4 + side)
+    return _Mp3Frame(length, sample_rate, channels, samples, layer, pos + side)
 
 
 def _skip_id3(data: bytes) -> int:
@@ -213,11 +215,12 @@ def _parse_mp3(data: bytes) -> AudioInfo:
     info_tag = data[first.side_info_end : first.side_info_end + 4]
     if info_tag in (b"Xing", b"Info") and len(data) >= first.side_info_end + 12:
         flags = struct.unpack(">I", data[first.side_info_end + 4 : first.side_info_end + 8])[0]
-        if flags & 1:
-            samples = (
-                struct.unpack(">I", data[first.side_info_end + 8 : first.side_info_end + 12])[0]
-                * first.samples
-            )
+        declared = (
+            struct.unpack(">I", data[first.side_info_end + 8 : first.side_info_end + 12])[0] * first.samples
+        )
+        # The tag's frame count is what makes long VBR files right; a count past a day is not believed.
+        if flags & 1 and declared * 1000 <= MAX_DURATION_MS * first.sample_rate:
+            samples = declared
     return AudioInfo(
         mime=MP3_MIME,
         codec="mp3",
