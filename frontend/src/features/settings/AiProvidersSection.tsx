@@ -1,5 +1,5 @@
 import { Pencil, Plus, Server, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { aiApi, isApiError } from '@/lib/api'
 import type { AiProvider } from '@/types/api'
 import { Badge, Button, ConfirmDialog, useToast } from '@/ui'
@@ -35,6 +35,8 @@ export function AiProvidersSection() {
   const [editing, setEditing] = useState<AiProvider | 'new' | null>(null)
   const [removing, setRemoving] = useState<AiProvider | null>(null)
   const [busy, setBusy] = useState(false)
+  const newForm = useRef(0)
+  const [formId, setFormId] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -54,7 +56,9 @@ export function AiProvidersSection() {
 
   if (hidden) return null
 
-  const saved = (provider: AiProvider): void => {
+  /** `target` is what the form that saved was editing; `form` numbers the "Add a server" forms, so a late answer
+   * from an earlier form never takes over the one open now. */
+  const saved = (provider: AiProvider, target: AiProvider | 'new', form: number): void => {
     setProviders((list) => {
       const rest = (list ?? []).filter((item) => item.id !== provider.id)
       const at = (list ?? []).findIndex((item) => item.id === provider.id)
@@ -62,7 +66,11 @@ export function AiProvidersSection() {
       rest.splice(at, 0, provider)
       return rest
     })
-    setEditing((current) => (current === null ? null : current === 'new' ? provider : current.id === provider.id ? provider : current))
+    setEditing((current) => {
+      if (current === null) return null
+      if (current === 'new') return target === 'new' && form === newForm.current ? provider : current
+      return current.id === provider.id ? provider : current
+    })
   }
 
   async function remove(provider: AiProvider) {
@@ -92,10 +100,21 @@ export function AiProvidersSection() {
         </p>
       ) : null}
       {editing ? (
-        <AiProviderEditor key={editing === 'new' ? 'new' : editing.id} provider={editing === 'new' ? null : editing} onSaved={saved} onClose={() => setEditing(null)} />
+        <AiProviderEditor
+          key={editing === 'new' ? `new-${formId}` : editing.id}
+          provider={editing === 'new' ? null : editing}
+          onSaved={(provider) => saved(provider, editing, formId)}
+          onClose={() => setEditing(null)}
+        />
       ) : (
         <div>
-          <Button variant="secondary" leftIcon={<Plus size={16} />} onClick={() => setEditing('new')} disabled={providers === null}>
+          <Button variant="secondary" leftIcon={<Plus size={16} />} onClick={() => {
+              newForm.current += 1
+              setFormId(newForm.current)
+              setEditing('new')
+            }}
+            disabled={providers === null}
+          >
             Add a server
           </Button>
         </div>

@@ -354,4 +354,25 @@ describe('settings: AI providers', () => {
     // Active editor must still be Server 2
     expect(screen.getByLabelText('Name')).toHaveValue('Server 2')
   })
+
+  it('keeps a half-filled new server when an earlier save answers late', async () => {
+    let resolveSave!: (res: Response) => void
+    const savePromise = new Promise<Response>((resolve) => {
+      resolveSave = resolve
+    })
+    const p1 = provider({ id: 'p1', name: 'Server 1' })
+    renderApp('/settings', { user: makeUser(), config: config(), handlers: [list([p1]), http.patch('*/api/v1/ai/providers/p1/', () => savePromise)] })
+    await openEditor('Server 1')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add a server' }))
+    await userEvent.type(screen.getByLabelText('Name'), 'Half typed')
+
+    await act(async () => {
+      resolveSave(HttpResponse.json(provider({ ...p1, updated_at: '2026-10-03T00:00:00Z' })))
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Half typed')
+  })
 })
