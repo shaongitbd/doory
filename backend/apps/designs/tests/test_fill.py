@@ -171,6 +171,23 @@ class TestRest:
         res = api.post(f"{URL}{template.pk}/bulk-fill/", body, format="json")
         assert res.status_code == 400
 
+    def test_one_fill_at_a_time_per_user(self, api, other_api, user, other, template):
+        from django.core.cache import cache
+
+        cache.add(f"bulk-fill:running:{user.pk}", 1, 60)  # a fill of this user's still running
+        res = api.post(f"{URL}{template.pk}/bulk-fill/", {"rows": [{"name": "A"}]}, format="json")
+        assert res.status_code == 429 and "already running" in str(res.json())
+        res = api.post(f"{URL}{template.pk}/fill/", {"values": {"name": "A"}}, format="json")
+        assert res.status_code == 429
+        theirs = make_design(other, title="Badge", document=template_doc())  # other users are not held up
+        res = other_api.post(f"{URL}{theirs.pk}/fill/", {"values": {"name": "B"}}, format="json")
+        assert res.status_code == 201
+        cache.delete(f"bulk-fill:running:{user.pk}")
+        # A refused run (400) frees the slot as well.
+        assert api.post(f"{URL}{template.pk}/fill/", {"values": {"x": "1"}}, format="json").status_code == 400
+        res = api.post(f"{URL}{template.pk}/fill/", {"values": {"name": "A"}}, format="json")
+        assert res.status_code == 201
+
     def test_bulk_fill_rows_count_against_the_bulk_fill_rate(self, api, template, monkeypatch):
         from django.core.cache import cache
 

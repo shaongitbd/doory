@@ -38,7 +38,7 @@ from .serializers import (
     VersionSummarySerializer,
 )
 from .services import THUMBNAIL_MAX_BYTES
-from .throttling import BulkFillImageRateThrottle, BulkFillRateThrottle
+from .throttling import BulkFillImageRateThrottle, BulkFillRateThrottle, one_fill_at_a_time
 
 UUID_REGEX = "[0-9a-fA-F-]{36}"
 FULL_DOCUMENT_ACTIONS = {"retrieve", "restore", "duplicate", "fields", "fill", "bulk_fill"}
@@ -195,15 +195,16 @@ class DesignViewSet(viewsets.GenericViewSet):
         body = FillSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        result = filling.fill_design(
-            self.get_object(),
-            request.user,
-            data["values"],
-            resolver=_resolver(request.user),
-            as_copy=data["as_copy"],
-            name=data.get("name"),
-            label="Before filling fields",
-        )
+        with one_fill_at_a_time(request.user):
+            result = filling.fill_design(
+                self.get_object(),
+                request.user,
+                data["values"],
+                resolver=_resolver(request.user),
+                as_copy=data["as_copy"],
+                name=data.get("name"),
+                label="Before filling fields",
+            )
         return Response(
             result.summary(), status=status.HTTP_201_CREATED if data["as_copy"] else status.HTTP_200_OK
         )
@@ -215,24 +216,26 @@ class DesignViewSet(viewsets.GenericViewSet):
         "Each row counts against the `bulk_fill` rate, each new image URL against `bulk_fill_images` and "
         "each exported image against `export`; a row over a limit reports its error. Image URLs are "
         "fetched only when URL_IMAGE_UPLOADS is on. Many URL images or exports make a long request: keep "
-        "it under the worker timeout with fewer rows.",
+        "it under the worker timeout with fewer rows. One fill or bulk fill per user runs at a time; another "
+        "one meanwhile is a 429.",
     )
     @action(detail=True, methods=["post"], url_path="bulk-fill")
     def bulk_fill(self, request, pk=None):
         body = BulkFillSerializer(data=request.data, context={"request": request})
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        rows = filling.bulk_fill(
-            self.get_object(),
-            request.user,
-            data["rows"],
-            row_numbers=data.get("row_numbers"),
-            resolver=_resolver(request.user, BulkFillImageRateThrottle),
-            name_pattern=data.get("name_pattern"),
-            folder=data.get("folder"),
-            before_row=lambda: filling.charge(BulkFillRateThrottle(), request.user),
-            after_row=filling.image_exporter(data.get("export"), request.user),
-        )
+        with one_fill_at_a_time(request.user):
+            rows = filling.bulk_fill(
+                self.get_object(),
+                request.user,
+                data["rows"],
+                row_numbers=data.get("row_numbers"),
+                resolver=_resolver(request.user, BulkFillImageRateThrottle),
+                name_pattern=data.get("name_pattern"),
+                folder=data.get("folder"),
+                before_row=lambda: filling.charge(BulkFillRateThrottle(), request.user),
+                after_row=filling.image_exporter(data.get("export"), request.user),
+            )
         return Response({"created": sum(row["ok"] for row in rows), "rows": rows})
 
     @extend_schema(
