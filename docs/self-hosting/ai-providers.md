@@ -42,6 +42,10 @@ AI_PROVIDER_2_SENDS_OFFSITE=true
 
 ## Operator settings
 
+Stored provider keys are encrypted with `AI_SECRETS_KEY` (or a key derived from `DJANGO_SECRET_KEY`). After
+setting a new `AI_SECRETS_KEY`, keep the old one in `AI_SECRETS_KEY_FALLBACKS` and run
+`manage.py reencrypt_ai_secrets` (`--dry-run` first), then drop the old key.
+
 - Providers can also be managed in the admin under "AI providers": order, daily quota per user, timeout and
   largest image.
 - With `SENDS_OFFSITE=true`, the editor and the MCP answers say that the image leaves this installation.

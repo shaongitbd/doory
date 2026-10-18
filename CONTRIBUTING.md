@@ -41,4 +41,5 @@ Documentation lives in [`docs/`](docs/README.md) and changes in the same pull re
 5. **Pages in `integrations/` and optional parts in `self-hosting/` share one layout:** What it does → Requirements →
    Turn it on → Settings → Check it works → Troubleshooting.
 6. **Write for someone setting Doory up:** commands they can copy, the defaults, and how to check that it works.
-   Don't recommend particular third-party services; use generic names and `example.com` addresses.
+   Name the services Doory works with where an admin needs to know them, but don't recommend one over another;
+   use `example.com` addresses in examples.

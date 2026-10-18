@@ -41,7 +41,8 @@ certificate, or a load balancer), then:
    count every user as the proxy.
 5. Make sure the proxy forwards WebSockets on `/ws/`.
 
-Then run `docker compose up -d` to apply the changes.
+Then run `docker compose up -d` to apply the changes. `frontend/nginx.conf` is built into the `web` image, so
+after changing it run `docker compose up -d --build web`.
 
 ## Running commands
 

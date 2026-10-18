@@ -42,5 +42,6 @@ restart the services.
 ## Notes
 
 - Keep `DJANGO_SECRET_KEY` together with the backup. If it changes, everyone is signed out and existing tokens
-  stop working.
+  stop working. Stored AI provider keys can't be read either, unless `AI_SECRETS_KEY` is set (keep that one
+  with the backup too).
 - After restoring onto a newer version, migrations run on start (Docker) or with `manage migrate`.

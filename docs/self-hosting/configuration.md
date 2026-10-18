@@ -45,6 +45,7 @@ add a row to the matching section (see [CONTRIBUTING.md](../../CONTRIBUTING.md#d
 | `REALTIME_MEM_LIMIT` | `2g` | Memory limit of the `realtime` service |
 | `MCP_WORKERS` | `1` | Workers of the `mcp` service |
 | `MCP_MEM_LIMIT` | `1g` | Memory limit of the `mcp` service. `export_design` runs Chromium inside it |
+| `WEB_CONCURRENCY` | `3` | Workers of the `api` service (gunicorn) |
 
 ## Database, cache and logs
 
@@ -175,13 +176,13 @@ admin under "AI providers".
 |---------|---------|--------------|
 | `AI_PROVIDERS_ENABLED` | `true` | Offer the configured providers in the editor |
 | `AI_PROVIDER_<n>_URL` | | Address of provider `<n>` (1 to 9), e.g. `http://model-server:7000` |
-| `AI_PROVIDER_<n>_STYLE` | | How its API looks: `doory` (the contract at `/api/v1/ai/contract.yaml`), `multipart`, `json`, `mask` or `custom` |
+| `AI_PROVIDER_<n>_STYLE` | `doory` | How its API looks: `doory` (the contract at `/api/v1/ai/contract.yaml`), `multipart`, `json`, `mask` or `custom` |
 | `AI_PROVIDER_<n>_STYLE_CONFIG` | | JSON details for the style, e.g. `{"path": "/remove", "file_field": "image"}` |
-| `AI_PROVIDER_<n>_TASKS` | | Tasks it serves, e.g. `background-removal` |
+| `AI_PROVIDER_<n>_TASKS` | `background-removal` | Tasks it serves |
 | `AI_PROVIDER_<n>_MODELS` | | `name:Label,name2:Label2`. Empty: the server's own list (`doory` style) or its default |
 | `AI_PROVIDER_<n>_AUTH_HEADER` | | Header for the key, e.g. `Authorization` or `X-Api-Key` |
 | `AI_PROVIDER_<n>_AUTH_VALUE` | | Value sent as is (e.g. `Bearer …`). Never shown in the browser or the logs |
-| `AI_PROVIDER_<n>_LABEL` | | Name shown in the editor |
+| `AI_PROVIDER_<n>_LABEL` | `Server <n>` | Name shown in the editor |
 | `AI_PROVIDER_<n>_SENDS_OFFSITE` | `false` | The editor tells users their image leaves this installation |
 | `AI_PROVIDER_<n>_TIMEOUT_SECONDS` | `AI_DEFAULT_TIMEOUT_SECONDS` | Time limit for one call |
 | `AI_PROVIDER_<n>_MAX_IMAGE_BYTES` | `AI_MAX_IMAGE_BYTES` | Largest image sent to it |
