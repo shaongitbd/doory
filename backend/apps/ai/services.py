@@ -55,9 +55,10 @@ class Outcome:
 
 
 def answer_limit(conn: Connection) -> int:
-    """The largest answer read from the provider: the image limit, plus room for base64 when the style may
-    answer with JSON."""
-    limit = min(conn.max_image_bytes, settings.AI_MAX_IMAGE_BYTES)
+    """The largest answer read from the provider: the server-wide image limit (not the provider's limit for
+    what is sent: a cut-out PNG is often several times larger than the JPEG it came from), plus room for
+    base64 when the style may answer with JSON."""
+    limit = settings.AI_MAX_IMAGE_BYTES
     if conn.config.response_format == "json" or conn.config.response == "auto":
         limit = limit * 4 // 3
     return limit + JSON_OVERHEAD

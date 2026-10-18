@@ -386,3 +386,23 @@ def test_a_large_image_answered_as_json_is_accepted(fake, user, photo, settings)
     assert answer_limit(conn) > settings.AI_MAX_IMAGE_BYTES * 4 // 3
     binary = catalog.connection(make_provider(fake.url, "multipart", style_config={"path": "/x"}))
     assert answer_limit(binary) < settings.AI_MAX_IMAGE_BYTES * 4 // 3
+
+
+def test_results_may_be_larger_than_the_providers_source_limit(fake, user, settings):
+    from apps.ai.services import answer_limit
+
+    # The provider takes sources up to 1 kB, but its cut-out PNG may well be larger than the source.
+    small = make_provider(fake.url, "multipart", style_config={"path": "/x"}, max_image_bytes=1024)
+    assert answer_limit(catalog.connection(small)) >= settings.AI_MAX_IMAGE_BYTES
+
+
+def test_json_made_of_many_small_containers_is_refused_before_parsing():
+    from apps.ai.styles.base import MAX_JSON_CONTAINERS, load_json
+    from apps.ai.transport import HttpResponse
+
+    body = b"[" + b"{}," * MAX_JSON_CONTAINERS + b"{}]"
+    with pytest.raises(AIProviderError) as caught:
+        load_json(HttpResponse(status=200, headers={}, body=body))
+    assert caught.value.code == "bad_response"
+    answer = json.dumps({"image_b64": base64.b64encode(b"x" * 3000).decode()}).encode()
+    assert load_json(HttpResponse(status=200, headers={}, body=answer))["image_b64"]

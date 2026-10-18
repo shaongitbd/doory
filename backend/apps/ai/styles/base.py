@@ -392,8 +392,15 @@ def expect_ok(response: HttpResponse) -> None:
     raise AIProviderError("bad_response", f"The server failed (HTTP {status}).")
 
 
+MAX_JSON_CONTAINERS = 10_000
+
+
 def load_json(response: HttpResponse) -> Any:
-    """The answer parsed as JSON. Its size is already capped by the read limit of the request."""
+    """The answer parsed as JSON. Its size is already capped by the read limit of the request; an answer made
+    of many small objects or lists (which take far more memory than their bytes) is refused before parsing.
+    Base64 never contains `{` or `[`, so a real answer has only a handful."""
+    if response.body.count(b"{") + response.body.count(b"[") > MAX_JSON_CONTAINERS:
+        raise AIProviderError("bad_response", "The server's answer is not the JSON expected.")
     try:
         return json.loads(response.body)
     except (ValueError, RecursionError) as exc:
