@@ -124,7 +124,10 @@ describe('StyleApi.removeBackground', () => {
       expect(await engine.style.removeBackground(undefined, controller.signal, 'env-1:best')).toBe(true)
 
       expect(removal.run).not.toHaveBeenCalled()
-      expect(run).toHaveBeenCalledWith('background-removal', { model: 'env-1:best', image: expect.objectContaining({ size: expect.any(Number) }), assetId: before.assetId, signal: controller.signal })
+      expect(run).toHaveBeenCalledWith('background-removal', { model: 'env-1:best', image: expect.any(Function), assetId: before.assetId, signal: controller.signal })
+      // The image is fetched only when the service asks for it (it may need just the asset).
+      const [, input] = run.mock.calls[0] as unknown as [string, { image: () => Promise<Blob> }]
+      expect((await input.image()).size).toBeGreaterThan(0)
       expect(handle.uploads).toHaveLength(uploadsBefore) // the server made the asset
       expect(engine.state.doc.pages[0].objects[0]).toMatchObject({ src: '/media/cut.png', assetId: 'cut' })
       await engine.undo()
