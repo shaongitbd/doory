@@ -41,3 +41,7 @@ Suites that need the API start it themselves (see `webServer` in each config).
 
 `.github/workflows/ci.yml` only runs when started by hand (**Actions → CI → Run workflow**), with end-to-end
 tests as an option. Run `make test` and `make lint` locally before you push.
+
+`.github/workflows/docker-images.yml` publishes the backend and frontend images to ghcr.io, also only when a
+maintainer starts it (**Actions → Docker images → Run workflow**) with a version such as `1.2.0` and, if it
+should be, `latest`. It builds amd64 and arm64 and runs no tests, so test the commit first.

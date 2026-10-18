@@ -28,6 +28,37 @@ A new site has no content yet. Add it next: see [content.md](content.md).
 To start optional services, set the profiles in `.env`, e.g. `COMPOSE_PROFILES=mcp,redis`, then
 `docker compose up -d`.
 
+## Pre-built images
+
+Instead of building, you can pull the published images (amd64 and arm64):
+
+- `ghcr.io/shaongitbd/doory-backend` for `api`, `realtime` and `mcp`. It includes the headless Chromium that
+  server-side export needs.
+- `ghcr.io/shaongitbd/doory-frontend` for `web`.
+
+Tags are a version such as `1.2.0`, `latest`, and `sha-<commit>`. Pin a version. To use them, put this in a
+`docker-compose.override.yml` next to `docker-compose.yml`:
+
+```yaml
+services:
+  api:
+    image: ghcr.io/shaongitbd/doory-backend:1.2.0
+    pull_policy: always
+  realtime:
+    image: ghcr.io/shaongitbd/doory-backend:1.2.0
+    pull_policy: always
+  mcp:
+    image: ghcr.io/shaongitbd/doory-backend:1.2.0
+    pull_policy: always
+  web:
+    image: ghcr.io/shaongitbd/doory-frontend:1.2.0
+    pull_policy: always
+```
+
+Then `docker compose pull && docker compose up -d`. To upgrade, change the version and run the same commands.
+Tools that can only pull (some NAS and container managers) need a copy of `docker-compose.yml` with the
+`build:` blocks replaced by these `image:` lines.
+
 ## HTTPS
 
 The stack serves plain HTTP. Put it behind a reverse proxy that handles TLS (a web server with a TLS
