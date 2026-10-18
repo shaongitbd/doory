@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createBlankDocument } from '@/lib/document'
+import { ApiError } from '@/lib/api/client'
 import type { BulkFillInput, TemplateField } from '@/types/api'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { EditorProvider } from '../EditorProvider'
@@ -52,6 +53,19 @@ describe('Bulk create dialog', () => {
     expect(ctx.run).toHaveBeenCalledWith({ rows: [{ name: 'Ada', accent: '#ff0000' }], row_numbers: [1], name_pattern: '{title} - {n}', folder: 'folder-1' })
     expect(await screen.findByRole('status')).toHaveTextContent(t.bulk.done(1))
     expect(screen.getByRole('link', { name: t.bulk.open })).toHaveAttribute('href', '/design/d0')
+  })
+
+  it('picks a free folder name when the suggested one is taken', async () => {
+    const ctx = setup([field('name', 'text', 'Name')])
+    engine = ctx.engine
+    const taken = new ApiError({ status: 400, code: 'invalid', message: 'Invalid', fields: { name: ['A folder with this name already exists here.'] } })
+    ctx.createFolder.mockRejectedValueOnce(taken)
+    await userEvent.click(await screen.findByRole('textbox', { name: t.bulk.dataField }))
+    await userEvent.paste('Name\nAda')
+    await userEvent.click(screen.getByRole('button', { name: t.bulk.next }))
+    await userEvent.click(screen.getByRole('button', { name: t.bulk.create(1) }))
+    await waitFor(() => expect(ctx.run).toHaveBeenCalledOnce())
+    expect(ctx.createFolder.mock.calls.map(([name]) => name)).toEqual([t.bulk.folderDefault('Badge'), `${t.bulk.folderDefault('Badge')} (2)`])
   })
 
   it('explains when the design has no fields', async () => {

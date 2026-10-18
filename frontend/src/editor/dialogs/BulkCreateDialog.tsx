@@ -14,6 +14,22 @@ const ERRORS: Record<string, string> = { color: t.bulk.errorColor, https: t.bulk
 
 type Step = 'data' | 'map' | 'done'
 
+const FOLDER_NAME_TRIES = 20
+
+/** A new folder named `base`, or `base (2)`, `base (3)`… when that name is taken (a second bulk create from the
+ * same design suggests the same name). */
+async function newFolder(create: (name: string) => Promise<{ id: string; name: string }>, base: string): Promise<{ id: string; name: string }> {
+  for (let n = 1; ; n += 1) {
+    const name = n === 1 ? base.slice(0, 120) : `${base.slice(0, 113)} (${n})`
+    try {
+      return await create(name)
+    } catch (error) {
+      const taken = isApiError(error) && error.status === 400 && (error.fields.name?.length ?? 0) > 0
+      if (!taken || n >= FOLDER_NAME_TRIES) throw error
+    }
+  }
+}
+
 /** Bulk create: paste a table or upload a CSV, map its columns to the template fields, preview, create into a folder. */
 export function BulkCreateDialog() {
   const editor = useEditor()
@@ -89,7 +105,7 @@ export function BulkCreateDialog() {
     let createdFolderId: string | null = null
     try {
       if (folderName.trim()) {
-        const folder = await service.createFolder(folderName.trim().slice(0, 120))
+        const folder = await newFolder(service.createFolder, folderName.trim())
         createdFolderId = folder.id
       }
       const outcome = await service.run({
