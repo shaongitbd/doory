@@ -10,7 +10,7 @@ import styles from './Settings.module.css'
 
 const FIELDS = ['name', 'base_url', 'style', 'style_config', 'auth_header', 'secret', 'tasks', 'timeout_seconds'] as const
 const DEFAULT_TIMEOUT = 60
-const MAX_TIMEOUT = 300
+const MAX_TIMEOUT = 60 // the server's cap for your own servers (USER_PROVIDER_MAX_TIMEOUT)
 
 function errorText(error: unknown, fallback: string): string {
   return isApiError(error) ? error.message || fallback : fallback
