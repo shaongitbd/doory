@@ -26,6 +26,7 @@ from .env import EnvProvider
 from .errors import AIProviderError
 from .models import Audience, Provider
 from .secrets import SecretUnreadable
+from .serializers import USER_PROVIDER_MAX_TIMEOUT
 from .styles import Connection, RemoteModel, get_style
 from .styles.base import ConfigError
 from .tasks import TASKS
@@ -115,7 +116,7 @@ def connection(provider: Provider | EnvProvider) -> Connection:
         ) from exc
     timeout = float(provider.timeout_seconds)
     if not provider.is_operator:
-        timeout = min(timeout, 60.0)
+        timeout = min(timeout, float(USER_PROVIDER_MAX_TIMEOUT))
     max_image_bytes = min(
         provider.max_image_bytes or settings.AI_MAX_IMAGE_BYTES,
         settings.AI_MAX_IMAGE_BYTES,
