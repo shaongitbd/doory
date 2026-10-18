@@ -1,5 +1,5 @@
 Doory
-Copyright (c) 2026 Siam, creator and maintainer of Doory
+Copyright (c) 2026 Siam, creator and maintainer of Doory, and the Doory contributors (see AUTHORS.md)
 https://github.com/shaongitbd/doory
 
 Doory is released under the Attribution Assurance License (see LICENSE). Anyone who redistributes it must keep
@@ -59,4 +59,5 @@ Artwork and models downloaded by the operator (never part of this repository)
 Original content of this repository
   The shapes, graphics, starter templates, audio library, logo and test fonts were made for Doory. The shapes,
   graphics, audio and test fonts are dedicated to the public domain under CC0 1.0
-  (https://creativecommons.org/publicdomain/zero/1.0/); the rest is MIT, like the code.
+  (https://creativecommons.org/publicdomain/zero/1.0/); the rest is under the Attribution
+  Assurance License, like the code.

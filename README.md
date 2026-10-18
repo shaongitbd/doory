@@ -391,7 +391,9 @@ Doory is released under the [Attribution Assurance License](LICENSE). You may us
 including commercially, but **you must credit the author**: keep the licence and [NOTICE](NOTICE) with it, and
 display this credit prominently in the running app:
 
-> Doory by Siam, creator and maintainer of Doory — https://github.com/shaongitbd/doory
+> Doory by Siam, creator and maintainer of Doory, https://github.com/shaongitbd/doory
+
+The copyright is held by Siam and the contributors listed in [AUTHORS.md](AUTHORS.md).
 
 Third-party software, fonts and content keep their own licences; see [THIRD_PARTY.md](THIRD_PARTY.md).
 
