@@ -57,6 +57,24 @@ Open a design, go to **Photos** and search. One tab appears for each provider wi
   `STOCK_<PROVIDER>_RATE` or raise its cache time.
 - **The "All" tab is slow:** lower `STOCK_ALL_TIMEOUT_SECONDS` or search fewer providers (`STOCK_ALL_PROVIDERS`).
 
+## Sounds (Freesound)
+
+The Audio tool can have a Freesound tab next to the built-in library: music, sound effects and ambience,
+searched through the API and copied into the user's uploads when added. It appears once a key is set.
+
+```ini
+FREESOUND_API_KEY=...
+```
+
+- Only CC0 sounds are offered by default. `FREESOUND_LICENSES=cc0,by` also allows CC BY: the editor then shows
+  the credit lines to publish with a design, and `get_design_credits` gives them over MCP. Licences that
+  restrict use (NC, Sampling+, SA, ND) are never offered.
+- Previews are relayed by the server, so the browser never talks to Freesound.
+- Freesound allows 60 calls a minute and 2,000 a day per key; Doory's default `STOCK_FREESOUND_RATE` is `60/m`.
+- Freesound's API terms cover non-commercial use. A commercial service needs an agreement with Freesound first.
+
+The settings are in [configuration.md](../self-hosting/configuration.md#stock-media).
+
 ## Adding a provider
 
 New providers get a section on this page and a row in configuration.md. They don't get a page of their own.
