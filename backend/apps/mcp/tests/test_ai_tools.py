@@ -287,6 +287,60 @@ def test_a_published_templates_picture_is_copied_once(as_caller, user, provider)
     assert copies.count() == 1
 
 
+@pytest.mark.parametrize(
+    "earlier",
+    [
+        {"op": "update_object", "object_id": "hero", "opacity": 0.5},
+        {"op": "remove_background", "object_id": "hero"},
+        {"op": "delete_objects", "object_ids": ["hero"]},
+        {"op": "delete_page", "page": 0},
+    ],
+)
+def test_a_picture_changed_earlier_in_the_call_is_refused_before_any_ai_call(
+    as_caller, user, provider, fake, earlier
+):
+    hero = picture(user)
+    doc = make_doc(objects=[image_obj(hero)])
+    doc["pages"].append({**doc["pages"][0], "id": "page-2", "objects": []})
+    design = make_design(user, document=doc)
+    with pytest.raises(ToolError, match="second edit_design call"):
+        designs.edit_design(str(design.pk), [earlier, {"op": "remove_background", "object_id": "hero"}])
+    assert fake.requests == [] and not AICall.objects.exists()
+    assert first_object(design)["assetId"] == str(hero.pk)
+
+
+def test_a_live_room_without_stored_state_falls_back_to_the_saved_design(
+    as_caller, user, provider, settings, monkeypatch
+):
+    hero = picture(user)
+    design = make_design(user, document=make_doc(objects=[image_obj(hero)]))
+    settings.REALTIME_ENABLED = True
+    monkeypatch.setattr(edits.store, "room_is_live", lambda pk: True)
+    monkeypatch.setattr(edits, "_live_document", lambda pk: None)
+    remove(design)
+    assert first_object(design)["assetId"] != str(hero.pk)
+
+
+def test_a_template_picture_is_not_copied_once_the_ai_throttle_is_used_up(
+    as_caller, user, provider, fake, monkeypatch
+):
+    author = User.objects.create_user(email="author@example.com", password="x-very-long-pass-1")
+    shared = picture(author, "Template photo")
+    Template.objects.create(
+        title="Poster",
+        width=800,
+        height=600,
+        is_published=True,
+        created_by=author,
+        document=make_doc(objects=[image_obj(shared)]),
+    )
+    monkeypatch.setattr(AIRateThrottle, "THROTTLE_RATES", {"ai": "0/min"})
+    design = make_design(user, document=make_doc(objects=[image_obj(shared)]))
+    with pytest.raises(ToolError, match="Too many requests"):
+        remove(design)
+    assert fake.requests == [] and not Asset.objects.filter(owner=user).exists()
+
+
 def test_edit_design_needs_assets_write_scope(as_caller, user, provider):
     design = make_design(user, document=make_doc(objects=[image_obj(picture(user))]))
     as_caller.token.scopes = ["designs:read", "designs:write"]

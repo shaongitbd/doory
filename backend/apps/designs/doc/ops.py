@@ -433,9 +433,9 @@ class Resolver(Protocol):
     def remove_background(self, *, obj: dict, model: str | None = None) -> ImageSource:
         """The picture of `obj` without its background; raises `LookupError` with a message for the agent."""
 
-    def seal(self) -> None:
+    def seal(self, sealed: bool = True) -> None:
         """Optional. Called once the design is locked: from then on, lookups must not do slow work (network,
-        AI)."""
+        AI). Called with `False` when an edit falls back from a live room to the saved content."""
 
     def font_category(self, family: str) -> str | None:
         """The catalogue category of a font family (serif, display…), None when it is unknown."""

@@ -150,8 +150,10 @@ class DjangoResolver:
             return self._cutouts[key]
         try:
             option = choose_model(self.user, model)
-            asset = self._source_asset(obj)
-            reserve_run(self.user, option)
+            asset, shared = self._source_asset(obj)
+            reserve_run(self.user, option)  # throttles and quota before anything is copied or sent
+            if shared:
+                asset = _copy_for(self.user, asset)
             cutout = run_model(self.user, asset, option)
         except ToolError as exc:
             raise LookupError(str(exc)) from exc
@@ -165,23 +167,25 @@ class DjangoResolver:
         self._cutouts[key] = source
         return source
 
-    def seal(self) -> None:
-        """From now on (the design is locked) nothing slow runs: no AI calls."""
-        self._sealed = True
+    def seal(self, sealed: bool = True) -> None:
+        """From now on (the design is locked) nothing slow runs: no AI calls. `False` opens it again, for an
+        edit that falls back from a live room to the saved content and prepares that first."""
+        self._sealed = sealed
 
     @staticmethod
     def _cutout_key(obj: dict, model: str | None) -> tuple:
         return (obj.get("id"), obj.get("assetId"), obj.get("src"), model)
 
-    def _source_asset(self, obj: dict) -> Asset:
-        """The upload behind `obj`: the caller's own, or one a published template places (copied into the
-        caller's uploads first). Nothing else, and never a file looked up by a path from the document."""
+    def _source_asset(self, obj: dict) -> tuple[Asset, bool]:
+        """The upload behind `obj`, and whether it is shared: the caller's own, or a picture a published
+        template places (copied into the caller's uploads before use). Nothing else, and never a file looked
+        up by a path from the document."""
         uid = _uuid(obj.get("assetId"))
         asset = Asset.objects.filter(pk=uid).exclude(kind=Asset.Kind.AUDIO).first() if uid else None
         if asset is not None and asset.owner_id == self.user.pk:
-            return asset
-        if asset is not None and _in_published_template(asset):
-            return _copy_for(self.user, asset)
+            return asset, False
+        if asset is not None and asset.kind == Asset.Kind.IMAGE and _in_published_template(asset):
+            return asset, True
         raise LookupError(
             "Only pictures from your uploads or a template can have their background removed. Upload it "
             "first (upload_image_from_url), then replace_image."
