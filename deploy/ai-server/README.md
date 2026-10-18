@@ -7,7 +7,8 @@ the `doory` API style.
 - Routes: `GET /v1/models`, `POST /v1/background-removal`, `GET /health`
 - Answer: a transparent PNG, or JSON with `image_b64` when the request asks for JSON only
 - Models: open licences only (Apache-2.0, MIT), run on the CPU through ONNX Runtime (via rembg)
-- Doory calls it from its backend. It has no CORS, and with `API_KEY` set every route except `/health` needs the key.
+- Doory calls it from its backend. It has no CORS, and every route except `/health` needs the key. It doesn't
+  start without `API_KEY` unless `ALLOW_NO_KEY=true` is set.
 
 ## Models
 
@@ -65,10 +66,11 @@ CPU-heavy, and without a key anyone who reaches it can use it.
 
 ```bash
 cd /opt/doory/deploy/ai-server
-python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
+sudo -u doory python3.12 -m venv .venv && sudo -u doory .venv/bin/pip install -r requirements.txt
 sudo install -d -o doory -g doory /var/lib/doory/models
 sudo -u doory U2NET_HOME=/var/lib/doory/models .venv/bin/python -c \
   "from rembg import new_session; [new_session(m) for m in ('isnet-general-use', 'u2netp')]"
+sudo install -d -m 755 /etc/doory
 echo "API_KEY=<a long random key>" | sudo install -m 600 /dev/stdin /etc/doory/ai-server.env
 sudo cp ../doory-ai-server.service /etc/systemd/system/ && sudo systemctl enable --now doory-ai-server
 ```
@@ -98,7 +100,8 @@ curl -H "Authorization: Bearer $KEY" -F image=@photo.jpg -F model=u2netp -o cuto
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `API_KEY` | empty | The key; requests send `Authorization: Bearer <key>` or `X-Api-Key: <key>`. Set it. |
+| `API_KEY` | empty | The key; requests send `Authorization: Bearer <key>` or `X-Api-Key: <key>`. The server doesn't start without it |
+| `ALLOW_NO_KEY` | `false` | Start without a key anyway: only for a server nobody else can reach |
 | `AVAILABLE_MODELS` | `isnet-general-use,u2netp` | The models offered and accepted |
 | `DEFAULT_MODEL` | the first available | Used when a request names no model; ignored when it isn't available |
 | `PORT` | `7000` | Port (Docker image) |

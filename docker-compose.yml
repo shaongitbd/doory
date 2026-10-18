@@ -194,7 +194,8 @@ services:
       retries: 5
 
   # Optional: the reference AI server for background removal (models with open licences, CPU only). Opt-in:
-  # add `ai` to COMPOSE_PROFILES. Reached by the api only, on the internal network (not published on the host).
+  # add `ai` to COMPOSE_PROFILES, and set AI_SERVER_API_KEY: it doesn't start without one. Not published on
+  # the host; the api reaches it at http://ai-server:7000.
   ai-server:
     profiles: [ai]
     build:

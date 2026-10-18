@@ -205,7 +205,7 @@ Read by `docker-compose.yml` for the `ai-server` service (profile `ai`). See [ai
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| `AI_SERVER_API_KEY` | | Key the server asks for. Always set it, and use the same value in `AI_PROVIDER_<n>_AUTH_VALUE` |
+| `AI_SERVER_API_KEY` | | Key the server asks for; it doesn't start without one. Use the same value in `AI_PROVIDER_<n>_AUTH_VALUE` |
 | `AI_SERVER_MODELS` | `isnet-general-use,u2netp` | Models built into the image and offered. Rebuild the image after changing it |
 | `AI_SERVER_DEFAULT_MODEL` | `isnet-general-use` | Model used when a request names none |
 | `AI_SERVER_WORKERS` | `1` | Images processed at once; more requests are answered "busy" (429) |
