@@ -395,6 +395,11 @@ display this credit prominently in the running app:
 
 The copyright is held by Siam and the contributors listed in [AUTHORS.md](AUTHORS.md).
 
+The licence text is GPG-signed by Siam, as the licence asks. To check it:
+`gpg --import licenses/siam-gpg.asc && gpg --verify LICENSE`. The key's fingerprint is
+`3255 3D6C 37CF 387A 36FF D6BB FEB1 0669 1898 A504`, and the same key is published at
+https://github.com/shaongitbd.gpg.
+
 Third-party software, fonts and content keep their own licences; see [THIRD_PARTY.md](THIRD_PARTY.md).
 
 <div align="center">
