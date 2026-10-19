@@ -808,7 +808,7 @@ export class EditorEngine implements PageCanvasHost {
       for (const v of this.allViews()) v.setTheme(this.themeValue)
     }
     const mo = new MutationObserver(update)
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'data-contrast'] })
     const mq = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null
     mq?.addEventListener('change', update)
     return () => {

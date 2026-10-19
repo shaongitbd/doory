@@ -109,7 +109,7 @@ export function Rulers({ scrollRef, artboards }: RulersProps) {
     const ro = new ResizeObserver(schedule)
     ro.observe(scroller)
     const mo = new MutationObserver(schedule)
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'data-contrast'] })
     return () => {
       scroller.removeEventListener('scroll', schedule)
       ro.disconnect()
