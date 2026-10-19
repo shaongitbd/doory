@@ -3,14 +3,14 @@
  * image adjustments, masks, recolouring, links and QR content. Continuous controls (sliders, colour
  * scrubbing) pass a `key` so their steps coalesce into one undo step.
  */
-import { type FabricImage, type FabricObject, IText, Polygon, Rect, Shadow } from 'fabric'
+import { type FabricImage, type FabricObject, IText, Point, Polygon, Rect, Shadow, util } from 'fabric'
 import type { ArrowHead, DocField, DocTextFit, ImageFilterSpec, MaskShape, ObjectEffects, ShadowSpec } from '@/types/document'
 import type { AssetRef } from '@/types/adapter'
 import type { EditorEngine } from '../editor'
 import { BACKGROUND_REMOVAL_TASK, BackgroundRemovalError, DEVICE_OPTION, removeBackground as runRemoval, type BgRemovalPhase } from '../bgRemoval'
 import { DoryLine } from '../objects/DoryLine'
 import { asDory } from '../objects/dory'
-import { applyColorMap } from '../objects/elements'
+import { SVG_EDIT_LIMITS, applyColorMap, elementColors, isSvgSource, parseSvgElement, shapeCount, svgEditProblem } from '../objects/elements'
 import { applyEffects } from '../objects/effects'
 import { readField } from '../fields'
 import { type FillSpec, buildFill } from '../objects/fills'
@@ -419,6 +419,89 @@ export class StyleApi {
   }
 
   /* --------------------------------------------------------- elements, links, QR */
+
+  /** Whether the selected picture is an uploaded SVG that "Edit colors" can turn into shapes. */
+  canEditSvgColors(): boolean {
+    const img = this.images()[0]
+    return this.targets().length === 1 && img !== undefined && isSvgSource(asDory(img).docSrc ?? img.getSrc())
+  }
+
+  /**
+   * Turns the selected uploaded SVG picture into editable shapes in the same place (one undo step), so its
+   * colors can be changed like an element's. Refused, with a message, for a cropped, framed or filtered
+   * picture, for drawings too big to store in the design, and for parts the shape parser can't reproduce.
+   */
+  async editSvgColors(): Promise<boolean> {
+    const view = this.engine.activeView()
+    const img = this.images()[0]
+    if (!view || !img || !this.canEditSvgColors()) return false
+    const d = asDory(img)
+    const natW = img.getElement().width || img.width || 1
+    const natH = img.getElement().height || img.height || 1
+    const cropped = (img.cropX ?? 0) > 0 || (img.cropY ?? 0) > 0 || (img.width ?? natW) < natW - 0.5 || (img.height ?? natH) < natH - 0.5
+    if (cropped || img.clipPath || d.maskShape || (d.filterSpecs?.length ?? 0) > 0) {
+      this.engine.toast(t.errors.svgEditPlain, 'error')
+      return false
+    }
+    let parsed: Awaited<ReturnType<typeof parseSvgElement>>
+    try {
+      const text = await (await fetch(img.getSrc())).text()
+      const problem = svgEditProblem(text)
+      if (problem) {
+        this.engine.toast(problem === 'too_large' ? t.errors.svgEditTooLarge : t.errors.svgEditUnsupported, 'error')
+        return false
+      }
+      parsed = await parseSvgElement(text)
+    } catch {
+      this.engine.toast(t.errors.svgEditFailed, 'error')
+      return false
+    }
+    const { object: next, svgWidth, svgHeight } = parsed
+    if (shapeCount(next) > SVG_EDIT_LIMITS.shapes) {
+      this.engine.toast(t.errors.svgEditTooLarge, 'error')
+      return false
+    }
+    if (elementColors(next).length === 0) {
+      this.engine.toast(t.errors.svgEditNoColors, 'error')
+      return false
+    }
+    if (!this.images().includes(img)) return false // the selection moved on while the file loaded
+    // The picture shows the SVG's whole canvas (margins included) across its own width x height, and the shapes
+    // are in that canvas's coordinates: map them through the picture's transform so they land where they were.
+    const kx = (img.width || 1) / Math.max(svgWidth, 1)
+    const ky = (img.height || 1) / Math.max(svgHeight, 1)
+    const shapes = next.getCenterPoint()
+    const local = new Point(-(img.width || 1) / 2 + shapes.x * kx, -(img.height || 1) / 2 + shapes.y * ky)
+    const at = util.transformPoint(local, img.calcTransformMatrix())
+    next.set({
+      originX: 'center',
+      originY: 'center',
+      left: at.x,
+      top: at.y,
+      scaleX: (img.scaleX || 1) * kx,
+      scaleY: (img.scaleY || 1) * ky,
+      angle: img.angle,
+      flipX: img.flipX,
+      flipY: img.flipY,
+      opacity: img.opacity,
+      shadow: img.shadow,
+    })
+    const nd = asDory(next)
+    nd.id = d.id
+    nd.name = d.name
+    nd.locked = d.locked
+    nd.assetId = d.assetId
+    nd.elementId = `upload:${d.assetId ?? 'svg'}`
+    nd.effects = d.effects
+    const index = view.canvas.getObjects().indexOf(img)
+    view.canvas.remove(img)
+    view.configure(next)
+    view.canvas.insertAt(Math.max(0, index), next)
+    next.setCoords()
+    view.selectObjects([next])
+    this.finish(t.history.editColors)
+    return true
+  }
 
   recolor(from: string, to: string): void {
     this.each((o) => {

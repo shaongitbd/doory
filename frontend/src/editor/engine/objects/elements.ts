@@ -54,10 +54,40 @@ export function applyColorMap(root: FabricObject, map: Record<string, string> | 
   root.set('dirty', true)
 }
 
+/** Limits for turning an uploaded SVG into editable shapes: they are stored in the design itself. */
+export const SVG_EDIT_LIMITS = { bytes: 1_000_000, shapes: 2000 } as const
+
+/** Parts the shape parser can't reproduce faithfully: a drawing with them stays a picture. */
+const UNSUPPORTED_SVG = /<(?:[a-z]+:)?(?:image|text|filter|mask|foreignObject|pattern)\b/i
+
+export type SvgEditProblem = 'too_large' | 'unsupported' | 'empty'
+
+/** Why `svgText` can't become editable shapes, or null when it can (checked before parsing). */
+export function svgEditProblem(svgText: string): SvgEditProblem | null {
+  if (svgText.length > SVG_EDIT_LIMITS.bytes) return 'too_large'
+  if (UNSUPPORTED_SVG.test(svgText)) return 'unsupported'
+  return null
+}
+
+/** The number of drawn shapes in a parsed element. */
+export function shapeCount(root: FabricObject): number {
+  return leaves(root).length
+}
+
+/** Whether a picture's source is an SVG file (an upload keeps its `.svg` name). */
+export function isSvgSource(src: unknown): boolean {
+  if (typeof src !== 'string') return false
+  return /\.svg$/i.test(src.split(/[?#]/, 1)[0])
+}
+
 export interface ParsedElement {
   object: FabricObject
+  /** The drawn shapes' size. */
   width: number
   height: number
+  /** The SVG's own canvas (its viewport), which the shapes' coordinates are in; may be larger than the shapes. */
+  svgWidth: number
+  svgHeight: number
 }
 
 export async function parseSvgElement(svgText: string): Promise<ParsedElement> {
@@ -66,5 +96,7 @@ export async function parseSvgElement(svgText: string): Promise<ParsedElement> {
   if (parsed.length === 0) throw new Error('The SVG contains no drawable shapes.')
   const object = util.groupSVGElements(parsed, options)
   captureOriginalColors(object)
-  return { object, width: object.width, height: object.height }
+  const svgWidth = typeof options.width === 'number' && options.width > 0 ? options.width : object.width
+  const svgHeight = typeof options.height === 'number' && options.height > 0 ? options.height : object.height
+  return { object, width: object.width, height: object.height, svgWidth, svgHeight }
 }
