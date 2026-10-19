@@ -1017,6 +1017,7 @@ export const t = {
     viewGrid: 'Toggle grid',
     viewGuides: 'Toggle smart guides',
     viewSnapping: 'Toggle snapping',
+    viewHighContrast: 'High contrast',
     pageAdd: 'Add page',
     pageDuplicate: 'Duplicate page',
     pageDelete: 'Delete page',

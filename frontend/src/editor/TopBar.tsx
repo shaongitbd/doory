@@ -1,4 +1,5 @@
 import { ChevronDown, Menu as MenuIcon, Presentation, Share2, Users } from 'lucide-react'
+import { useContrast } from '@/lib/contrast'
 import { useSizePresets } from '@/lib/sizePresets'
 import { getPageSize } from './engine/pageSizes'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -208,6 +209,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
   const ui = useEditorState((s) => s.ui)
   const notesOpen = useNotesOpen()
   const timelineOpen = useTimelineView().open
+  const highContrast = useContrast().effective === 'more'
   const guideCount = useEditorState((s) => s.doc.pages.find((p) => p.id === s.activePageId)?.guides?.length ?? 0)
   // Re-read when the server's size presets arrive: they say which sizes have a safe zone.
   useSizePresets()
@@ -267,6 +269,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
     { ...cmd('view.notes'), checked: notesOpen },
     { ...cmd('view.timeline'), checked: timelineOpen },
     cmd('view.playPage'),
+    { ...cmd('view.highContrast'), checked: highContrast },
     { id: 'v2', separator: true },
     cmd('file.shortcuts'),
   ]

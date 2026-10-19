@@ -32,6 +32,7 @@ import {
   ArrowUpToLine,
   ArrowDownToLine,
 } from 'lucide-react'
+import { toggleContrast } from '@/lib/contrast'
 import { t } from '../strings'
 import { openAccountDialog } from '../chrome/accountGate'
 import { registerCommand } from '../commands'
@@ -122,6 +123,8 @@ export function registerBuiltinCommands(): void {
   registerCommand({ id: 'view.grid', label: t.cmd.viewGrid, shortcut: "Mod+'", group: t.cmdGroup.view, run: (e) => e.patchUi({ grid: !e.state.ui.grid }) })
   registerCommand({ id: 'view.guides', label: t.cmd.viewGuides, group: t.cmdGroup.view, run: (e) => e.patchUi({ guides: !e.state.ui.guides }) })
   registerCommand({ id: 'view.snapping', label: t.cmd.viewSnapping, group: t.cmdGroup.view, run: (e) => e.patchUi({ snapping: !e.state.ui.snapping }) })
+  // The viewer's own chrome, not the design: a view. command, so it also works on view-only and comment links.
+  registerCommand({ id: 'view.highContrast', label: t.cmd.viewHighContrast, group: t.cmdGroup.view, run: () => toggleContrast() })
 
   registerCommand({ id: 'page.add', label: t.cmd.pageAdd, group: t.cmdGroup.pages, run: (e) => void e.pages.add() })
   registerCommand({ id: 'page.duplicate', label: t.cmd.pageDuplicate, group: t.cmdGroup.pages, run: (e) => e.pages.duplicate(e.state.activePageId) })

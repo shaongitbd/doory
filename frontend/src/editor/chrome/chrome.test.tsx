@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { CONTRAST_KEY, setContrastPreference } from '@/lib/contrast'
 import '../builtins/commands'
 import '../builtins/panels'
 import '../presenter/commands'
@@ -56,6 +57,7 @@ describe('editor chrome', () => {
     engine = null
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    setContrastPreference('system')
     document.body.innerHTML = ''
   })
 
@@ -110,6 +112,27 @@ describe('editor chrome', () => {
     const view = screen.getByRole('menu', { name: t.topbar.view })
     expect(within(view).getByRole('menuitemcheckbox', { name: t.menu.rulers })).toBeInTheDocument()
     expect(within(view).getByRole('menuitem', { name: /Keyboard shortcuts/ })).toBeInTheDocument()
+  })
+
+  it('switches high contrast from the View menu', async () => {
+    engine = await mount()
+    await userEvent.click(screen.getByRole('button', { name: t.topbar.view }))
+    const item = within(screen.getByRole('menu', { name: t.topbar.view })).getByRole('menuitemcheckbox', { name: t.cmd.viewHighContrast })
+    expect(item).toHaveAttribute('aria-checked', 'false')
+    await userEvent.click(item)
+    expect(document.documentElement.dataset.contrast).toBe('more')
+    expect(localStorage.getItem(CONTRAST_KEY)).toBe('more')
+    await userEvent.click(screen.getByRole('button', { name: t.topbar.view }))
+    expect(within(screen.getByRole('menu', { name: t.topbar.view })).getByRole('menuitemcheckbox', { name: t.cmd.viewHighContrast })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('offers high contrast on a view-only link too', async () => {
+    engine = await mount('shared-view')
+    await userEvent.click(screen.getByRole('button', { name: t.topbar.view }))
+    const item = within(screen.getByRole('menu', { name: t.topbar.view })).getByRole('menuitemcheckbox', { name: t.cmd.viewHighContrast })
+    expect(item).toBeEnabled()
+    await userEvent.click(item)
+    expect(document.documentElement.dataset.contrast).toBe('more')
   })
 
   it('gathers sharing, downloads and presenting in the one Share menu', async () => {
