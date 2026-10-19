@@ -2,7 +2,7 @@
  * Doory design tokens — the lilac theme: a soft lavender page, ink-brown lines and pastel accents taken from the
  * Doory bunny.
  * Components must use these variables and never hard-code colours.
- * There is one theme: Doory is always light.
+ * There is one light theme, with a high-contrast variant (the `data-contrast='more'` block at the end).
  */
 :root {
   /* Brand — violet scale */
@@ -133,6 +133,27 @@
   --z-toast: 400;
 
   color-scheme: light;
+}
+
+/*
+ * High contrast: the same light theme with darker text, lines and focus rings. Set on <html> by src/lib/contrast.ts.
+ * Colours only, and never the page, workspace or stage backgrounds, so presenting and exports look the same.
+ */
+:root[data-contrast='more'] {
+  --color-text-muted: #3f3340; /* at least 9:1 on every surface, the workspace and the lilac washes */
+  --color-text-subtle: #4a3d4b; /* at least 7.8:1 */
+  --color-border: #6f6170; /* at least 4.4:1 */
+  --color-border-strong: #463a46; /* at least 8.2:1 */
+  --accent-lilac: var(--violet-800);
+  --selection-color: var(--violet-800); /* 7.4:1 on the workspace */
+  --guide-color: #86198f; /* fuchsia-800, 6.8:1 on the workspace, and told apart from the violet selection */
+  --color-success: #166534;
+  --color-warning: #92400e;
+  --color-danger: #991b1b;
+  --color-info: #1e40af;
+  /* One shadow, so the `inset var(--focus-ring)` rings keep working. */
+  --focus-ring: 0 0 0 3px var(--violet-800);
+  --shadow-artboard: 0 0 0 1px var(--color-border-strong), 0 2px 6px rgb(60 40 110 / 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {

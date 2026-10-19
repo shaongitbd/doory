@@ -486,6 +486,10 @@
   outline: none;
   background: var(--ed-surface-hover);
 }
+/* High contrast: keyboard focus gets a ring, not only the faint hover wash. */
+:global(:root[data-contrast='more']) .menuItem:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ed-text);
+}
 .menuItem:disabled {
   opacity: 0.45;
   cursor: default;

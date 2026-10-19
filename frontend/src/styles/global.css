@@ -124,6 +124,15 @@ samp {
   border-radius: var(--radius-sm);
 }
 
+/*
+ * High contrast: things that are selected or pressed are shown only by a pale wash, so they also get an inset outline
+ * (no layout change). Checked menu items already show a tick, and breadcrumbs mark the current page in their text.
+ */
+:root[data-contrast='more'] :is([aria-pressed='true'], [aria-selected='true'], [aria-current]:not([aria-current='page'], [aria-current='false'])) {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
 ::selection {
   background: var(--pastel-butter);
   color: var(--ink);

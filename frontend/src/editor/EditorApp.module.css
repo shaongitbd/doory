@@ -40,6 +40,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* High contrast: the light dividers are drawn in the background colour today, so they get the border colour. */
+:global(:root[data-contrast='more']) .root {
+  --ed-border-light: var(--color-border);
+}
+
 .root *,
 .root *::before,
 .root *::after {
