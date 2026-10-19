@@ -53,9 +53,16 @@ jobs:
       - name: Check the version
         env:
           VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           if [ -n "$VERSION" ] && ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "The version must look like 1.2.0." >&2
+            exit 1
+          fi
+          # The release step below would refuse an existing tag: stop before any image is pushed.
+          if [ -n "$VERSION" ] && gh api "repos/$REPO/git/ref/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION is already released. Pick a new version." >&2
             exit 1
           fi
 
@@ -96,3 +103,34 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,scope=${{ matrix.name }},mode=max
+
+  # With a version: tag the commit the images were built from and publish a GitHub release for it, after both
+  # images are pushed. Only this job can write tags and releases.
+  release:
+    needs: images
+    if: inputs.version != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          LATEST: ${{ inputs.latest }}
+          SHA: ${{ github.sha }}
+        run: |
+          printf '%s\n' \
+            "Docker images for linux/amd64 and linux/arm64:" \
+            "" \
+            '```bash' \
+            "docker pull ghcr.io/shaongitbd/doory-backend:$VERSION    # api, realtime and mcp" \
+            "docker pull ghcr.io/shaongitbd/doory-frontend:$VERSION   # web" \
+            '```' \
+            "" \
+            "To run them instead of building, see [Pre-built images](https://github.com/$REPO/blob/main/docs/self-hosting/docker.md#pre-built-images)." \
+            > notes.md
+          gh release create "v$VERSION" --repo "$REPO" --target "$SHA" --title "v$VERSION" \
+            --notes-file notes.md --generate-notes --latest="$LATEST"
