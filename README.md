@@ -53,6 +53,7 @@ reports are very welcome.
 | **Together** | Share links that view, comment or edit (with an optional password), pinned comments, version history, real-time co-editing |
 | **Brand** | Brand kits with your colours, fonts and logos |
 | **Export** | PNG, JPG, SVG, PDF, MP4, WebM and GIF |
+| **Accessibility** | High-contrast mode with darker text, borders and focus rings, following your device setting or switched in the View menu and Settings |
 
 ## Templates
 
