@@ -119,6 +119,11 @@ export function ImageSection() {
           <span className={ed.toolText}>{t.ctx.removeBackground}</span>
         </ToolButton>
       ) : null}
+      {editor.style.canEditSvgColors() ? (
+        <ToolButton label={t.toolbar.editColors} testId="ed-edit-svg-colors" onClick={() => void editor.style.editSvgColors()}>
+          <span className={ed.textButton}>{t.toolbar.editColors}</span>
+        </ToolButton>
+      ) : null}
       <PopoverTool label={t.toolbar.filters} trigger={<SlidersIcon />} width={312} testId="ed-adjust">
         <AdjustPanel />
       </PopoverTool>
