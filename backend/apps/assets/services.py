@@ -67,9 +67,10 @@ def _prepare_svg(data: bytes) -> PreparedFile:
     try:
         clean = svg.sanitize_svg(data)
         info = svg.svg_info(clean)
+        width, height = _svg_dimensions(info.width, info.height)
+        clean = svg.with_intrinsic_size(clean, width, height)
     except (svg.SvgError, DefusedXmlException, ParseError) as exc:
         raise InvalidFile("The file is not a valid, safe SVG.") from exc
-    width, height = _svg_dimensions(info.width, info.height)
     return PreparedFile("svg", clean, "image/svg+xml", "svg", width, height, None)
 
 

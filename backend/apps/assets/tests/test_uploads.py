@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from defusedxml import ElementTree as ET
 from django.core.files.storage import default_storage
 from PIL import Image
 
@@ -208,6 +209,24 @@ class TestSvgUpload:
         body = post(api, data, "big.svg").json()
         assert max(body["width"], body["height"]) == 12_000
         assert body["width"] == 12_000 and body["height"] == 6_000
+
+    @pytest.mark.parametrize(
+        ("root", "size", "viewbox"),
+        [
+            ('viewBox="0 0 800 600"', (800, 600), "0 0 800 600"),
+            ('width="100%" height="100%" viewBox="0 0 800 600"', (800, 600), "0 0 800 600"),
+            ('width="200"', (200, 150), "0 0 200 150"),  # no viewBox: one is added for the original size
+            ('viewBox="0 0 400 200" width="40000px"', (12_000, 6_000), "0 0 400 200"),
+        ],
+    )
+    def test_the_stored_svg_has_the_size_it_is_listed_with(self, api, root, size, viewbox):
+        # A browser draws an SVG at its root size (300x150 when it has none), so it must match `width`/`height`.
+        data = f'<svg xmlns="http://www.w3.org/2000/svg" {root}><rect width="10" height="10"/></svg>'.encode()
+        body = post(api, data, "drawing.svg").json()
+        assert (body["width"], body["height"]) == size
+        stored = ET.fromstring(stored_bytes(Asset.objects.get(pk=body["id"])))
+        assert (stored.get("width"), stored.get("height")) == (str(size[0]), str(size[1]))
+        assert stored.get("viewBox") == viewbox
 
     def test_oversize_svg_rejected(self, api, monkeypatch):
         monkeypatch.setattr("apps.core.svg.MAX_BYTES", 100)
