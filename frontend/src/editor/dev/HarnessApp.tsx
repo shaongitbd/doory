@@ -1,7 +1,8 @@
 /**
  * Dev/e2e harness UI: mounts `EditorApp` with an in-memory adapter. Served by Vite at /editor-harness.html
  * (it is not part of the production build). Query parameters:
- *   mode=guest|account|shared-view|shared-comment   theme=light|dark   doc=demo|blank|stress|deck|animated|stored
+ *   mode=guest|account|shared-view|shared-comment   theme=light|dark   contrast=more|standard
+ *   doc=demo|blank|stress|deck|animated|stored
  *   pages=N&objects=M (stress)   w=…&h=… (blank)   saveDelay=ms
  *   viewer=owner|commenter|anonymous (who looks at the comments)   comments=demo|N (threads to start with)   commentLatency=ms
  */
@@ -10,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { EditorHandle, EditorMode, SaveState } from '@/types/adapter'
 import type { DoryDocument } from '@/types/document'
 import '@/styles/tokens.css'
+import { initContrast, setContrastPreference } from '@/lib/contrast'
 import { EditorApp } from '../EditorApp'
 import { createAnimatedDemo, createBlankDemo, createDeckDemo, createDemoDocument, createStressDocument } from './demoDocument'
 import { createMemoryAdapter } from './memoryAdapter'
@@ -36,6 +38,9 @@ const params = new URLSearchParams(location.search)
 const mode = (params.get('mode') ?? 'guest') as EditorMode
 const theme = params.get('theme')
 if (theme === 'dark' || theme === 'light') document.documentElement.dataset.theme = theme
+initContrast()
+const contrast = params.get('contrast')
+if (contrast === 'more' || contrast === 'standard') setContrastPreference(contrast)
 
 function initialDocument(): DoryDocument {
   const kind = params.get('doc') ?? 'demo'

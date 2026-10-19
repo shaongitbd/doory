@@ -9,7 +9,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/tokens.css'
 import './styles/global.css'
+import { initContrast } from './lib/contrast'
 import App from './App'
+
+// Before the first render, so high contrast is on from the first paint (the CSP allows no inline script for this).
+initContrast()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')

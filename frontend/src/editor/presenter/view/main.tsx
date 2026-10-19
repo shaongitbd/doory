@@ -10,7 +10,10 @@ import '@fontsource-variable/fraunces/opsz-italic.css'
 import '@fontsource-variable/caveat'
 import '@/styles/tokens.css'
 import '@/styles/global.css'
+import { initContrast } from '@/lib/contrast'
 import { PresenterView } from './PresenterView'
+
+initContrast()
 
 const session = new URLSearchParams(location.search).get('session')
 
