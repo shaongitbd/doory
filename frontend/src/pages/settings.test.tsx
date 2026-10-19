@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { CONTRAST_KEY, setContrastPreference } from '@/lib/contrast'
 import { renderApp } from '@/test/app'
 import { makeConfig, makeDesign, makeUser, page } from '@/test/factories'
 
@@ -135,6 +136,23 @@ describe('settings: password', () => {
     await userEvent.type(screen.getByLabelText(/^New password/, { selector: 'input' }), 'first-password-1')
     await userEvent.click(screen.getByRole('button', { name: 'Set password' }))
     await waitFor(() => expect(bodies).toEqual([{ new_password: 'first-password-1' }]))
+  })
+})
+
+describe('settings: accessibility', () => {
+  afterEach(() => setContrastPreference('system'))
+
+  it('matches the device by default and switches high contrast on and off in this browser', async () => {
+    renderApp('/settings', { user: makeUser() })
+    const card = within(await screen.findByRole('region', { name: 'Accessibility' }))
+    expect(card.getByRole('radio', { name: 'Match my device' })).toBeChecked()
+    expect(document.documentElement.hasAttribute('data-contrast')).toBe(false)
+    await userEvent.click(card.getByRole('radio', { name: 'High contrast' }))
+    expect(document.documentElement.dataset.contrast).toBe('more')
+    expect(localStorage.getItem(CONTRAST_KEY)).toBe('more')
+    await userEvent.click(card.getByRole('radio', { name: 'Match my device' }))
+    expect(document.documentElement.hasAttribute('data-contrast')).toBe(false)
+    expect(localStorage.getItem(CONTRAST_KEY)).toBeNull()
   })
 })
 

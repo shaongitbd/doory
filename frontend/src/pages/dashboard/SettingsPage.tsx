@@ -1,4 +1,5 @@
 import { useAuth } from '@/features/auth/AuthProvider'
+import { AccessibilitySection } from '@/features/settings/AccessibilitySection'
 import { AiProvidersSection } from '@/features/settings/AiProvidersSection'
 import { ApiTokensSection } from '@/features/settings/ApiTokensSection'
 import { DangerSection } from '@/features/settings/DangerSection'
@@ -25,6 +26,7 @@ export default function SettingsPage() {
         <ProfileSection />
         <EmailSection />
         <PasswordSection />
+        <AccessibilitySection />
         {mcp ? <ApiTokensSection /> : null}
         {aiProviders ? <AiProvidersSection /> : null}
         <DangerSection />
