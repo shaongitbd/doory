@@ -13,6 +13,10 @@
   user-select: none;
   -webkit-user-select: none;
 }
+/* High contrast: the violet ring is too dark on the black stage, so the controls ring in the stage's text colour. */
+:global(:root[data-contrast='more']) .overlay {
+  --focus-ring: 0 0 0 3px var(--color-on-stage);
+}
 
 .main {
   flex: 1;
@@ -272,6 +276,10 @@
 .ctl[aria-pressed='true'] {
   background: var(--color-brand);
   color: var(--color-on-brand);
+}
+/* High contrast: the selected outline is ink, which does not show on the dark pill. */
+:global(:root[data-contrast='more']) .overlay .ctl[aria-pressed='true']:not(:focus-visible) {
+  outline-color: var(--color-on-stage);
 }
 
 .count {
