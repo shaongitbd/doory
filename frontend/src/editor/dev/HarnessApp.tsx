@@ -5,13 +5,15 @@
  *   doc=demo|blank|stress|deck|animated|stored
  *   pages=N&objects=M (stress)   w=…&h=… (blank)   saveDelay=ms
  *   viewer=owner|commenter|anonymous (who looks at the comments)   comments=demo|N (threads to start with)   commentLatency=ms
+ * `contrast=` lasts for the session and is not stored. The harness loads tokens.css but not global.css, so the
+ * high-contrast selected outline and the global focus ring are checked in the app, not here.
  */
 import { Moon, Sun } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { EditorHandle, EditorMode, SaveState } from '@/types/adapter'
 import type { DoryDocument } from '@/types/document'
 import '@/styles/tokens.css'
-import { initContrast, setContrastPreference } from '@/lib/contrast'
+import { initContrast, setSessionContrast } from '@/lib/contrast'
 import { EditorApp } from '../EditorApp'
 import { createAnimatedDemo, createBlankDemo, createDeckDemo, createDemoDocument, createStressDocument } from './demoDocument'
 import { createMemoryAdapter } from './memoryAdapter'
@@ -40,7 +42,7 @@ const theme = params.get('theme')
 if (theme === 'dark' || theme === 'light') document.documentElement.dataset.theme = theme
 initContrast()
 const contrast = params.get('contrast')
-if (contrast === 'more' || contrast === 'standard') setContrastPreference(contrast)
+if (contrast === 'more' || contrast === 'standard') setSessionContrast(contrast)
 
 function initialDocument(): DoryDocument {
   const kind = params.get('doc') ?? 'demo'

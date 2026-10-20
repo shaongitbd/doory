@@ -6,6 +6,7 @@ import {
   readContrastPreference,
   resolveContrast,
   setContrastPreference,
+  setSessionContrast,
   subscribeContrast,
   toggleContrast,
   useContrast,
@@ -100,6 +101,14 @@ describe('setContrastPreference', () => {
     expect(root.dataset.contrast).toBe('more')
     expect(getContrastSnapshot().preference).toBe('more')
     expect(localStorage.getItem(CONTRAST_KEY)).toBeNull()
+  })
+
+  it('can hold a choice for the session without storing it', () => {
+    localStorage.setItem(CONTRAST_KEY, 'standard')
+    setSessionContrast('more')
+    expect(root.dataset.contrast).toBe('more')
+    expect(getContrastSnapshot().preference).toBe('more')
+    expect(localStorage.getItem(CONTRAST_KEY)).toBe('standard')
   })
 
   it('notifies subscribers only when something changes', () => {

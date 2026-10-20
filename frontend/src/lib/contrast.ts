@@ -68,6 +68,12 @@ export function setContrastPreference(preference: ContrastPreference): void {
   applyContrast()
 }
 
+/** Shows a choice for this session only, leaving the stored one alone (the dev harness's `?contrast=`). */
+export function setSessionContrast(preference: ContrastPreference): void {
+  unsaved = preference
+  applyContrast()
+}
+
 /**
  * Flips what is shown. Landing on what the device asks for stores 'system' again, so someone on a shared link (who
  * can't reach Settings) can still get back to following their device.
