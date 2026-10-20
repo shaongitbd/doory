@@ -142,8 +142,9 @@
 :root[data-contrast='more'] {
   --color-text-muted: #3f3340; /* at least 9:1 on every surface, the workspace and the lilac washes */
   --color-text-subtle: #4a3d4b; /* at least 7.8:1 */
-  --color-border: #6f6170; /* at least 4.4:1 */
-  --color-border-strong: #463a46; /* at least 8.2:1 */
+  /* Mid-tones: tracks and meters pair them with ink fills, so they keep 3:1 against ink as well as the surfaces. */
+  --color-border: #837585; /* at least 3.3:1 on every surface, 3.7:1 against ink */
+  --color-border-strong: #7a6c7b; /* at least 3.7:1 on every surface, 3.3:1 against ink */
   --accent-lilac: var(--violet-800);
   --selection-color: var(--violet-800); /* 7.4:1 on the workspace */
   --guide-color: #86198f; /* fuchsia-800, 6.8:1 on the workspace, and told apart from the violet selection */

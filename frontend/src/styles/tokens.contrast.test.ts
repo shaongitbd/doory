@@ -62,10 +62,18 @@ describe('high-contrast tokens', () => {
     for (const name of ['--color-border', '--color-border-strong', '--selection-color', '--guide-color']) expect(lowest(color(name)), name).toBeGreaterThanOrEqual(3)
   })
 
+  it('keeps tracks told apart from the ink that fills them (switches, sliders, progress bars)', () => {
+    for (const name of ['--color-border', '--color-border-strong']) expect(contrastRatio(color(name), color('--color-brand')), name).toBeGreaterThanOrEqual(3)
+  })
+
   it('keeps the status colours at 6:1 or more on the surface and on their own wash', () => {
     for (const status of ['success', 'warning', 'danger', 'info']) {
       expect(lowest(color(`--color-${status}`), ['--color-surface', `--color-${status}-soft`]), status).toBeGreaterThanOrEqual(6)
     }
+  })
+
+  it('keeps the password meter score readable: its empty segments are --color-bg-muted in high contrast', () => {
+    for (const status of ['success', 'warning']) expect(contrastRatio(color(`--color-${status}`), color('--color-bg-muted')), status).toBeGreaterThanOrEqual(3)
   })
 
   it('makes muted text and borders darker than the standard theme', () => {
