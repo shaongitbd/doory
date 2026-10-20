@@ -301,3 +301,8 @@ small.error {
   border-color: var(--color-brand);
   background: var(--color-brand-soft);
 }
+
+/* High contrast: the pale track gets an outline, so the full length of the bar shows. */
+:global(:root[data-contrast='more']) .progress {
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}

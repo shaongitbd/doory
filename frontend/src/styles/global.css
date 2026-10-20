@@ -133,6 +133,10 @@ samp {
   outline: 2px solid var(--color-text);
   outline-offset: -2px;
 }
+/* While focused, the state shows as an inset line inside the focus ring instead. */
+:root[data-contrast='more'] :is([aria-pressed='true'], [aria-selected='true'], [aria-current]:not([aria-current='page'], [aria-current='false'])):focus-visible {
+  box-shadow: var(--focus-ring), inset 0 0 0 2px var(--color-text);
+}
 
 ::selection {
   background: var(--pastel-butter);

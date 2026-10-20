@@ -1,5 +1,6 @@
 /** A waveform drawn on a canvas from peaks, with an optional played part and a click-to-seek surface. */
 import { useEffect, useRef } from 'react'
+import { useContrast } from '@/lib/contrast'
 import { type Peaks, barsFor, displayGain } from '../audio/peaks'
 import { t } from '../strings'
 import styles from './Audio.module.css'
@@ -37,6 +38,8 @@ export function AudioWaveform({ peaks, fromMs = 0, toMs, progress, selectFromMs,
   const total = peaks?.durationMs ?? 0
   const to = toMs ?? total
 
+  // The bar colours come from the tokens, which high contrast changes: draw again when it does.
+  const contrast = useContrast().effective
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
@@ -79,7 +82,7 @@ export function AudioWaveform({ peaks, fromMs = 0, toMs, progress, selectFromMs,
       cancelAnimationFrame(frame)
       observer?.disconnect()
     }
-  }, [peaks, fromMs, to, progress, selectFromMs, selectToMs, height])
+  }, [peaks, fromMs, to, progress, selectFromMs, selectToMs, height, contrast])
 
   return (
     <canvas

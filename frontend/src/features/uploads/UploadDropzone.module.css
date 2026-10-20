@@ -144,3 +144,8 @@
 .progress::-moz-progress-bar {
   background: var(--color-brand-fill);
 }
+
+/* High contrast: the pale track gets an outline, so the full length of the bar shows. */
+:global(:root[data-contrast='more']) .progress {
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}

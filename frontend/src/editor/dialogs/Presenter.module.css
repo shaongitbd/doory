@@ -281,6 +281,16 @@
 :global(:root[data-contrast='more']) .overlay .ctl[aria-pressed='true']:not(:focus-visible) {
   outline-color: var(--color-on-stage);
 }
+:global(:root[data-contrast='more']) .overlay .ctl[aria-pressed='true']:focus-visible {
+  box-shadow: var(--focus-ring), inset 0 0 0 2px var(--color-on-stage);
+}
+/* High contrast: the current step is marked in the stage's text colour, and keyboard focus gets a ring. */
+:global(:root[data-contrast='more']) .overlay .segment[aria-current]:not(:focus-visible) {
+  outline-color: var(--color-on-stage);
+}
+:global(:root[data-contrast='more']) .overlay .segment:focus-visible {
+  box-shadow: var(--focus-ring);
+}
 
 .count {
   min-width: 58px;
