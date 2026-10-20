@@ -107,6 +107,11 @@
 .chev:hover {
   background: var(--color-border);
 }
+/* High contrast: the border colour is a mid-tone there, too dark to put icons on. */
+:global(:root[data-contrast='more']) .chev:hover,
+:global(:root[data-contrast='more']) .toggle:hover {
+  background: var(--color-brand-soft-hover);
+}
 
 .icon,
 .thumb {

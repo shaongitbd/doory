@@ -57,6 +57,10 @@
   background: var(--ed-border);
   color: var(--ed-text);
 }
+/* High contrast: the border colour is a mid-tone there, too dark to put the icon on. */
+:global(:root[data-contrast='more']) .clear:hover {
+  background: var(--color-brand-soft-hover);
+}
 .clear:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
