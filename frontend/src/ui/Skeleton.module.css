@@ -15,6 +15,11 @@
   animation: shimmer 1.4s var(--ease-out) infinite;
 }
 
+/* High contrast: the border colour is a mid-tone there, so the shimmer stays a light sweep. */
+:global(:root[data-contrast='more']) .skeleton::after {
+  background: linear-gradient(90deg, transparent, var(--color-bg-subtle), transparent);
+}
+
 @keyframes shimmer {
   to {
     transform: translateX(100%);

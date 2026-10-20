@@ -52,6 +52,7 @@
   --color-canvas-workspace: #ebe7f5; /* area around the artboard in the editor */
   --color-border: #ebe2e8;
   --color-border-strong: #d9ccd5;
+  --color-checker: #d9ccd5; /* transparency checkerboards; high contrast leaves it, so colours preview the same */
   --color-text: var(--ink);
   --color-text-muted: #6f6170;
   --color-text-subtle: #73667a;

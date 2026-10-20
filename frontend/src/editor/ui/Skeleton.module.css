@@ -4,6 +4,10 @@
   background-size: 300% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
+/* High contrast: the border colour is a mid-tone there, so the shimmer stays a light sweep. */
+:global(:root[data-contrast='more']) .skeleton {
+  background-image: linear-gradient(100deg, var(--color-bg-muted) 30%, var(--color-bg-subtle) 50%, var(--color-bg-muted) 70%);
+}
 
 @keyframes shimmer {
   from {

@@ -47,8 +47,8 @@ describe('high-contrast tokens', () => {
     }
   })
 
-  it('leaves the page, workspace and stage alone, and stays light', () => {
-    for (const name of ['--color-bg', '--color-canvas-workspace', '--color-stage', '--color-on-stage', 'color-scheme']) expect(more).not.toHaveProperty(name)
+  it('leaves the page, workspace, stage and transparency checkerboard alone, and stays light', () => {
+    for (const name of ['--color-bg', '--color-canvas-workspace', '--color-stage', '--color-on-stage', '--color-checker', 'color-scheme']) expect(more).not.toHaveProperty(name)
   })
 
   it('keeps every text colour at 7:1 or more on every surface', () => {

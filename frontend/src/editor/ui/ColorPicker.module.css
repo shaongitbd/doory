@@ -82,7 +82,7 @@
 }
 .alphaWrap {
   border-radius: 99px;
-  background: repeating-conic-gradient(var(--color-border-strong) 0% 25%, var(--color-surface) 0% 50%) 50% / 10px 10px;
+  background: repeating-conic-gradient(var(--color-checker) 0% 25%, var(--color-surface) 0% 50%) 50% / 10px 10px;
 }
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
