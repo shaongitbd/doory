@@ -151,6 +151,10 @@
   outline: none;
   background: var(--ed-surface-2);
 }
+/* High contrast: keyboard focus gets the focus ring, apart from the outline on the selected option. */
+:global(:root[data-contrast='more']) .menu button:focus-visible {
+  box-shadow: inset var(--focus-ring);
+}
 .menu button.active {
   background: var(--ed-accent-glow);
   font-weight: 600;
