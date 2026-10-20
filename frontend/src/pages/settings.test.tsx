@@ -146,6 +146,7 @@ describe('settings: accessibility', () => {
     renderApp('/settings', { user: makeUser() })
     const card = within(await screen.findByRole('region', { name: 'Accessibility' }))
     expect(card.getByRole('radio', { name: 'Match my device' })).toBeChecked()
+    expect(card.getByRole('radio', { name: 'Match my device' })).toHaveAccessibleDescription('Uses high contrast when your device asks for more contrast.')
     expect(document.documentElement.hasAttribute('data-contrast')).toBe(false)
     await userEvent.click(card.getByRole('radio', { name: 'High contrast' }))
     expect(document.documentElement.dataset.contrast).toBe('more')

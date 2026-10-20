@@ -221,6 +221,20 @@ describe('other tabs', () => {
   })
 })
 
+describe('disposers', () => {
+  it('only remove their own listeners, once', () => {
+    const system = stubSystem(false)
+    const first = initContrast()
+    first()
+    const second = initContrast()
+    first()
+    expect(system.listeners.size).toBe(1)
+    expect(initContrast()).toBe(second)
+    second()
+    expect(system.listeners.size).toBe(0)
+  })
+})
+
 describe('useContrast', () => {
   it('returns a stable snapshot and updates on change', () => {
     const { result, rerender } = renderHook(() => useContrast())

@@ -44,6 +44,7 @@ export function RadioGroup<T extends string>({ legend, options, value, defaultVa
                   checked={current === option.value}
                   disabled={option.disabled}
                   onChange={() => setCurrent(option.value)}
+                  aria-describedby={option.description ? `${id}-desc` : undefined}
                 />
                 <span className={styles.visual} aria-hidden="true" />
               </span>
@@ -51,7 +52,11 @@ export function RadioGroup<T extends string>({ legend, options, value, defaultVa
                 <label htmlFor={id} className={styles.label}>
                   {option.label}
                 </label>
-                {option.description ? <span className={styles.description}>{option.description}</span> : null}
+                {option.description ? (
+                  <span id={`${id}-desc`} className={styles.description}>
+                    {option.description}
+                  </span>
+                ) : null}
               </span>
             </div>
           )

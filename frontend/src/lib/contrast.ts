@@ -113,11 +113,14 @@ export function initContrast(): () => void {
   if (mq?.addEventListener) mq.addEventListener('change', update)
   else mq?.addListener?.(update) // Safari before 14
   window.addEventListener('storage', onStorage)
+  let done = false
   const off = (): void => {
+    if (done) return
+    done = true
     if (mq?.removeEventListener) mq.removeEventListener('change', update)
     else mq?.removeListener?.(update)
     window.removeEventListener('storage', onStorage)
-    dispose = null
+    if (dispose === off) dispose = null
   }
   dispose = off
   return off
