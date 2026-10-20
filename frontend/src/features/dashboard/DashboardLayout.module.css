@@ -179,6 +179,13 @@
   color: var(--color-brand-strong);
 }
 
+/* High contrast: muted text is nearly ink there, so the current page also gets the selected outline. */
+:global(:root[data-contrast='more']) .link[aria-current='page']:not(:focus-visible),
+:global(:root[data-contrast='more']) .tab[aria-current='page']:not(:focus-visible) {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
 .main {
   flex: 1;
   padding: var(--space-6) var(--space-4) var(--space-16);
