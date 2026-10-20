@@ -56,6 +56,12 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* High contrast: muted text is nearly ink there, so the selected option also gets the selected outline. */
+:global(:root[data-contrast='more']) .segment[data-checked] .text {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
 .input:focus-visible + .text {
   box-shadow: var(--focus-ring);
 }
