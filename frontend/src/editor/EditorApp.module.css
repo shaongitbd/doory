@@ -42,7 +42,7 @@
 }
 
 /*
- * High contrast: the light dividers are drawn in the background colour today, so they get the border colour, and the
+ * High contrast: the light dividers use a background colour (--color-bg-muted), so they get the border colour, and the
  * pale focus halo on text fields becomes the real focus ring.
  */
 :global(:root[data-contrast='more']) .root {
