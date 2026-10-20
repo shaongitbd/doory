@@ -15,6 +15,7 @@
   --ed-accent: var(--color-brand);
   --ed-accent-hover: var(--color-brand-hover);
   --ed-accent-glow: var(--color-brand-soft);
+  --ed-focus-glow: 0 0 0 3px var(--ed-accent-glow); /* the focus halo on text fields and selects */
   --ed-canvas-bg: var(--color-canvas-workspace);
   --ed-danger: var(--color-danger);
   --ed-danger-dim: var(--color-danger-soft);
@@ -40,9 +41,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* High contrast: the light dividers are drawn in the background colour today, so they get the border colour. */
+/*
+ * High contrast: the light dividers are drawn in the background colour today, so they get the border colour, and the
+ * pale focus halo on text fields becomes the real focus ring.
+ */
 :global(:root[data-contrast='more']) .root {
   --ed-border-light: var(--color-border);
+  --ed-focus-glow: var(--focus-ring);
 }
 
 .root *,

@@ -14,7 +14,7 @@
 }
 .search:focus-within {
   border-color: var(--ed-accent);
-  box-shadow: 0 0 0 3px var(--ed-accent-glow);
+  box-shadow: var(--ed-focus-glow);
 }
 .searchIcon {
   position: absolute;
@@ -94,7 +94,7 @@
 .categoryBtn.open {
   outline: none;
   border-color: var(--ed-accent);
-  box-shadow: 0 0 0 3px var(--ed-accent-glow);
+  box-shadow: var(--ed-focus-glow);
 }
 .categoryBtn:disabled {
   opacity: 0.6;

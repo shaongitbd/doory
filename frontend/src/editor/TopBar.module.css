@@ -102,7 +102,7 @@
   outline: none;
   border-color: var(--ed-accent);
   background: var(--ed-surface);
-  box-shadow: 0 0 0 3px var(--ed-accent-glow);
+  box-shadow: var(--ed-focus-glow);
   text-align: left;
 }
 

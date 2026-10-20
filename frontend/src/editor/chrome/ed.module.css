@@ -278,7 +278,7 @@
 .select[aria-expanded='true'] {
   outline: none;
   border-color: var(--ed-accent);
-  box-shadow: 0 0 0 3px var(--ed-accent-glow);
+  box-shadow: var(--ed-focus-glow);
 }
 .select:disabled {
   opacity: 0.5;
@@ -311,7 +311,7 @@
 }
 .stepper:focus-within {
   border-color: var(--ed-accent);
-  box-shadow: 0 0 0 3px var(--ed-accent-glow);
+  box-shadow: var(--ed-focus-glow);
 }
 .stepBtn {
   width: 28px;
@@ -391,7 +391,7 @@
 .propInput:focus {
   outline: none;
   border-color: var(--ed-accent);
-  box-shadow: 0 0 0 3px var(--ed-accent-glow);
+  box-shadow: var(--ed-focus-glow);
 }
 .propInput[aria-invalid='true'] {
   border-color: var(--ed-danger);
