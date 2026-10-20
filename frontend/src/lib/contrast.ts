@@ -41,7 +41,7 @@ export function resolveContrast(preference: ContrastPreference, systemMore: bool
 
 const listeners = new Set<() => void>()
 let snapshot: ContrastSnapshot | null = null
-/** A choice storage refused to keep: it holds for this session instead. */
+/** A choice storage refused to keep: it holds for this session instead, until another tab makes a choice. */
 let unsaved: ContrastPreference | null = null
 
 function current(): ContrastSnapshot {
@@ -105,7 +105,9 @@ export function initContrast(): () => void {
   applyContrast()
   const update = (): void => applyContrast()
   const onStorage = (event: StorageEvent): void => {
-    if (event.key === CONTRAST_KEY || event.key === null) update()
+    if (event.key !== CONTRAST_KEY && event.key !== null) return
+    unsaved = null // the other tab's choice wins, so this tab keeps following the others
+    update()
   }
   const mq = typeof window.matchMedia === 'function' ? window.matchMedia(CONTRAST_QUERY) : null
   if (mq?.addEventListener) mq.addEventListener('change', update)

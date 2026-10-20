@@ -183,6 +183,18 @@ describe('other tabs', () => {
     off()
   })
 
+  it('lets another tab override a choice this tab could not store', () => {
+    init()
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new Error('quota')
+    })
+    setContrastPreference('more')
+    localStorage.setItem(CONTRAST_KEY, 'standard')
+    fire(CONTRAST_KEY, 'standard')
+    expect(getContrastSnapshot().preference).toBe('standard')
+    expect(root.hasAttribute('data-contrast')).toBe(false)
+  })
+
   it("resolves an invalid value as 'system' and ignores other keys", () => {
     init()
     localStorage.setItem(CONTRAST_KEY, '"><script>')
