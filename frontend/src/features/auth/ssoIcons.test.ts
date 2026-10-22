@@ -1,4 +1,4 @@
-import { hasSsoIcon } from './ssoIcons'
+import { hasSsoIcon } from './ssoIconTable'
 
 const files = import.meta.glob<string>('/src/assets/sso-icons/*.svg', { query: '?raw', import: 'default', eager: true })
 const sources: Record<string, { source: string; license: string; url: string }> = JSON.parse(
