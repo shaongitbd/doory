@@ -333,7 +333,7 @@ def read_probe(data: dict, size: int) -> VideoInfo:
         constant_rate=bool(sane and real and average and abs(real - average) / real < 0.01),
         has_audio=bool(audios),
         audio_codec=str(audios[0].get("codec_name", "")) if audios else "",
-        hdr=transfer in ("smpte2084", "arib-std-b67") or str(video.get("color_primaries", "")) == "bt2020",
+        hdr=transfer in ("smpte2084", "arib-std-b67"),  # PQ or HLG: BT.2020 colours alone are not HDR
         size=size,
     )
 

@@ -53,6 +53,14 @@ class TestReadProbe:
     def test_anything_else_is_converted(self, change):
         assert not info(**change).web_ready
 
+    @pytest.mark.parametrize(
+        ("transfer", "hdr"), [("smpte2084", True), ("arib-std-b67", True), ("bt2020-10", False)]
+    )
+    def test_hdr_needs_an_hdr_transfer_not_only_bt2020_colours(self, transfer, hdr):
+        clip = info(codec_name="hevc", color_primaries="bt2020", color_transfer=transfer)
+        args = video.transcode_args(video.Path("in"), video.Path("out.mp4"), clip)
+        assert clip.hdr is hdr and ("tonemap" in args[args.index("-vf") + 1]) is hdr
+
     def test_audio_that_is_not_aac_is_converted(self):
         data = described()
         data["streams"][1]["codec_name"] = "opus"
