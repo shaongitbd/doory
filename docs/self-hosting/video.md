@@ -7,10 +7,12 @@ People can put video clips in their designs: their own uploads, or stock videos 
 web-ready with `ffmpeg`, so every browser can play it and the editor can scrub and export it quickly:
 
 - **Every clip ends up the same:** H.264 video with AAC sound in an MP4, at most 1920 by 1080 (1080 by 1920 for
-  portrait clips), with a key frame at least every two seconds.
+  portrait clips).
 - **A clip that is already like that** (most phone recordings from Android, screen recordings, stock videos) is
-  only rewrapped. That takes a second or two, and the upload answers when it's done.
-- **Anything else** (iPhone HEVC and HDR clips, 4K, ProRes, VP9, AVI and so on) is converted in the background.
+  only rewrapped. That takes a second or two, and the upload answers when it's done. It keeps the key frames
+  it came with.
+- **Anything else** (iPhone HEVC and HDR clips, 4K, ProRes, VP9, AVI and so on) is converted in the background,
+  with a key frame every two seconds.
   The upload answers right away with `status: processing`, and the editor shows the clip as soon as it is
   `ready`. A five-minute 4K iPhone clip takes about a minute on a few CPU cores.
 - **Each clip also gets** a poster (the frame that thumbnails, PNG and PDF downloads and the server's image export

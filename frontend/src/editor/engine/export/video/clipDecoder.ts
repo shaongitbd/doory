@@ -1,10 +1,11 @@
 /**
  * The exporter's clip source: the exact picture of a clip at each frame of the video, decoded with WebCodecs.
  *
- * The server makes every clip an H.264 MP4 with its index first and a key frame at least every two seconds, so the clip
- * is demuxed once (mp4box.js, while it downloads) into its encoded samples, and frames are decoded forward as the
- * export asks for later and later times. A loop or a trim that goes back restarts from the key frame at or before the
- * time wanted. Only one decoded picture is held at a time (plus the few the decoder hands over ahead of it).
+ * The server makes every clip an H.264 MP4 with its index first (a converted one with a key frame every two seconds, a
+ * rewrapped one with the key frames it came with), so the clip is demuxed once (mp4box.js, while it downloads) into its
+ * encoded samples, and frames are decoded forward as the export asks for later and later times. A loop or a trim that
+ * goes back restarts from the key frame at or before the time wanted. Only one decoded picture is held at a time (plus
+ * the few the decoder hands over ahead of it).
  *
  * Where WebCodecs can't decode the clip (no `VideoDecoder`, or the codec isn't supported), the clip is played by a
  * `<video>` that seeks to each frame instead: slower and less exact, but it works everywhere.

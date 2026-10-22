@@ -5,10 +5,10 @@ environment, a private work directory and a hard deadline. They're installed wit
 (`INSTALL_FFMPEG`) or by the operator; without them the server takes no video (`available()`).
 
 Every clip ends up the same way, whatever came in: H.264 (yuv420p) with AAC sound in an MP4 whose index sits
-at the front (`+faststart`), at most 1920 by 1080, with a key frame at least every two seconds. Then every
-browser can play it, the editor can seek it quickly, and the export can decode it with WebCodecs. A file that
-already looks like that is only rewrapped (`remux`, a second or two). Anything else is converted
-(`transcode`), which can take minutes and so runs off the request (`video_jobs`).
+at the front (`+faststart`), at most 1920 by 1080. Then every browser can play it, the editor can seek it
+quickly, and the export can decode it with WebCodecs. A file that already looks like that is only rewrapped
+(`remux`, a second or two) and keeps the key frames it came with. Anything else is converted (`transcode`),
+with a key frame every two seconds, which can take minutes and so runs off the request (`video_jobs`).
 
 Each clip also gets a poster (the frame every still surface shows: thumbnails, PNG/PDF export, the server's
 image export), a filmstrip for the timeline, and its sound as an .m4a of its own for the audio mix.
