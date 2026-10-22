@@ -4,6 +4,7 @@ import type { DocObject, DocPage, DoryDocument } from '@/types/document'
 import { createMemoryAdapter } from '../../dev/memoryAdapter'
 import { EditorEngine } from '../editor'
 import { runExport } from './exporter'
+import { pageMultiplier } from './formats'
 import { DEFAULT_EXPORT_OPTIONS, pageFilename } from './registry'
 
 const rect = (id: string, left: number, top: number): DocObject => ({
@@ -149,6 +150,16 @@ describe('exports of a design with pages of different sizes', () => {
     expect(input.width).toBe(794)
     engine.dispose()
   }, 30_000)
+})
+
+describe('the scale of each page', () => {
+  it('takes a width per page, and keeps one too large for a small page to the largest scale, not the plain scale', () => {
+    const options = { ...DEFAULT_EXPORT_OPTIONS, scale: 1, size: '2000w' }
+    expect(pageMultiplier(options, { width: 1000, height: 1000 })).toBe(2)
+    expect(pageMultiplier(options, { width: 336, height: 192 })).toBe(4)
+    expect(pageMultiplier({ ...options, size: '10w' }, { width: 336, height: 192 })).toBe(0.1)
+    expect(pageMultiplier({ ...options, size: 'big' }, { width: 336, height: 192 })).toBe(1)
+  })
 })
 
 describe('page file names', () => {

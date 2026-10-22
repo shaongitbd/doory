@@ -24,15 +24,20 @@ export function readSize(text: string): ParsedSize | null {
   return { kind: unit === 'w' ? 'w' : unit === 'h' ? 'h' : 'x', value }
 }
 
+/** The scale `text` asks of a page of `width` × `height` px, whatever it is; null when the text is not a size. */
+export function sizeScale(text: string, width: number, height: number): number | null {
+  const size = readSize(text)
+  if (!size || width <= 0 || height <= 0) return null
+  return size.kind === 'w' ? size.value / width : size.kind === 'h' ? size.value / height : size.value
+}
+
 /**
  * The scale `text` asks of a page of `width` × `height` px, or null when the text is not a size or the scale is outside
  * MIN_SCALE..MAX_SCALE (`8000w` of a 1080 px page). Each page of a design with mixed sizes gets its own scale.
  */
 export function parseSize(text: string, width: number, height: number): number | null {
-  const size = readSize(text)
-  if (!size || width <= 0 || height <= 0) return null
-  const scale = size.kind === 'w' ? size.value / width : size.kind === 'h' ? size.value / height : size.value
-  return scale >= MIN_SCALE - 1e-9 && scale <= MAX_SCALE + 1e-9 ? scale : null
+  const scale = sizeScale(text, width, height)
+  return scale !== null && scale >= MIN_SCALE - 1e-9 && scale <= MAX_SCALE + 1e-9 ? scale : null
 }
 
 /** The pixels a page becomes at `scale`, rounded like the renderer. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSize, readSize, scaledPixels } from './size'
+import { parseSize, readSize, scaledPixels, sizeScale } from './size'
 
 describe('parseSize', () => {
   it('reads a scale, a width or a height', () => {
@@ -24,6 +24,11 @@ describe('parseSize', () => {
     expect(parseSize('50w', 1080, 1350)).toBeNull()
     expect(parseSize('4x', 1080, 1350)).toBe(4)
     expect(parseSize('0.1x', 1080, 1350)).toBe(0.1)
+  })
+
+  it('tells the scale asked of a page even outside the limits', () => {
+    expect(sizeScale('2000w', 400, 300)).toBe(5)
+    expect(sizeScale('big', 400, 300)).toBeNull()
   })
 
   it('tells what was typed', () => {

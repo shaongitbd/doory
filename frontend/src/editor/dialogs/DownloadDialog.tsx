@@ -118,10 +118,11 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
   const files = chosen.length
   const zipped = files > 1 && format?.mime !== 'application/pdf' && !video
 
-  // The size as typed, the scale it means for the first page, and whether the browser had to draw smaller.
+  // The size as typed, the scale it means for the first page, and whether the browser had to draw smaller. Every page
+  // downloaded must take it: `2000w` is 1.9x of a 1080 px page but 5x of a 400 px one.
   const sizeText = options.size ?? `${options.scale}x`
   const typed = parseSize(sizeText, size.width, size.height)
-  const sizeValid = !raster || typed !== null
+  const sizeValid = !raster || (typed !== null && chosen.every((s) => parseSize(sizeText, s.width, s.height) !== null))
   const wanted = typed ?? options.scale
   const clamped = !!raster && chosen.some((s) => safeMultiplier(s.width, s.height, pageMultiplier(options, s)) < pageMultiplier(options, s) - 1e-6)
   const multiplier = safeMultiplier(size.width, size.height, wanted)

@@ -563,6 +563,25 @@ describe('Download dialog: pictures', () => {
     expect(within(dialog()).getByRole('button', { name: t.dialog.downloadButton })).toBeEnabled()
   })
 
+  it('checks a typed width against every page downloaded, not only the first', async () => {
+    ;({ engine } = setup())
+    // Pages of 1080, 794 and 400 px: 2000w is 5x of the last one.
+    await userEvent.clear(sizeField())
+    await userEvent.type(sizeField(), '2000w')
+    expect(within(dialog()).getByRole('alert')).toHaveTextContent(t.dialog.downloadSizeInvalid)
+    expect(within(dialog()).getByRole('button', { name: t.dialog.downloadNFiles(4) })).toBeDisabled()
+    await userEvent.clear(sizeField())
+    await userEvent.type(sizeField(), '1600w')
+    expect(within(dialog()).queryByRole('alert')).toBeNull()
+    expect(within(dialog()).getByRole('button', { name: t.dialog.downloadNFiles(4) })).toBeEnabled()
+    await userEvent.clear(sizeField())
+    await userEvent.type(sizeField(), '2000w')
+    await more()
+    await userEvent.click(within(dialog()).getByRole('radio', { name: t.dialog.downloadCurrentPage }))
+    expect(within(dialog()).queryByRole('alert')).toBeNull()
+    expect(within(dialog()).getByRole('button', { name: t.dialog.downloadButton })).toBeEnabled()
+  })
+
   it('the stops and the number set the quality; a typed number leaves the stops', async () => {
     ;({ engine } = setup({ doc: story() }))
     await userEvent.click(within(dialog()).getByRole('button', { name: /Small file/ }))
