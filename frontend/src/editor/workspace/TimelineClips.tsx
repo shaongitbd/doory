@@ -66,6 +66,12 @@ export function ClipsSection({ pageId, pxPerMs, contentWidth, readOnly }: Timeli
     drag.current = null
   }
   const onKey = (id: string, clip: Clip, e: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      // A button: Enter and Space select the clip, as pressing it does.
+      e.preventDefault()
+      if (!readOnly && editor.state.activePageId === pageId) editor.select([id], pageId)
+      return
+    }
     if (readOnly || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
     e.preventDefault()
     const delta = (e.key === 'ArrowLeft' ? -1 : 1) * TIME_STEP_MS
