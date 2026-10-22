@@ -32,7 +32,10 @@ function server(answer: (input: OptimizeImageInput) => Promise<OptimizedImage> =
 
 const options = { ...DEFAULT_EXPORT_OPTIONS, quality: 0.82 }
 
-afterEach(() => setBrowserWebpForTests(null))
+afterEach(() => {
+  setBrowserWebpForTests(null)
+  vi.useRealTimers()
+})
 
 describe('encodeRaster: the browser first, the server when it helps', () => {
   it('keeps the browser file when nothing asks for the server', async () => {
@@ -97,6 +100,52 @@ describe('encodeRaster: the browser first, the server when it helps', () => {
       throw new DOMException('Aborted', 'AbortError')
     })
     await expect(encodeRaster(fakeCanvas(), 'jpg', { ...options, optimize: true }, adapter)).rejects.toThrow('Aborted')
+  })
+
+  it('asked to slow down (429), waits as long as the server says and tries again', async () => {
+    vi.useFakeTimers()
+    const busy = new ApiError({ status: 429, code: 'throttled', message: 'Slow down', retryAfter: 7 })
+    const adapter = server()
+    adapter.optimizeImage.mockRejectedValueOnce(busy)
+    const pending = encodeRaster(fakeCanvas(), 'jpg', { ...options, optimize: true }, adapter)
+    await vi.advanceTimersByTimeAsync(6900)
+    expect(adapter.optimizeImage).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(200)
+    const out = await pending
+    expect(adapter.optimizeImage).toHaveBeenCalledTimes(2)
+    expect(out).toMatchObject({ format: 'jpg', optimized: true })
+    expect(out.note).toBeUndefined()
+  })
+
+  it('waits at most a minute per try, and keeps the browser file after a few tries', async () => {
+    vi.useFakeTimers()
+    const adapter = server(async () => {
+      throw new ApiError({ status: 429, code: 'throttled', message: 'Slow down', retryAfter: 3600 })
+    })
+    const pending = encodeRaster(fakeCanvas(), 'jpg', { ...options, optimize: true }, adapter)
+    await vi.advanceTimersByTimeAsync(59_000)
+    expect(adapter.optimizeImage).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(adapter.optimizeImage).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(120_000)
+    const out = await pending
+    expect(adapter.optimizeImage).toHaveBeenCalledTimes(4)
+    expect(out).toMatchObject({ format: 'jpg', optimized: false, note: t.dialog.downloadServerSkipped })
+  })
+
+  it('a cancel during the wait stops at once, without another try', async () => {
+    vi.useFakeTimers()
+    const adapter = server(async () => {
+      throw new ApiError({ status: 429, code: 'throttled', message: 'Slow down', retryAfter: 30 })
+    })
+    const controller = new AbortController()
+    const pending = encodeRaster(fakeCanvas(), 'jpg', { ...options, optimize: true }, adapter, controller.signal)
+    const failed = expect(pending).rejects.toThrow('Aborted')
+    await vi.advanceTimersByTimeAsync(1000)
+    controller.abort()
+    await failed
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(adapter.optimizeImage).toHaveBeenCalledTimes(1)
   })
 
   it('fits a cap in the browser by lowering the quality', async () => {
