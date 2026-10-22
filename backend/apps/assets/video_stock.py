@@ -1,4 +1,4 @@
-"""`/stock/videos/` — search and import clips from the configured video providers (Pexels, Pixabay).
+"""`/stock/videos/`: search and import clips from the configured video providers (Pexels, Pixabay).
 
 The same machinery as stock photos (`stock`): per-provider caching with a stale fallback, a short lock against
 bursts, and an "All" tab that searches the providers in parallel. A clip is imported by downloading it on the
