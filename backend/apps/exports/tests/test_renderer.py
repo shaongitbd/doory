@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from django.conf import settings as django_settings
 
-from apps.exports import renderer
+from apps.exports import chromium_worker, renderer
 from apps.exports.exceptions import ExportFailed, ExportTimeout, ExportUnavailable, InvalidExport
 
 
@@ -443,6 +443,81 @@ def test_pictures_are_jpegs_and_the_default_deadline_is_the_setting(use_worker, 
     result = render_some_pages({"document": {}, "pages": [0], "output": "picture"})
     assert result.mime == "image/jpeg" and result.pages[0].pixel_width == 900
     assert json.loads((tmp_path / "seen.json").read_text())["timeout_s"] == 12
+
+
+def test_svg_and_print_pages_get_size_limits(use_worker, tmp_path):
+    seen = tmp_path / "seen.json"
+    use_worker(
+        f"""
+        payload = json.loads(Path(spec["payload_path"]).read_text())
+        Path({str(seen)!r}).write_text(json.dumps([
+            spec["max_page_bytes"], spec["max_total_bytes"], payload.get("maxPageBytes"), payload.get("maxTotalBytes"),
+        ]))
+        (Path(spec["pages_dir"]) / "page-1.svg").write_bytes(b"<svg/>")
+        Path(spec["report_path"]).write_text(json.dumps({{"status": "ok", "pages": [{{"file": "page-1.svg"}}]}}))
+        """
+    )
+    mb = 1024 * 1024
+    for output, limits in (
+        ("svg", [50 * mb, 200 * mb]),
+        ("print", [5 * mb, 200 * mb]),
+        ("picture", [None, None]),
+    ):
+        render_some_pages({"document": {}, "pages": [0], "output": output})
+        assert json.loads(seen.read_text()) == limits * 2
+
+
+class FakeRenderPage:
+    """The render page as `chromium_worker._render_pages` drives it, answering `answer`."""
+
+    def __init__(self, answer):
+        self.answer = answer
+
+    def goto(self, *args, **kwargs):
+        pass
+
+    def wait_for_function(self, *args, **kwargs):
+        pass
+
+    def evaluate(self, script, *args):
+        return True if script == chromium_worker.HAS_RENDER_PAGES else self.answer
+
+
+def worker_pages(tmp_path, texts, output="svg", **limits) -> dict:
+    (tmp_path / "payload.json").write_text(json.dumps({"output": output}))
+    (tmp_path / "pages").mkdir(exist_ok=True)
+    spec = {"payload_path": str(tmp_path / "payload.json"), "pages_dir": str(tmp_path / "pages"), **limits}
+    spec["render_url"] = RENDER_URL
+    pages = [{"data": text, "pageIndex": index} for index, text in enumerate(texts)]
+    report = {"status": "ok"}
+    chromium_worker._render_pages(FakeRenderPage({"ok": True, "pages": pages}), spec, lambda: 1000, report)
+    return report
+
+
+def test_the_worker_refuses_pages_over_the_size_limits_before_writing_them(tmp_path):
+    report = worker_pages(tmp_path, ["<svg/>", "<svg>" + "x" * 100 + "</svg>"], max_page_bytes=100)
+    assert (report["status"], report["error"]["code"]) == ("error", "too_large")
+    assert report["error"]["message"].startswith(
+        "Page 2 would be a file of 0.0 MB; this server makes SVG files"
+    )
+    assert list((tmp_path / "pages").iterdir()) == []
+    report = worker_pages(tmp_path, ["<svg>a</svg>"] * 3, "print", max_page_bytes=100, max_total_bytes=30)
+    assert report["error"]["code"] == "too_large" and "together" in report["error"]["message"]
+    assert list((tmp_path / "pages").iterdir()) == []
+    report = worker_pages(tmp_path, ["<svg>a</svg>"] * 3, "print", max_page_bytes=100, max_total_bytes=36)
+    assert report["status"] == "ok" and len(list((tmp_path / "pages").iterdir())) == 3
+
+
+def test_pages_over_the_size_limits_are_an_invalid_export(use_worker):
+    use_worker(
+        """
+        Path(spec["report_path"]).write_text(json.dumps({"status": "error", "kind": "render",
+            "error": {"code": "too_large", "message": "Page 2 would be a file of 80.0 MB."}}))
+        """
+    )
+    with pytest.raises(InvalidExport) as raised:
+        render_some_pages()
+    assert raised.value.get_codes() == "too_large" and "80.0 MB" in str(raised.value.detail)
 
 
 @pytest.mark.parametrize(

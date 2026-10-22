@@ -21,6 +21,8 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 
+from apps.core import svg
+
 from .exceptions import ExportBusy, ExportFailed, ExportTimeout, ExportUnavailable, InvalidExport
 from .policy import RequestPolicy
 
@@ -49,6 +51,12 @@ RENDER_PAGE_INPUT_ERRORS = frozenset(
 # The render page's browser has no encoder for the video asked for (a 503).
 RENDER_PAGE_UNAVAILABLE = frozenset({"video_unsupported"})
 PAGE_MIME_TYPES = {"svg": "image/svg+xml", "print": "image/svg+xml", "picture": "image/jpeg"}
+# The largest file of one page `render_pages` takes, and of all its pages together (`too_large`, before the
+# worker writes them). An SVG carries its pictures inside, once for every use: a design that repeats a large
+# picture makes a huge file. Print pages go through the SVG sanitiser, which takes at most `svg.MAX_BYTES`.
+# Pictures (JPEG) are bounded by their pixels.
+MAX_PAGE_BYTES = {"svg": 50 * 1024 * 1024, "print": svg.MAX_BYTES}
+MAX_PAGES_TOTAL_BYTES = 200 * 1024 * 1024
 VIDEO_MIME_TYPES = frozenset({"video/mp4", "video/webm", "image/gif"})
 _ENV_ALLOWLIST = (
     "PATH",
@@ -317,19 +325,26 @@ def render_pages(payload: dict, *, render_url: str, timeout: float | None = None
     picture).
 
     `payload` is the render page's input (`document`, `pages`, `output`, `bleed`, `multiplier`, `maxPixels`,
-    `fonts`). `timeout` replaces `EXPORT_TIMEOUT_SECONDS` (several pages take longer than one). Raises the
-    `Export*` API exceptions, and `InvalidExport` with the page's code when it refuses the input."""
+    `fonts`); the size limits of SVG and print pages (`MAX_PAGE_BYTES`, `MAX_PAGES_TOTAL_BYTES`) are added to
+    it. `timeout` replaces `EXPORT_TIMEOUT_SECONDS` (several pages take longer than one). Raises the `Export*`
+    API exceptions, and `InvalidExport` with the page's code when it refuses the input (`too_large` for pages
+    over the limits)."""
     _check_render_url(render_url)
+    limits = {}
+    if payload.get("output") in MAX_PAGE_BYTES:
+        limits = {"maxPageBytes": MAX_PAGE_BYTES[payload["output"]], "maxTotalBytes": MAX_PAGES_TOTAL_BYTES}
 
     def prepare(workdir: Path) -> tuple[dict, Path]:
         payload_path, pages_dir = workdir / "payload.json", workdir / "pages"
-        payload_path.write_text(json.dumps(payload), encoding="utf-8")
+        payload_path.write_text(json.dumps({**payload, **limits}), encoding="utf-8")
         pages_dir.mkdir()
         spec = {
             "mode": "pages",
             "render_url": render_url,
             "payload_path": str(payload_path),
             "pages_dir": str(pages_dir),
+            "max_page_bytes": limits.get("maxPageBytes"),
+            "max_total_bytes": limits.get("maxTotalBytes"),
         }
         return spec, pages_dir
 
