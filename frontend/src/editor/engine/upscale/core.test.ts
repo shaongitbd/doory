@@ -45,24 +45,39 @@ describe('upscaleImageData', () => {
     expect(out.data[(out.width - 1) * 4]).toBe(255)
   })
 
-  it('clamps the ringing around a hard edge to the source range', () => {
-    const width = 8
+  /** `width` x 2 pixels: `left` on the left half and `right` on the right half. */
+  function edge(width: number, left: readonly [number, number, number, number], right: readonly [number, number, number, number]): Uint8ClampedArray {
     const source = new Uint8ClampedArray(width * 2 * 4)
     for (let y = 0; y < 2; y++) {
-      for (let x = 0; x < width; x++) {
-        const value = x < width / 2 ? 0 : 255
-        source.set([value, value, value, 255], (y * width + x) * 4)
-      }
+      for (let x = 0; x < width; x++) source.set(x < width / 2 ? left : right, (y * width + x) * 4)
     }
-    const out = upscaleImageData(source, width, 2, { scale: 4 })
+    return source
+  }
+
+  it('clamps the ringing around a hard edge to the source range', () => {
+    // Mid-grey on both sides, so an overshoot would show up as a value outside 64..192 rather than
+    // being hidden by the 0..255 range of the bytes. No detail pass, which could sharpen past it.
+    const out = upscaleImageData(edge(8, [64, 64, 64, 255], [192, 192, 192, 255]), 8, 2, { scale: 4, detail: 0 })
     for (let i = 0; i < out.data.length; i += 4) {
-      expect(out.data[i]).toBeGreaterThanOrEqual(0)
-      expect(out.data[i]).toBeLessThanOrEqual(255)
+      for (let channel = 0; channel < 3; channel++) {
+        expect(out.data[i + channel]).toBeGreaterThanOrEqual(64)
+        expect(out.data[i + channel]).toBeLessThanOrEqual(192)
+      }
+      expect(out.data[i + 3]).toBe(255)
     }
-    // The pixels just before and after the transition may not overshoot to more white than 255.
-    const edge = width * 2
-    expect(pixel(out.data, out.width, edge - 1, 0)[0]).toBeLessThanOrEqual(255)
-    expect(pixel(out.data, out.width, edge, 0)[0]).toBeLessThanOrEqual(255)
+  })
+
+  it('leaves no dark fringe along a semi-transparent edge', () => {
+    // Both halves half transparent: the colour is divided by the resampled alpha, where an unclamped
+    // undershoot turns into a dark (even black) seam.
+    const out = upscaleImageData(edge(8, [64, 64, 64, 128], [192, 192, 192, 128]), 8, 2, { scale: 4, detail: 0 })
+    for (let i = 0; i < out.data.length; i += 4) {
+      for (let channel = 0; channel < 3; channel++) {
+        expect(out.data[i + channel]).toBeGreaterThanOrEqual(64)
+        expect(out.data[i + channel]).toBeLessThanOrEqual(192)
+      }
+      expect(out.data[i + 3]).toBe(128)
+    }
   })
 
   it('uses exact nearest-neighbour pixels in pixel mode', () => {
