@@ -230,6 +230,7 @@ REST_FRAMEWORK = {
         "anon": "240/min",
         "user": "1200/min",
         "auth": "20/min",  # login / register / password reset
+        "oidc": "30/min",  # single sign-on: a sign-in takes one start and one callback
         "upload": "60/min",
         "stock": "60/min",
         "stock_preview": "300/min",  # listening to Freesound previews; searches keep the `stock` budget

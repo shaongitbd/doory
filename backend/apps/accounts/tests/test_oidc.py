@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from django.core import mail
 from django.core.management import call_command
 from rest_framework.test import APIClient
+from rest_framework.throttling import SimpleRateThrottle
 
 from apps.accounts import oidc
 from apps.accounts.checks import check_oidc_settings
@@ -667,6 +668,21 @@ def test_rotated_keys_are_fetched_again_once(client, provider):
     provider.serve(jwt.encode(provider.payload(), rsa_key(1), algorithm="RS256", headers={"kid": "key-3"}))
     assert sso_error(callback(client, provider)) == "oidc_failed"
     assert len(provider.calls_to(provider.metadata["jwks_uri"])) == 2
+
+
+def test_sso_has_its_own_throttle_scope(client, provider, monkeypatch):
+    monkeypatch.setattr(
+        SimpleRateThrottle,
+        "THROTTLE_RATES",
+        {"auth": "1/min", "oidc": "3/min", "anon": "1000/min", "user": "1000/min"},
+    )
+    payload = {"email": "x@example.com", "password": "wrong-guess-1234"}
+    for _ in range(2):  # the per-IP budget for passwords runs out...
+        res = client.post(LOGIN, payload, format="json")
+    assert res.status_code == 429
+    for _ in range(3):  # ...without touching the one for single sign-on
+        assert client.get(START).status_code == 302
+    assert client.get(START).status_code == 429
 
 
 # --- connecting an existing account -----------------------------------------------------------------------
