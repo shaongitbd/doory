@@ -122,6 +122,32 @@ class TestReadProbe:
         with pytest.raises(video.VideoError, match="no length"):
             video.read_probe(data, 1)
 
+    def test_without_a_container_length_the_longest_stream_counts(self):
+        data = described(duration="9.5")
+        data["format"]["duration"] = "N/A"
+        data["streams"][1]["duration"] = "10.25"
+        assert video.read_probe(data, 1).duration_ms == 10250
+
+    def test_a_browser_recording_of_unknown_length_is_converted_and_capped(self, settings):
+        settings.MAX_VIDEO_DURATION_SECONDS = 600
+        data = {  # what ffprobe says about a MediaRecorder WebM: "Duration: N/A", no stream lengths either
+            "format": {"format_name": "matroska,webm", "duration": "N/A"},
+            "streams": [
+                {"codec_type": "video", "codec_name": "vp8", "width": 1280, "height": 720,
+                 "r_frame_rate": "1000/1", "avg_frame_rate": "0/0"},
+                {"codec_type": "audio", "codec_name": "opus"},
+            ],
+        }  # fmt: skip
+        clip = video.read_probe(data, 1)
+        assert (clip.duration_ms, clip.web_ready) == (0, False)
+        args = video.transcode_args(video.Path("in"), video.Path("out.mp4"), clip)
+        assert args[args.index("-t") + 1] == "600"
+
+    def test_h264_of_unknown_length_is_converted_too(self):
+        data = described()
+        data["format"] = {"format_name": "matroska,webm", "duration": "N/A"}
+        assert not video.read_probe(data, 1).web_ready
+
 
 class TestPlans:
     @pytest.mark.parametrize(

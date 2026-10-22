@@ -59,6 +59,8 @@ SLOT_WAIT_SECONDS = 20.0
 WORK_PREFIX = "doory-video-"
 # The containers ffprobe may name for an upload (format_name is a comma list; any of these will do).
 CONTAINERS = frozenset({"mov", "mp4", "m4a", "3gp", "3g2", "mj2", "matroska", "webm", "avi"})
+# Containers a browser recording (MediaRecorder) comes in, which may not say how long it is.
+RECORDING_CONTAINERS = frozenset({"matroska", "webm"})
 # Still-image "videos" (a GIF, a PNG sequence) are pictures, not clips.
 STILL_CODECS = frozenset({"gif", "png", "mjpeg", "apng", "webp", "bmp", "tiff"})
 _ENV_ALLOWLIST = ("PATH", "HOME", "LANG", "LC_ALL")
@@ -83,7 +85,7 @@ class VideoBusy(VideoError):
 
 @dataclass(frozen=True)
 class VideoInfo:
-    duration_ms: int
+    duration_ms: int  # 0: not known before converting (a browser recording)
     width: int  # as shown, after any rotation
     height: int
     fps: float
@@ -101,7 +103,8 @@ class VideoInfo:
         """True when rewrapping is enough: everything a browser and WebCodecs need is already there."""
         long_side, short_side = max(self.width, self.height), min(self.width, self.height)
         return (
-            self.codec == "h264"
+            self.duration_ms > 0  # a clip of unknown length is converted, which caps it
+            and self.codec == "h264"
             and self.pix_fmt in ("yuv420p", "yuvj420p")
             and long_side <= MAX_WIDTH
             and short_side <= MAX_HEIGHT
@@ -284,7 +287,8 @@ def read_probe(data: dict, size: int) -> VideoInfo:
     """Describe a clip from ffprobe's JSON, or raise `VideoError` when it isn't one we take."""
     fmt = data.get("format") if isinstance(data.get("format"), dict) else {}
     streams = [s for s in data.get("streams") or [] if isinstance(s, dict)]
-    if not CONTAINERS & set(str(fmt.get("format_name", "")).split(",")):
+    formats = set(str(fmt.get("format_name", "")).split(","))
+    if not CONTAINERS & formats:
         raise VideoError("This video format is not supported.")
     videos = [
         s
@@ -300,8 +304,10 @@ def read_probe(data: dict, size: int) -> VideoInfo:
     width, height = int(video.get("width") or 0), int(video.get("height") or 0)
     if not (0 < width <= MAX_DIMENSION and 0 < height <= MAX_DIMENSION):
         raise VideoError("The video's size is not supported.")
-    duration = _rate(fmt.get("duration")) or _rate(video.get("duration"))
-    if duration <= 0:
+    # A container that doesn't say how long it is: its longest stream. A browser recording (MediaRecorder
+    # WebM) often names no length at all: converting it caps it at the longest clip and tells its length.
+    duration = _rate(fmt.get("duration")) or max((_rate(s.get("duration")) for s in streams), default=0.0)
+    if duration <= 0 and not RECORDING_CONTAINERS & formats:
         raise VideoError("The video has no length.")
     if duration > settings.MAX_VIDEO_DURATION_SECONDS:
         minutes = settings.MAX_VIDEO_DURATION_SECONDS / 60
