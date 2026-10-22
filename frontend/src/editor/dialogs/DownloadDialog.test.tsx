@@ -630,6 +630,23 @@ describe('Download dialog: pictures', () => {
     expect(vi.mocked(downloadFiles).mock.calls[0][0][0].filename).toBe('Menu.jpg')
   })
 
+  it('previews an outside optimizer only when asked, and still downloads with it', async () => {
+    const answer = async (input: OptimizeImageInput): Promise<OptimizedImage> => ({ blob: new Blob(['small'], { type: 'image/jpeg' }), format: input.format, width: 1080, height: 1920, quality: 82, bytesBefore: 9000, optimizer: String(input.optimize), optimized: true, warnings: [] })
+    const ctx = withServer(story(), answer)
+    engine = ctx.engine
+    await userEvent.click(within(dialog()).getByRole('radio', { name: 'Our optimizer' }))
+    const ask = await within(dialog()).findByRole('button', { name: t.dialog.downloadPreviewWith('Our optimizer') })
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    const outside = () => ctx.optimizeImage.mock.calls.filter(([input]) => input.optimize === 'custom')
+    expect(outside()).toHaveLength(0)
+    await userEvent.click(ask)
+    await waitFor(() => expect(outside()).toHaveLength(1))
+    await waitFor(() => expect(within(dialog()).queryByRole('button', { name: t.dialog.downloadPreviewWith('Our optimizer') })).toBeNull())
+    await download()
+    await waitFor(() => expect(downloadFiles).toHaveBeenCalled())
+    expect(outside()).toHaveLength(2)
+  })
+
   it('starts on the default optimizer when the one used last is no longer offered', async () => {
     saveLastExport({ formatId: 'jpg', options: { ...DEFAULT_EXPORT_OPTIONS, optimize: true, optimizer: 'gone' } })
     const answer = async (input: OptimizeImageInput): Promise<OptimizedImage> => ({ blob: new Blob(['small'], { type: 'image/jpeg' }), format: input.format, width: 1080, height: 1080, quality: 82, bytesBefore: 9000, optimizer: 'builtin', optimized: true, warnings: [] })

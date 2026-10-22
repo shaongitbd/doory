@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { EditorAdapter } from '@/types/adapter'
+import type { EditorAdapter, OptimizeImageInput, OptimizedImage } from '@/types/adapter'
 import type { DocPage } from '@/types/document'
 import type { EditorEngine } from '../../engine/editor'
 import { DEFAULT_EXPORT_OPTIONS, type ExportOptions } from '../../engine/export/registry'
@@ -19,6 +19,23 @@ const size = { width: 400, height: 300 }
 
 function engineWith(adapter: Partial<EditorAdapter> = {}): EditorEngine {
   return { adapter, loadContext: {} } as unknown as EditorEngine
+}
+
+/** A server with a built-in optimizer and one that sends pages to an outside service. */
+function server() {
+  const optimizeImage = vi.fn(async (input: OptimizeImageInput): Promise<OptimizedImage> => ({ blob: new Blob(['opt'], { type: 'image/jpeg' }), format: input.format, width: 400, height: 300, quality: 82, bytesBefore: 900, optimizer: String(input.optimize), optimized: true, warnings: [] }))
+  const adapter: Partial<EditorAdapter> = {
+    imageOptimize: {
+      formats: ['png', 'jpg', 'webp', 'avif'],
+      optimizers: [
+        { id: 'builtin', name: 'Built-in', formats: ['jpg', 'png'], sendsOffsite: false },
+        { id: 'outside', name: 'Outside', formats: ['jpg'], sendsOffsite: true },
+      ],
+      default: 'builtin',
+    },
+    optimizeImage,
+  }
+  return { engine: engineWith(adapter), optimizeImage }
 }
 
 function input(engine: EditorEngine, options: Partial<ExportOptions> = {}): PreviewInput {
@@ -87,5 +104,40 @@ describe('usePreview', () => {
     await settle()
     const webp = vi.mocked(canvasToBlob).mock.calls.filter(([, type]) => type === 'image/webp').map(([, , quality]) => quality)
     expect(webp).toEqual([0.6])
+  })
+
+  it('asks the server on its own for an optimizer that stays on it', async () => {
+    const { engine, optimizeImage } = server()
+    const view = renderHook((props: PreviewInput) => usePreview(props), { initialProps: input(engine, { optimize: true, optimizer: 'builtin' }) })
+    await settle()
+    expect(optimizeImage).toHaveBeenCalledWith(expect.objectContaining({ format: 'jpg', optimize: 'builtin' }))
+    expect(view.result.current.offsite).toBeNull()
+  })
+
+  it('does not send the page to an outside optimizer until asked, and asks once for the settings shown', async () => {
+    const { engine, optimizeImage } = server()
+    const view = renderHook((props: PreviewInput) => usePreview(props), { initialProps: input(engine, { optimize: true, optimizer: 'outside' }) })
+    await settle()
+    expect(optimizeImage).not.toHaveBeenCalled()
+    expect(view.result.current).toMatchObject({ offsite: 'Outside', asked: false, approximate: { jpg: true } })
+    expect(view.result.current.after).not.toBeNull()
+    act(() => view.result.current.ask())
+    await settle()
+    expect(optimizeImage).toHaveBeenCalledTimes(1)
+    expect(optimizeImage).toHaveBeenCalledWith(expect.objectContaining({ optimize: 'outside' }))
+    expect(view.result.current.asked).toBe(true)
+    // Another setting: back to the browser's estimate, nothing sent.
+    view.rerender(input(engine, { optimize: true, optimizer: 'outside', quality: 0.5 }))
+    await settle()
+    expect(optimizeImage).toHaveBeenCalledTimes(1)
+    expect(view.result.current.asked).toBe(false)
+  })
+
+  it('an outside optimizer that leaves the format alone is not held back', async () => {
+    const { engine, optimizeImage } = server()
+    const view = renderHook((props: PreviewInput) => usePreview(props), { initialProps: { ...input(engine, { optimize: true, optimizer: 'outside' }), format: 'png' } })
+    await settle()
+    expect(view.result.current.offsite).toBeNull()
+    expect(optimizeImage).toHaveBeenCalledWith(expect.objectContaining({ format: 'png', optimize: 'outside' }))
   })
 })

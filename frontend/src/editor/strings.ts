@@ -592,6 +592,7 @@ export const t = {
     downloadDragHint: 'Drag across the image to compare',
     downloadDetailHint: 'Drag or scroll to move around (Shift + wheel for sideways), drag the line to compare',
     downloadPreviewFailed: 'The preview could not be drawn.',
+    downloadPreviewWith: (name: string) => `Preview with ${name}`,
     downloadPagesShown: 'Pages',
     downloadMoreSettings: 'More settings',
     downloadMetadata: 'Remove metadata',

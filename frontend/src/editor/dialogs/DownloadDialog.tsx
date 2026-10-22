@@ -291,6 +291,11 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
       <div className={dl.previewBar}>
         <span className={dl.pill}>{t.dialog.downloadPageOf(shownIndex + 1, total)}</span>
         <span className={dl.spacer} />
+        {raster && preview.offsite && !preview.asked ? (
+          <button type="button" className={dl.ask} onClick={preview.ask}>
+            {t.dialog.downloadPreviewWith(preview.offsite)}
+          </button>
+        ) : null}
         {raster ? (
           <div className={dl.zoom} role="group" aria-label={t.dialog.downloadZoom}>
             {(['fit', 'detail'] as const).map((z) => (
