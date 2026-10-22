@@ -70,11 +70,13 @@ describe('video clips in the frame renderer', () => {
   afterAll(() => restoreImages())
 
   it('is a picture like any other without a media source (thumbnails, server export)', async () => {
-    vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined) // the stubbed poster can't be drawn
-    const media = vi.fn()
+    const draw = vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined) // the stubbed poster can't be drawn
     const renderer = await createFrameRenderer(page([clip()]), SIZE, ctx, { multiplier: 1 })
     expect(renderer.hasClips).toBe(false)
-    expect(media).not.toHaveBeenCalled()
+    // Its poster went into the page's still picture once, as any picture's does; nothing is drawn for it per frame.
+    expect(draw).toHaveBeenCalledOnce()
+    renderer.render(2000)
+    expect(draw).toHaveBeenCalledOnce()
     await expect(renderer.prepare(2000)).resolves.toBeUndefined()
     vi.restoreAllMocks()
   })
