@@ -4,6 +4,7 @@ import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { installImageStub } from '../test/imageStub'
 import { DUPLICATE_OFFSET } from './api/arrange'
 import { EditorEngine } from './editor'
+import { asDory } from './objects/dory'
 import { AUTOSAVE_DELAY_MS } from './persistence'
 
 /** jsdom has no DataTransfer; the clipboard API only needs these three members. */
@@ -706,6 +707,35 @@ describe('EditorEngine', () => {
     expect(clip.rx * 2).toBeCloseTo(img.width)
     expect(clip.ry * 2).toBeCloseTo(img.height)
     expect(clip.rx * 2 * img.scaleX).toBeCloseTo(800)
+    await nextFrame()
+    engine.dispose()
+    restore()
+  })
+
+  it('fit to page gives a picture in a placeholder a page-sized frame and covers it', async () => {
+    const restore = installImageStub({ width: 600, height: 300 })
+    vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined)
+    URL.createObjectURL = vi.fn(() => 'blob:fake-1')
+    const { engine, pageId, view } = await setup()
+    await engine.insert.shape('ellipse')
+    engine.arrange.setAngle(20)
+    engine.style.setPlaceholder(true)
+    const ref = await engine.assets.upload(new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' }), 'photo.png')
+    await engine.insert.fillPlaceholderWith(pageId, engine.state.selection.ids[0], ref)
+    expect(engine.arrange.canFitToPage()).toBe(true)
+    engine.arrange.fitToPage()
+    const img = view.canvas.getObjects()[0] as FabricImage
+    expect(asDory(img).slot).toMatchObject({ cx: 400, cy: 300, width: 800, height: 600, angle: 0, mask: 'circle' })
+    // 600x300 over 800x600: scaled 2x, centred on the page, straight.
+    expect(img.angle).toBe(0)
+    expect(img.scaleX).toBeCloseTo(2)
+    expect(img.scaleY).toBeCloseTo(2)
+    expect(img.getCenterPoint().x).toBeCloseTo(400)
+    expect(img.getCenterPoint().y).toBeCloseTo(300)
+    // The clip is the new frame: the oval now spans the page.
+    const clip = img.clipPath as Ellipse
+    expect(clip.absolutePositioned).toBe(true)
+    expect([clip.left, clip.top, clip.rx * 2, clip.ry * 2]).toEqual([400, 300, 800, 600])
     await nextFrame()
     engine.dispose()
     restore()

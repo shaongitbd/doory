@@ -11,7 +11,7 @@ import { asDory, ensureId, isLocked } from '../objects/dory'
 import { bakeInPlace } from '../objects/bake'
 import { applyMask } from '../objects/masks'
 import { kindOfLive } from '../objects/kinds'
-import { anchorFrames, carriedPictures, clampSlotImage, followFrames, hasSlot, mirrorSlot, shiftSlot } from '../objects/slot'
+import { anchorFrames, carriedPictures, clampSlotImage, coverSlotTransform, followFrames, hasSlot, mirrorSlot, shiftSlot } from '../objects/slot'
 import { getExtraProps } from '../serialization'
 import { coverFrame } from './insert'
 import { isFiniteNumber } from '../numbers'
@@ -446,18 +446,28 @@ export class ArrangeApi {
   }
 
   /**
-   * Makes the selected object, unrotated, cover the whole page: a picture is scaled and cropped, a shape stretched.
-   * Text, QR codes and lines are left alone (see `canFitKind`).
+   * Makes the selected object, unrotated, cover the whole page: a picture is scaled and cropped, a picture in a
+   * placeholder frame gets a page-sized frame and a shape is stretched. Text, QR codes and lines are left alone
+   * (see `canFitKind`).
    */
   fitToPage(): void {
     const view = this.view
     const active = view?.canvas.getActiveObject()
     if (!view || !active || !this.fitsPage(active)) return
     const page = this.engine.pageSizeOf(this.engine.state.activePageId)
+    const centre = new Point(page.width / 2, page.height / 2)
     const border = active.strokeUniform ? active.strokeWidth || 0 : 0
     this.carrying(active, () => {
       active.rotate(0)
-      if (active instanceof FabricImage && !hasSlot(active)) {
+      const slot = asDory(active).slot
+      if (slot) {
+        // The frame is what shows of a placeholder picture: the frame takes the page and the picture covers it, centred.
+        const frame = { ...slot, cx: centre.x, cy: centre.y, width: page.width, height: page.height, angle: 0 }
+        asDory(active).slot = frame
+        const k = coverSlotTransform(frame, active.width, active.height).scale
+        active.set({ scaleX: active.scaleX < 0 ? -k : k, scaleY: active.scaleY < 0 ? -k : k })
+        applyMask(active)
+      } else if (active instanceof FabricImage) {
         coverFrame(active, page.width, page.height)
         applyMask(active)
       } else {
@@ -467,7 +477,7 @@ export class ArrangeApi {
         // A baked shape has a new width and height, so its frame (a placeholder's crop shape) is rebuilt to match.
         if (bakeInPlace(active) && asDory(active).maskShape) applyMask(active)
       }
-      active.setPositionByOrigin(new Point(page.width / 2, page.height / 2), 'center', 'center')
+      active.setPositionByOrigin(centre, 'center', 'center')
     })
     clampSlotImage(active)
     active.setCoords()
