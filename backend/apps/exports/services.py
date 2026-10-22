@@ -419,9 +419,8 @@ def _convert(
 ) -> Converted:
     """PNG as drawn (or with fewer colours); JPG flattened on white (no alpha); WebP and AVIF with alpha only
     for a transparent export. `auto` makes every format that fits (no AVIF above `AVIF_FAST_PIXELS`) and
-    keeps the smallest file. Past
-    `deadline`, a `max_bytes` search and `auto` stop with the files made so far. `pixels`: `png` decoded
-    already (`_rgba`)."""
+    keeps the smallest file. Past `deadline`, a `max_bytes` search and `auto` stop with the files made so
+    far. `pixels`: `png` decoded already (`_rgba`)."""
     image, info = pixels or (None, {})
     if image is None and _needs_pixels(encoding):
         with Image.open(io.BytesIO(png)) as source:
