@@ -314,6 +314,15 @@
   color: var(--color-brand-strong);
 }
 
+.notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+  background: var(--color-bg-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .empty {
   padding: var(--space-8) var(--space-4);
   color: var(--color-text-subtle);

@@ -156,6 +156,17 @@ describe('Create a design dialog', () => {
     localStorage.removeItem('doory.sizeChoices')
   })
 
+  it('says so when your sizes are full', async () => {
+    setSizeChoicesForTests({ pinned: ['card', ...Array.from({ length: 23 }, (_, n) => `gone-${n}`)] })
+    renderWithProviders(<CreateDesignDialog open onClose={() => undefined} />)
+    await userEvent.click(within(list()).getByRole('button', { name: /Platform A/ }))
+    await userEvent.click(screen.getAllByRole('button', { name: 'Add to your sizes' })[0])
+    expect(screen.getByRole('status')).toHaveTextContent('Your sizes hold up to 24. Remove one to add another.')
+    expect(screen.queryAllByRole('button', { name: 'Remove from your sizes' })).toHaveLength(0)
+    setSizeChoicesForTests()
+    localStorage.removeItem('doory.sizeChoices')
+  })
+
   it('moves between size cards with the arrow keys', async () => {
     renderWithProviders(<CreateDesignDialog open onClose={() => undefined} />)
     await userEvent.click(within(list()).getByRole('button', { name: /Platform A/ }))

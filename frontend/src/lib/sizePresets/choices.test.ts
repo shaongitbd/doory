@@ -44,6 +44,16 @@ describe('your sizes', () => {
     expect(JSON.parse(localStorage.getItem('doory.sizeChoices')!)).toEqual({ pinned: [], recent: ['poster', 'a4'], collapsed: [] })
   })
 
+  it('refuses a pin past the limit instead of dropping the oldest', () => {
+    const full = Array.from({ length: 24 }, (_, n) => `size-${n}`)
+    setSizeChoicesForTests({ pinned: full })
+    expect(togglePinned('poster', [])).toBe(false)
+    expect(getSizeChoices().pinned).toEqual(full)
+    expect(togglePinned('size-0', [])).toBe(true)
+    expect(togglePinned('poster', [])).toBe(true)
+    expect(getSizeChoices().pinned).toEqual([...full.slice(1), 'poster'])
+  })
+
   it('belong to whoever is signed in: another person signing in on the same page gets their own', async () => {
     setSizeChoicesForTests()
     const pins: Record<string, string[]> = { ada: ['a4'], bo: ['logo'] }

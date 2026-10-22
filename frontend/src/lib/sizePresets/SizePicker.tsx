@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, Clock, Ruler, Search, Star } from 'lucide-re
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import { useMediaQuery } from '@/ui/hooks'
 import { type PresetGroup, type SizePreset } from './catalogue'
-import { knownPresets, setCollapsed, togglePinned, useSizeChoices, yourSizes } from './choices'
+import { knownPresets, MAX_PINNED, setCollapsed, togglePinned, useSizeChoices, yourSizes } from './choices'
 import { GroupIcon } from './GroupIcon'
 import {
   entryBlocks,
@@ -56,6 +56,8 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
   const [query, setQuery] = useState('')
   const [shape, setShape] = useState<ShapeFilter>('all')
   const [kind, setKind] = useState<KindFilter>('all')
+  // Set when a star could not pin a size because your sizes are full.
+  const [full, setFull] = useState(false)
   const collapsed = choices.collapsed
   // On a phone the list is one row without section titles, so nothing could unfold a folded section there.
   const narrow = useMediaQuery('(max-width: 639px)')
@@ -83,6 +85,7 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
     setQuery('')
     setShape('all')
     setKind('all')
+    setFull(false)
   }
   const fold = (key: string): void => {
     setCollapsed(collapsed.includes(key) ? collapsed.filter((item) => item !== key) : [...collapsed, key])
@@ -91,7 +94,7 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
   const title = searching ? `Sizes matching “${query.trim()}”` : entry === MINE ? 'Your sizes' : entry === RECENT ? 'Recent' : entry === CUSTOM ? 'Custom size' : (group?.label ?? '')
   const showPlatform = searching || entry === MINE || entry === RECENT
   const pinnedIds = mine.map((preset) => preset.id)
-  const pin = (preset: SizePreset): void => togglePinned(preset.id, pinnedIds)
+  const pin = (preset: SizePreset): void => setFull(!togglePinned(preset.id, pinnedIds))
 
   return (
     <div className={styles.picker}>
@@ -151,6 +154,11 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
               </>
             )}
           </div>
+          {full ? (
+            <p className={styles.notice} role="status">
+              Your sizes hold up to {MAX_PINNED}. Remove one to add another.
+            </p>
+          ) : null}
           <div className={styles.scroll} onKeyDown={moveBetweenCards}>
             {entry === CUSTOM && !searching ? (
               custom

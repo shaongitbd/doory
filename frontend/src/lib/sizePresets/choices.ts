@@ -16,7 +16,8 @@ export interface SizeChoices {
 }
 
 const KEY = 'doory.sizeChoices'
-const MAX_PINNED = 24
+/** How many sizes a person can pin (the server holds no more). */
+export const MAX_PINNED = 24
 const MAX_RECENT = 8
 const EMPTY: SizeChoices = { pinned: null, recent: [], collapsed: [] }
 
@@ -108,11 +109,19 @@ export function useSizeChoices(): SizeChoices {
   return useSyncExternalStore(subscribeSizeChoices, getSizeChoices, getSizeChoices)
 }
 
-/** Pins a size, or unpins it. `shown` is what the person sees now (the popular sizes until they choose). */
-export function togglePinned(id: string, shown: readonly string[]): void {
+/**
+ * Pins a size, or unpins it. `shown` is what the person sees now (the popular sizes until they choose). False when
+ * the size was not pinned because `MAX_PINNED` sizes already are: one has to go first.
+ */
+export function togglePinned(id: string, shown: readonly string[]): boolean {
   const list = current.pinned ?? [...shown]
-  const next = list.includes(id) ? list.filter((item) => item !== id) : [...list, id].slice(-MAX_PINNED)
-  save({ pinned: next })
+  if (list.includes(id)) {
+    save({ pinned: list.filter((item) => item !== id) })
+    return true
+  }
+  if (list.length >= MAX_PINNED) return false
+  save({ pinned: [...list, id] })
+  return true
 }
 
 export function setCollapsed(collapsed: string[]): void {
