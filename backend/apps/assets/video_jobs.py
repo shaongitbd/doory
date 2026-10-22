@@ -131,8 +131,9 @@ def store(asset: Asset, converted: Converted, *, new: bool, same: dict | None = 
 
     The files go up first so the owner's row is never locked while hundreds of megabytes travel to storage.
     A new clip made from a source the owner already has (`same`, see `_claim`) raises `Duplicate` instead.
-    A background job (`new=False`) only updates a row that still exists: a clip deleted while it was being
-    converted must not come back, and its files are removed again.
+    A background job (`new=False`) only updates a row that is still `processing`: a clip deleted, or given up
+    on as interrupted (`fail_stale`), while it was being converted must not come back, and its files are
+    removed again.
     """
     stored = _save_files(asset, converted)
     _describe(asset, converted, _stored_size(converted))
@@ -149,7 +150,8 @@ def store(asset: Asset, converted: Converted, *, new: bool, same: dict | None = 
                 fields = ("file", "poster", "thumbnail", "filmstrip", "audio", "width", "height", "size")
                 values = {name: getattr(asset, name) for name in fields}
                 values.update(mime=asset.mime, meta=asset.meta, status=asset.status, error="")
-                if not Asset.objects.filter(pk=asset.pk).update(**values, updated_at=timezone.now()):
+                rows = Asset.objects.filter(pk=asset.pk, status=Asset.Status.PROCESSING)
+                if not rows.update(**values, updated_at=timezone.now()):
                     delete_files(asset.file.storage, stored)
     except Exception:
         delete_files(asset.file.storage, stored)
@@ -245,12 +247,21 @@ def _fail(asset_id, message: str) -> None:
     )
 
 
+def _start(asset_id) -> bool:
+    """Mark a conversion as started, so `fail_stale` counts its age from now rather than from the upload (it
+    may have waited behind others). False when the clip was deleted or given up on while it waited."""
+    rows = Asset.objects.filter(pk=asset_id, status=Asset.Status.PROCESSING)
+    return bool(rows.update(updated_at=timezone.now()))
+
+
 def run(asset_id, source: Path, info: video.VideoInfo) -> None:
     """Convert and store one clip; on any failure the asset says why instead of staying `processing`."""
     try:
         with video.slot(wait=None):
+            if not _start(asset_id):
+                return
             converted = convert(source, info)
-        asset = Asset.objects.filter(pk=asset_id).first()
+        asset = Asset.objects.filter(pk=asset_id, status=Asset.Status.PROCESSING).first()
         if asset is not None:
             store(asset, converted, new=False)
     except QuotaExceeded:

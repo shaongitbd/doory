@@ -166,21 +166,74 @@ def processing(owner, **fields) -> Asset:
 
 @pytest.mark.django_db
 class TestFailed:
-    def test_a_failed_conversion_stops_counting_against_the_quota(self, api, user, tmp_path, monkeypatch):
+    def test_a_failed_conversion_stops_counting_against_the_quota(self, api, user, job, monkeypatch):
         asset = processing(user, size=5000)
 
         def broken(source, info):
             raise video.VideoError("The video could not be converted.")
 
         monkeypatch.setattr(video_jobs, "convert", broken)
-        monkeypatch.setattr(video_jobs.connections, "close_all", lambda: None)
-        workdir = tmp_path / "doory-video-x"
-        workdir.mkdir()
-        video_jobs.run(asset.pk, workdir / "source", described_clip(codec_name="hevc"))
+        video_jobs.run(asset.pk, job / "source", described_clip(codec_name="hevc"))
         asset.refresh_from_db()
         assert (asset.status, asset.size, asset.error) == ("failed", 0, "The video could not be converted.")
         assert api.get(f"{URL}usage/").json()["used_bytes"] == 0
-        assert not workdir.exists()
+        assert not job.exists()
+
+
+@pytest.fixture
+def job(tmp_path, monkeypatch):
+    """A background conversion's work directory, run in the test's thread."""
+    monkeypatch.setattr(video_jobs.connections, "close_all", lambda: None)
+    workdir = tmp_path / "doory-video-job"
+    workdir.mkdir()
+    (workdir / "source").write_bytes(b"source")
+    return workdir
+
+
+def converted(workdir: Path) -> video_jobs.Converted:
+    (workdir / "clip.mp4").write_bytes(b"clip")
+    stills = video.Stills(poster=b"poster", thumbnail=b"thumb", filmstrip=None, strip=None)
+    return video_jobs.Converted(workdir / "clip.mp4", described_clip(), stills, None)
+
+
+@pytest.mark.django_db
+class TestQueued:
+    def test_the_age_counts_from_when_the_conversion_starts(self, user, job, monkeypatch):
+        asset = processing(user, size=10)
+        queued_at = timezone.now() - timedelta(minutes=30)  # waited behind other conversions
+        Asset.objects.filter(pk=asset.pk).update(updated_at=queued_at)
+        started = []
+
+        def convert(source, info):
+            started.append(Asset.objects.get(pk=asset.pk).updated_at)
+            return converted(source.parent)
+
+        monkeypatch.setattr(video_jobs, "convert", convert)
+        video_jobs.run(asset.pk, job / "source", described_clip(codec_name="hevc"))
+        assert started[0] > queued_at + timedelta(minutes=29)
+        assert Asset.objects.get(pk=asset.pk).status == "ready"
+
+    def test_a_clip_given_up_on_while_it_waited_is_not_converted(self, user, job, monkeypatch):
+        asset = processing(user)
+        Asset.objects.filter(pk=asset.pk).update(status="failed", error=video_jobs.INTERRUPTED)
+        monkeypatch.setattr(video_jobs, "convert", lambda *args: pytest.fail("converted a failed clip"))
+        video_jobs.run(asset.pk, job / "source", described_clip(codec_name="hevc"))
+        assert Asset.objects.get(pk=asset.pk).status == "failed" and not job.exists()
+
+    def test_a_clip_given_up_on_while_converting_stays_failed(self, user, job, monkeypatch):
+        asset = processing(user, size=10)
+
+        def convert(source, info):
+            # fail_stale, from another process, while this one converts
+            Asset.objects.filter(pk=asset.pk).update(status="failed", error=video_jobs.INTERRUPTED, size=0)
+            return converted(source.parent)
+
+        monkeypatch.setattr(video_jobs, "convert", convert)
+        video_jobs.run(asset.pk, job / "source", described_clip(codec_name="hevc"))
+        asset.refresh_from_db()
+        assert (asset.status, asset.error, asset.file.name) == ("failed", video_jobs.INTERRUPTED, "")
+        names = [f"assets/{user.pk}/{asset.pk}.mp4", f"assets/{user.pk}/posters/{asset.pk}.webp"]
+        assert not any(asset.file.storage.exists(name) for name in names)
 
 
 @pytest.mark.django_db
