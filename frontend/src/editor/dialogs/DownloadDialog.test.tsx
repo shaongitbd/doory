@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/lib/api/client'
 import { createBlankDocument } from '@/lib/document'
+import { type SizePresetCatalogue, buildCatalogue, setSizePresetsForTests } from '@/lib/sizePresets'
 import type { DocPage, DoryDocument } from '@/types/document'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { EditorProvider } from '../EditorProvider'
@@ -724,6 +725,21 @@ describe('Download dialog: pictures', () => {
     await pick(/^SVG/)
     expect(screen.getByTestId('download-api')).toHaveTextContent('"format": "svg"')
     expect(screen.getByTestId('download-api')).not.toHaveTextContent('bleed_mm')
+  })
+
+  it("says when the platform doesn't take the format, reading JPEG as JPG", async () => {
+    const tree = { version: 1, groups: [{ slug: 'social', label: 'Social', presets: [{ slug: 'feed', label: 'Feed', width: 1080, height: 1350, meta: { formats: ['jpeg'] } }] }] }
+    setSizePresetsForTests(buildCatalogue(tree) as SizePresetCatalogue)
+    try {
+      ;({ engine } = setup({ doc: { ...createBlankDocument(1080, 1350), meta: { presetId: 'feed' } } }))
+      const notAccepted = t.dialog.downloadNotAccepted('Social', 'JPEG')
+      expect(within(dialog()).getByRole('radio', { name: /^JPG/ })).toBeChecked()
+      expect(within(dialog()).queryByText(notAccepted)).toBeNull()
+      await pick(/^PNG/)
+      expect(within(dialog()).getByText(notAccepted)).toBeInTheDocument()
+    } finally {
+      setSizePresetsForTests()
+    }
   })
 
   it('sums up the files in the footer and names the button by their number', async () => {

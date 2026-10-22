@@ -238,7 +238,8 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
     )
     if (!format) return null
     if (video) return note(t.dialog.downloadVideoNext, '', 'download-format-note')
-    if (raster && preset?.formats && !preset.formats.includes(raster)) return note(t.dialog.downloadNotAccepted(platform, preset.formats.map((f) => f.toUpperCase()).join(', ')), 'warn')
+    // Catalogues write JPG as `jpg` or `jpeg`.
+    if (raster && preset?.formats && !preset.formats.some((f) => (f === 'jpeg' ? 'jpg' : f) === raster)) return note(t.dialog.downloadNotAccepted(platform, preset.formats.map((f) => f.toUpperCase()).join(', ')), 'warn')
     if (raster === 'avif') return note(t.dialog.downloadAvifNote, 'warn', 'download-format-note')
     if (raster && preset?.maxBytes && perPage !== undefined) {
       const limit = formatBytes(preset.maxBytes)
