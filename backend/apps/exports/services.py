@@ -42,7 +42,7 @@ from .exceptions import (
     PayloadTooLarge,
     VideoExportDisabled,
 )
-from .filenames import document_filename, export_filename, page_filename
+from .filenames import document_filename, export_filename, page_filename, unique_names
 from .fonts import load_fonts
 from .layout import MAX_BLEED_MM, PX_PER_MM, PageGeometry, build_document_html, prepare_page_svg
 from .layout import fmt as svg_number
@@ -854,8 +854,8 @@ def export_images(
 
 
 def _bundle(design, images: tuple[ImageResult, ...], *, style: str, unix: int | None) -> ImageBundle:
-    """One page as its own file, several in a ZIP named after the design."""
-    names = tuple(page_filename(design.title, image, style=style, unix=unix) for image in images)
+    """One page as its own file, several in a ZIP named after the design (no two files of the same name)."""
+    names = unique_names([page_filename(design.title, image, style=style, unix=unix) for image in images])
     if len(images) == 1:
         return ImageBundle(images[0].data, images[0].format, images[0].mime, names[0], images, names)
     out = io.BytesIO()

@@ -13,15 +13,33 @@ def pdf_filename(title: str | None) -> str:
     return export_filename(title, "pdf")
 
 
-def export_filename(title: str | None, extension: str) -> str:
-    """Download name from a user supplied title: letters, digits, spaces, dashes, dots and brackets only."""
+def export_filename(title: str | None, extension: str, *, suffix: str = "") -> str:
+    """Download name from a user supplied title: letters, digits, spaces, dashes, dots and brackets only.
+    `suffix` (our own text, such as " - page 2") is kept whole: a long title is shortened to make room."""
     text = unicodedata.normalize("NFC", title or "")
     text = _WHITESPACE.sub(" ", text)
     text = "".join(ch for ch in text if unicodedata.category(ch)[0] != "C")
     text = _DISALLOWED.sub("", text)
     text = _SPACES.sub(" ", text).strip(" .-_")
-    text = text[:MAX_STEM_LENGTH].strip(" .-_")
+    text = (text[: MAX_STEM_LENGTH - len(suffix)].strip(" .-_") + suffix).strip(" .-_")
     return f"{text or DEFAULT_STEM}.{extension}"
+
+
+def unique_names(names: list[str] | tuple[str, ...]) -> tuple[str, ...]:
+    """`names` with each repeat numbered as a file manager does (`poster (2).png`): the files of a ZIP."""
+    taken: set[str] = set()
+    out = []
+    for name in names:
+        stem, dot, extension = name.rpartition(".")
+        if not dot:
+            stem, extension = name, ""
+        candidate, number = name, 2
+        while candidate.casefold() in taken:
+            candidate = f"{stem} ({number}){dot}{extension}"
+            number += 1
+        taken.add(candidate.casefold())
+        out.append(candidate)
+    return tuple(out)
 
 
 # ---- structured names (#59) --------------------------------------------------------------------
@@ -98,9 +116,8 @@ def preset_parts(preset_slug: str | None, width: float, height: float) -> tuple[
 def page_filename(title: str | None, result, *, style: str, unix: int | None = None) -> str:
     """The download name of one page `export_image` made (`result`), simple (as before) or structured."""
     if style != "structured":
-        if result.page_count > 1:
-            title = f"{title} - page {result.page_index + 1}"
-        return export_filename(title, result.format)
+        suffix = f" - page {result.page_index + 1}" if result.page_count > 1 else ""
+        return export_filename(title, result.format, suffix=suffix)
     platform, preset = preset_parts(result.preset, result.page_width, result.page_height)
     return structured_filename(
         title,

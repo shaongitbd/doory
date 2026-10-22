@@ -11,6 +11,7 @@ from apps.accounts.models import User
 from apps.designs.tests.helpers import make_design, make_doc
 from apps.exports import optimizers, services
 from apps.exports.exceptions import ExportBusy, ImageExportDisabled, InvalidExport, PayloadTooLarge
+from apps.exports.filenames import slug
 from apps.exports.renderer import RenderResult, render_slot
 from apps.fonts.models import FontFamily, FontVariant
 
@@ -490,6 +491,23 @@ def test_several_pages_go_into_one_zip_one_render_each(user, renders):
     assert all(info.compress_type == zipfile.ZIP_STORED for info in archive.infolist())
     assert [archive.read(name) for name in archive.namelist()] == [image.data for image in bundle.images]
     assert opened(archive.read("Spring Sale - page 2.webp")).format == "WEBP"
+
+
+@pytest.mark.parametrize(
+    ("style", "pattern"),
+    [("simple", "{title} - page {n}.png"), ("structured", "{slug}_400x200_p0{n}.png")],
+)
+def test_a_long_title_still_gives_every_page_its_own_file(user, renders, style, pattern):
+    import zipfile
+
+    title = ("Quarterly results for the northern region " * 3)[:100]
+    assert len(title) == 100
+    design = make_design(user, title=title, document=make_doc(pages=3, width=400, height=200))
+    bundle = services.export_images(design, pages="all", filename_style=style)
+    names = zipfile.ZipFile(io.BytesIO(bundle.data)).namelist()
+    assert len(names) == len(set(names)) == 3
+    expected = [pattern.format(title=title[:71].strip(), slug=slug(title), n=n) for n in (1, 2, 3)]
+    assert names == list(bundle.filenames) == expected
 
 
 def test_one_page_is_its_own_file(design, renders, settings):

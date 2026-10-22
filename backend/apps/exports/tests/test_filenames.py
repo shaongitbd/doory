@@ -4,7 +4,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from apps.exports.filenames import page_filename, pdf_filename, preset_parts, structured_filename
+from apps.exports.filenames import (
+    page_filename,
+    pdf_filename,
+    preset_parts,
+    structured_filename,
+    unique_names,
+)
 
 
 @pytest.mark.parametrize(
@@ -100,4 +106,22 @@ def test_simple_style_keeps_the_old_names():
     assert page_filename("Summer Sale", _result(), style="simple") == "Summer Sale - page 2.png"
     assert (
         page_filename("Summer Sale", _result(page_count=1, page_index=0), style="simple") == "Summer Sale.png"
+    )
+
+
+def test_a_long_title_is_shortened_to_keep_the_page_number():
+    title = "Spring sale " * 10
+    names = [page_filename(title, _result(page_index=i), style="simple") for i in range(3)]
+    assert names == [f"{title[:71].strip()} - page {i}.png" for i in (1, 2, 3)]
+    assert all(len(name) - len(".png") <= 80 for name in names)
+    assert page_filename("", _result(), style="simple") == "page 2.png"
+
+
+def test_repeated_names_are_numbered():
+    assert unique_names(["a.png", "b.png", "A.png", "a.png", "notes"]) == (
+        "a.png",
+        "b.png",
+        "A (2).png",
+        "a (3).png",
+        "notes",
     )
