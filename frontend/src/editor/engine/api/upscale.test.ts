@@ -82,6 +82,23 @@ describe('StyleApi.upscale', () => {
     engine.dispose()
   })
 
+  it('keeps a crop that sits between pixels exactly where it was', async () => {
+    const { engine, img } = await setup()
+    img.set({ cropX: 10.25, cropY: 5.5, width: 100.5, height: 50.25, scaleX: 2, scaleY: 2 })
+    expect(engine.style.selectedImageSource()).toEqual({ width: 200, height: 100, crop: { x: 10.25, y: 5.5, width: 100.5, height: 50.25 } })
+    vi.mocked(upscaleImage).mockImplementation(async () => {
+      // The new picture is the whole photo at twice the size.
+      restore()
+      restore = installImageStub({ width: 400, height: 200 })
+      return new Blob(['png'], { type: 'image/png' })
+    })
+    expect(await engine.style.upscale({ scale: 2 })).toBe(true)
+    expect({ x: img.cropX, y: img.cropY, width: img.width, height: img.height }).toEqual({ x: 20.5, y: 11, width: 201, height: 100.5 })
+    expect(img.getScaledWidth()).toBeCloseTo(201, 6)
+    expect(img.getScaledHeight()).toBeCloseTo(100.5, 6)
+    engine.dispose()
+  })
+
   it('leaves an SVG alone without fetching or starting the worker', async () => {
     const { engine } = await setup('/media/assets/logo.svg?v=2')
     expect(engine.style.canUpscale()).toBe(false)

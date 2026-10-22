@@ -103,7 +103,7 @@ export function UpscaleDialog() {
           </p>
           {source.crop ? (
             <p className={styles.muted}>
-              {t.dialog.upscaleCrop}: {source.crop.width} × {source.crop.height} px
+              {t.dialog.upscaleCrop}: {Math.round(source.crop.width)} × {Math.round(source.crop.height)} px
             </p>
           ) : null}
           <Segmented label={t.dialog.upscaleScale} value={scaleId} options={SCALES} onChange={(value) => setScaleId(value)} />

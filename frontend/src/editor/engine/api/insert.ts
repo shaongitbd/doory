@@ -459,10 +459,10 @@ export class InsertApi {
     } else if (crop) {
       // The new source is the whole photo at a higher resolution: keep exactly the same visible crop
       // and shrink the displayed scale by the same factor, so the picture does not move or grow.
-      const x = Math.min(natW - 1, Math.max(0, Math.round(crop.x)))
-      const y = Math.min(natH - 1, Math.max(0, Math.round(crop.y)))
-      const width = Math.min(natW - x, Math.max(1, Math.round(crop.width)))
-      const height = Math.min(natH - y, Math.max(1, Math.round(crop.height)))
+      const x = Math.min(natW - 1, Math.max(0, crop.x))
+      const y = Math.min(natH - 1, Math.max(0, crop.y))
+      const width = Math.min(natW - x, Math.max(1, crop.width))
+      const height = Math.min(natH - y, Math.max(1, crop.height))
       const scale = Math.min(frameW / width, frameH / height)
       img.set({ cropX: x, cropY: y, width, height, scaleX: scale, scaleY: scale })
     } else {
