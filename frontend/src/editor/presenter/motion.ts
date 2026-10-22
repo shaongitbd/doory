@@ -3,8 +3,8 @@
  * made once from the snapshot the slideshow works on; `reduced` is the viewer's wish for reduced motion, which turns
  * every transition into a short fade and plays no object animation at all (the pages then appear as they rest).
  *
- * Page time. A page stays up for its time (`DocPage.durationSec`, or the default when the design has none) counted from
- * the moment it has built up, so its auto-advance time is its transition plus the end of its last enter animation plus
+ * Page time. A page stays up for its time (`DocPage.durationSec`, or the default stretched to its clips when the design
+ * has none) counted from the moment it has built up, so its auto-advance time is its transition plus the end of its last enter animation plus
  * that time; `motionDurations` adds the first two to the times `timing.ts` resolves. The state machine, the page
  * clock and the presenter view all see one number and need no idea of animation.
  */

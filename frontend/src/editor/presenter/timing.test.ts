@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { clampDuration, DEFAULT_DURATION_SEC, formatClock, formatDuration, hasTimings, pageDuration, resolveDurations } from './timing'
+import type { DocObject } from '@/types/document'
+import { clampDuration, DEFAULT_DURATION_SEC, formatClock, formatDuration, hasTimings, pageDuration, pageSeconds, resolveDurations } from './timing'
+
+const clip = (over: Record<string, unknown>): DocObject => ({ id: 'v', type: 'image', left: 0, top: 0, width: 10, height: 10, src: '/p.png', videoSrc: '/v.mp4', videoDurationMs: 60_000, videoTrimStartMs: 0, videoTrimEndMs: 60_000, ...over })
+const untimed = (objects: DocObject[] = []) => ({ objects })
 
 describe('clampDuration', () => {
   it('rounds and limits to 1-600', () => {
@@ -27,18 +31,25 @@ describe('pageDuration and resolveDurations', () => {
 
   it('uses the default for every page of a design without any time', () => {
     expect(hasTimings([{}, {}])).toBe(false)
-    expect(resolveDurations([{}, {}, {}])).toEqual([DEFAULT_DURATION_SEC, DEFAULT_DURATION_SEC, DEFAULT_DURATION_SEC])
-    expect(resolveDurations([{}, {}], 12)).toEqual([12, 12])
+    expect(resolveDurations([untimed(), untimed(), untimed()])).toEqual([DEFAULT_DURATION_SEC, DEFAULT_DURATION_SEC, DEFAULT_DURATION_SEC])
+    expect(resolveDurations([untimed(), untimed()], 12)).toEqual([12, 12])
+  })
+
+  it('stretches the default to the video clips of a design without any time, as the timeline does', () => {
+    const pages = [untimed([clip({ videoTrimEndMs: 12_400 })]), untimed([clip({ videoStartMs: 1000, videoTrimEndMs: 2000 })]), untimed([clip({ videoLoop: true })])]
+    expect(resolveDurations(pages)).toEqual([13, DEFAULT_DURATION_SEC, DEFAULT_DURATION_SEC])
+    expect(resolveDurations(pages)).toEqual(pages.map((p) => pageSeconds(p)))
+    expect(resolveDurations(pages, 20)).toEqual([20, 20, 20])
   })
 
   it('follows the pages of a timed design: a page without a time waits', () => {
     expect(hasTimings([{}, { durationSec: 3 }])).toBe(true)
-    expect(resolveDurations([{ durationSec: 2 }, {}, { durationSec: 30 }])).toEqual([2, null, 30])
+    expect(resolveDurations([{ durationSec: 2, objects: [] }, untimed([clip({})]), { durationSec: 30, objects: [] }])).toEqual([2, null, 30])
   })
 
   it('treats an unusable time as no time', () => {
-    expect(resolveDurations([{ durationSec: 0 }, { durationSec: 9 }])).toEqual([null, 9])
-    expect(resolveDurations([{ durationSec: 0 }])).toEqual([DEFAULT_DURATION_SEC])
+    expect(resolveDurations([{ durationSec: 0, objects: [] }, { durationSec: 9, objects: [] }])).toEqual([null, 9])
+    expect(resolveDurations([{ durationSec: 0, objects: [] }])).toEqual([DEFAULT_DURATION_SEC])
   })
 })
 

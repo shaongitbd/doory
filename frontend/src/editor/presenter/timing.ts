@@ -29,14 +29,14 @@ export function pageDuration(page: Pick<DocPage, 'durationSec'>): number | null 
 }
 
 /**
- * How long a page plays, in seconds: its own time, or else the default stretched to its video clips, so a clip on a
+ * How long a page plays, in seconds: its own time, or else `fallbackSec` stretched to its video clips, so a clip on a
  * page that was never timed plays to its end (a looping clip fills whatever time the page has).
  */
-export function pageSeconds(page: Pick<DocPage, 'durationSec' | 'objects'>): number {
+export function pageSeconds(page: Pick<DocPage, 'durationSec' | 'objects'>, fallbackSec: number = DEFAULT_DURATION_SEC): number {
   const own = pageDuration(page)
   if (own !== null) return own
   const clipsEndSec = Math.ceil(pageClipTiming(page).endMs / 1000)
-  return Math.min(DURATION_MAX_SEC, Math.max(DEFAULT_DURATION_SEC, clipsEndSec))
+  return Math.min(DURATION_MAX_SEC, Math.max(fallbackSec, clipsEndSec))
 }
 
 /** True when at least one page has its own time: the design is "timed" and auto-advance starts switched on. */
@@ -49,11 +49,12 @@ export function hasTimings(pages: readonly Pick<DocPage, 'durationSec'>[]): bool
  *
  * A timed design (some page has a time) follows its pages: a page without a time waits, which is what the
  * "No auto-advance" choice of the time popover means. A design without any time uses `fallbackSec` for every page,
- * so switching auto-advance on always does something.
+ * stretched to the page's video clips as the timeline and the video export do, so switching auto-advance on always
+ * does something and a clip plays to its end.
  */
-export function resolveDurations(pages: readonly Pick<DocPage, 'durationSec'>[], fallbackSec: number = DEFAULT_DURATION_SEC): (number | null)[] {
+export function resolveDurations(pages: readonly Pick<DocPage, 'durationSec' | 'objects'>[], fallbackSec: number = DEFAULT_DURATION_SEC): (number | null)[] {
   const timed = hasTimings(pages)
-  return pages.map((p) => (timed ? pageDuration(p) : fallbackSec))
+  return pages.map((p) => (timed ? pageDuration(p) : pageSeconds(p, fallbackSec)))
 }
 
 /** `5 s`, `45 s`, `1:30`, `10:00`: how a page time reads on its chip. */
