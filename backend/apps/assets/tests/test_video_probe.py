@@ -1,5 +1,9 @@
 """What a clip is and what has to happen to it, from ffprobe's description (no ffmpeg needed here)."""
 
+import logging
+import os
+import sys
+
 import pytest
 
 from apps.assets import video
@@ -237,3 +241,31 @@ class TestInputs:
                 call()
         assert video.extract_audio(clip, tmp_path / "sound.m4a") is False
         assert len(commands) == 3 and all(self.guarded(args) for args in commands)
+
+
+class TestRun:
+    """Running a command (Python stands in for ffprobe)."""
+
+    @pytest.fixture(autouse=True)
+    def _python_env(self, monkeypatch):
+        monkeypatch.setattr(video, "_env", lambda workdir: dict(os.environ))  # Python on Windows needs more
+
+    @staticmethod
+    def python(code: str) -> list[str]:
+        return [sys.executable, "-c", code]
+
+    def test_returns_the_output(self):
+        assert video._run(self.python("print('{}', end='')"), timeout=30, capture=True) == b"{}"
+
+    def test_refuses_too_much_output(self, monkeypatch):
+        monkeypatch.setattr(video, "MAX_PROBE_OUTPUT", 1000)
+        code = "import sys; [sys.stdout.write('x' * 1000) for _ in range(1000)]"  # 1 MB, read 64 KB at a time
+        with pytest.raises(video.Unreadable):
+            video._run(self.python(code), timeout=30, capture=True)
+
+    def test_logs_the_end_of_a_failed_command_s_messages(self, caplog):
+        code = "import sys; sys.stderr.write('a' * 100_000 + 'the end'); sys.exit(1)"
+        with caplog.at_level(logging.INFO, logger=video.__name__), pytest.raises(video.Unreadable):
+            video._run(self.python(code), timeout=30)
+        (record,) = caplog.records
+        assert record.getMessage().endswith("the end") and len(record.getMessage()) < 2100

@@ -45,6 +45,8 @@ PROBE_TIMEOUT_SECONDS = 20
 REMUX_TIMEOUT_SECONDS = 60
 STILLS_TIMEOUT_SECONDS = 60
 MAX_PROBE_OUTPUT = 256 * 1024
+STDERR_TAIL = 2000  # the end of a failed command's messages, for the log
+PIPE_CHUNK = 64 * 1024
 MAX_DIMENSION = 8192
 MAX_WIDTH, MAX_HEIGHT = 1920, 1080  # landscape; a portrait clip may be 1080 by 1920
 MAX_FPS = 60
@@ -219,6 +221,28 @@ def _env(workdir: Path | None) -> dict[str, str]:
     return env
 
 
+class _Drain(threading.Thread):
+    """Read a pipe to its end in chunks, keeping at most `limit` bytes: the first ones, or with `tail` the
+    last ones. However much a command writes, no more than that is ever held in memory."""
+
+    def __init__(self, pipe, limit: int, *, tail: bool = False):
+        super().__init__(daemon=True)
+        self.pipe, self.limit, self.tail = pipe, limit, tail
+        self.data = bytearray()
+        self.overflow = False
+
+    def run(self) -> None:
+        with contextlib.suppress(OSError, ValueError), self.pipe:
+            while chunk := self.pipe.read1(PIPE_CHUNK):
+                if self.tail:
+                    self.data += chunk
+                    del self.data[: -self.limit]
+                elif len(self.data) + len(chunk) > self.limit:
+                    self.overflow = True  # keep reading, so the command doesn't block on a full pipe
+                else:
+                    self.data += chunk
+
+
 def _run(args: list[str], *, timeout: float, workdir: Path | None = None, capture: bool = False) -> bytes:
     """Run one command; kill its whole process group on timeout. Returns stdout (capped) when `capture`."""
     process = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
@@ -230,21 +254,31 @@ def _run(args: list[str], *, timeout: float, workdir: Path | None = None, captur
         cwd=str(workdir) if workdir else None,
         start_new_session=True,
     )
+    err = _Drain(process.stderr, STDERR_TAIL, tail=True)
+    out = _Drain(process.stdout, MAX_PROBE_OUTPUT) if capture else None
+    readers = [err] if out is None else [err, out]
+    for reader in readers:
+        reader.start()
     try:
-        out, err = process.communicate(timeout=timeout)
+        process.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(process.pid, signal.SIGKILL)
-        process.communicate()
+        process.wait()
         raise VideoError("Converting the video took too long.") from None
+    finally:
+        for reader in readers:
+            reader.join()
     if process.returncode != 0:
         logger.info(
-            "%s failed (%s): %s", Path(args[0]).name, process.returncode, err[-2000:].decode(errors="replace")
+            "%s failed (%s): %s", Path(args[0]).name, process.returncode, err.data.decode(errors="replace")
         )
         raise Unreadable("The video could not be read.")
-    if capture and len(out) > MAX_PROBE_OUTPUT:
+    if out is None:
+        return b""
+    if out.overflow:
         raise Unreadable("The video could not be read.")
-    return out or b""
+    return bytes(out.data)
 
 
 def _ffmpeg(*args: str) -> list[str]:
