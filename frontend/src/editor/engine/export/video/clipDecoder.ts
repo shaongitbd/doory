@@ -4,7 +4,8 @@
  * The server makes every clip an H.264 MP4 with its index first and a key frame at least every two seconds, so the clip
  * is demuxed once (mp4box.js, while it downloads) into its encoded samples, and frames are decoded forward as the
  * export asks for later and later times. A loop or a trim that goes back restarts from the key frame at or before the
- * time wanted. Only one decoded picture is held at a time (plus the few the decoder hands over ahead of it).
+ * time wanted. Only one decoded picture is held at a time (plus the few the decoder hands over ahead of it). Times are
+ * the clip's own, as a player shows them: the track's edit list (the delay an encoder adds for B-frames) is applied.
  *
  * Where WebCodecs can't decode the clip (no `VideoDecoder`, or the codec isn't supported), the clip is played by a
  * `<video>` that seeks to each frame instead: slower and less exact, but it works everywhere.
@@ -49,6 +50,30 @@ export function keyIndexAtOrBefore(samples: readonly Pick<EncodedSample, 'timest
   return found
 }
 
+/** The parts of an edit list entry that place the media on the clip's time line. */
+export interface EditEntry {
+  /** In the movie's timescale. */
+  segment_duration: number
+  /** In the track's timescale; -1 for an empty edit (nothing shown for `segment_duration`). */
+  media_time: number
+}
+
+/**
+ * What to add to a sample's composition time (µs) to get its time in the clip as a player shows it: leading empty edits
+ * delay the media, and the first real edit starts it at its `media_time`. No edit list: the composition times as they are.
+ */
+export function editShiftUs(edits: readonly EditEntry[] | undefined, timescale: number, movieTimescale: number): number {
+  let shiftUs = 0
+  for (const edit of edits ?? []) {
+    if (edit.media_time === -1) {
+      if (movieTimescale > 0) shiftUs += (edit.segment_duration * 1_000_000) / movieTimescale
+      continue
+    }
+    return timescale > 0 ? shiftUs - (edit.media_time * 1_000_000) / timescale : shiftUs
+  }
+  return shiftUs
+}
+
 /** The codec's own description (the `avcC` box of the sample entry, without its header), as `VideoDecoder` wants it. */
 async function describe(file: { getTrackById(id: number): unknown }, trackId: number): Promise<Uint8Array | undefined> {
   const { DataStream, Endianness } = await import('mp4box')
@@ -71,6 +96,7 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
   const samples: EncodedSample[] = []
   let failure: Error | null = null
   let ready: Promise<VideoDecoderConfig> | null = null
+  let shiftUs = 0
   file.onError = (_module: string, message: string) => {
     failure = new ClipDecodeError(`A video clip could not be read: ${message}`)
   }
@@ -86,6 +112,7 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
       codedHeight: track.video?.height ?? track.track_height,
       ...(description ? { description } : {}),
     }))
+    shiftUs = editShiftUs(track.edits, track.timescale, track.movie_timescale)
     file.setExtractionOptions(track.id, undefined, { nbSamples: 250 })
     file.start()
   }
@@ -93,7 +120,7 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
     for (const sample of list) {
       if (!sample.data) continue
       samples.push({
-        timestampUs: Math.round((sample.cts * 1_000_000) / sample.timescale),
+        timestampUs: Math.round((sample.cts * 1_000_000) / sample.timescale + shiftUs),
         durationUs: Math.round((sample.duration * 1_000_000) / sample.timescale),
         key: sample.is_sync,
         data: sample.data,
@@ -132,6 +159,8 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
 export class DecoderSource implements ClipFrameSource {
   private loading: Promise<Demuxed | null> | null = null
   private demuxed: Demuxed | null = null
+  /** The time of the clip's earliest picture, µs. */
+  private firstUs = 0
   private readonly abort = new AbortController()
   private decoder: VideoDecoder | null = null
   private fallback: ClipFrameSource | null = null
@@ -194,6 +223,8 @@ export class DecoderSource implements ClipFrameSource {
     const showing = this.current
     const span = showing ? (showing.duration ?? samples[0]?.durationUs ?? 33_333) : 0
     if (showing && showing.timestamp <= target && target < showing.timestamp + span) return
+    // Before the first picture the first picture shows (as a player shows it): it is already there.
+    if (showing && target < showing.timestamp && showing.timestamp <= this.firstUs) return
     const key = keyIndexAtOrBefore(samples, target)
     if (!showing || target < showing.timestamp || key > this.next) this.seek(key)
     for (;;) {
@@ -271,6 +302,7 @@ export class DecoderSource implements ClipFrameSource {
           return null
         }
         this.demuxed = demuxed
+        this.firstUs = demuxed.samples.reduce((first, sample) => Math.min(first, sample.timestampUs), Number.POSITIVE_INFINITY)
         this.decoder = new VideoDecoder({
           output: (frame) => {
             if (this.disposed) {

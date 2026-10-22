@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { type Demuxed, DecoderSource, demux, keyIndexAtOrBefore } from './clipDecoder'
+import { type Demuxed, DecoderSource, demux, editShiftUs, keyIndexAtOrBefore } from './clipDecoder'
 
 /** A stand-in for mp4box: `mp4.onAppend` plays what the demuxer would report for a chunk of the file. */
 interface FakeMp4File {
@@ -121,10 +121,33 @@ describe('finding where to decode from', () => {
   })
 })
 
+describe('the clip’s own time line', () => {
+  it('starts the media at the first edit’s media time, after any empty edit', () => {
+    expect(editShiftUs([{ segment_duration: 1000, media_time: 1024 }], 15_360, 1000)).toBeCloseTo(-66_666.67, 1)
+    expect(editShiftUs([{ segment_duration: 500, media_time: -1 }, { segment_duration: 1000, media_time: 0 }], 15_360, 1000)).toBe(500_000)
+    expect(editShiftUs(undefined, 15_360, 1000)).toBe(0)
+    expect(editShiftUs([], 15_360, 1000)).toBe(0)
+  })
+})
+
 describe('demuxing a clip', () => {
   afterEach(() => {
     mp4.onAppend = null
     vi.unstubAllGlobals()
+  })
+
+  const track = { id: 1, codec: 'avc1.64001f', video: { width: 16, height: 9 }, timescale: 15_360, movie_timescale: 1000, edits: [{ segment_duration: 1000, media_time: 1024, media_rate_integer: 1, media_rate_fraction: 0 }] }
+  const sample = (n: number, cts: number) => ({ number: n, cts, duration: 512, timescale: 15_360, is_sync: n === 0, data: new Uint8Array([n]) })
+
+  it('times the samples as a player shows them, by the track’s edit list', async () => {
+    download(1)
+    mp4.onAppend = (file) => {
+      file.onReady?.({ videoTracks: [track] })
+      file.onSamples?.(1, null, [sample(0, 1024), sample(1, 2048), sample(2, 1536)])
+    }
+    const { samples, config } = await demux('/media/c.mp4')
+    expect(config).toMatchObject({ codec: 'avc1.64001f', codedWidth: 16, codedHeight: 9 })
+    expect(samples.map((s) => s.timestampUs)).toEqual([0, 66_667, 33_333])
   })
 
   it('stops the download when the file cannot be read', async () => {
@@ -183,6 +206,19 @@ describe('the exporter’s clip source', () => {
     expect(shownAt(src)).toBe(40_000)
     await src.ready(5000)
     expect(shownAt(src)).toBe(940_000)
+  })
+
+  it('keeps the first picture up for every time before it, without going back to decode it again', async () => {
+    const data = demuxed(1)
+    data.samples = data.samples.map((s) => ({ ...s, timestampUs: s.timestampUs + 40_000 }))
+    const { src } = source(data)
+    await src.ready(0)
+    const decoder = FakeDecoder.instances[0]
+    const [resets, decoded, version] = [decoder.resets, decoder.decoded.length, src.version]
+    await src.ready(10)
+    await src.ready(20)
+    expect(shownAt(src)).toBe(40_000)
+    expect([decoder.resets, decoder.decoded.length, src.version]).toEqual([resets, decoded, version])
   })
 
   it('says the decoder failed even when the picture asked for is already shown', async () => {
