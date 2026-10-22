@@ -1,4 +1,4 @@
-import { FabricImage, type IText } from 'fabric'
+import { Ellipse, FabricImage, type IText } from 'fabric'
 import { createBlankDocument } from '@/lib/document'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { installImageStub } from '../test/imageStub'
@@ -621,6 +621,27 @@ describe('EditorEngine', () => {
     expect(img.getScaledHeight()).toBeCloseTo(600)
     expect(img.getBoundingRect().left).toBeCloseTo(0)
     expect(img.getBoundingRect().top).toBeCloseTo(0)
+    await nextFrame()
+    engine.dispose()
+    restore()
+  })
+
+  it('fit to page rebuilds the frame of a masked picture for its new crop', async () => {
+    const restore = installImageStub({ width: 200, height: 100 })
+    vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined)
+    const { engine, view } = await setup()
+    URL.createObjectURL = vi.fn(() => 'blob:fake-1')
+    await engine.insert.imageFiles([new File([new Uint8Array([1])], 'wide.png', { type: 'image/png' })])
+    await vi.waitFor(() => expect(view.canvas.getObjects()).toHaveLength(1))
+    engine.style.setMask('circle')
+    engine.arrange.fitToPage()
+    const img = view.canvas.getObjects()[0] as FabricImage
+    // The oval spans the cropped picture (not the old, wider one), so it fills the page.
+    const clip = img.clipPath as Ellipse
+    expect(clip).toBeInstanceOf(Ellipse)
+    expect(clip.rx * 2).toBeCloseTo(img.width)
+    expect(clip.ry * 2).toBeCloseTo(img.height)
+    expect(clip.rx * 2 * img.scaleX).toBeCloseTo(800)
     await nextFrame()
     engine.dispose()
     restore()

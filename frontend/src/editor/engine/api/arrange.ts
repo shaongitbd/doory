@@ -9,6 +9,7 @@ import type { EditorEngine } from '../editor'
 import { type Rect, normalizeAngle } from '../geometry'
 import { asDory, ensureId, isLocked } from '../objects/dory'
 import { bakeInPlace } from '../objects/bake'
+import { applyMask } from '../objects/masks'
 import { anchorFrames, carriedPictures, clampSlotImage, followFrames, hasSlot, mirrorSlot, shiftSlot } from '../objects/slot'
 import { getExtraProps } from '../serialization'
 import { coverFrame } from './insert'
@@ -433,11 +434,13 @@ export class ArrangeApi {
       active.rotate(0)
       if (active instanceof FabricImage && !hasSlot(active)) {
         coverFrame(active, page.width, page.height)
+        applyMask(active)
       } else {
         const w0 = Math.max(1, (active.getScaledWidth() || 1) - border)
         const h0 = Math.max(1, (active.getScaledHeight() || 1) - border)
         active.set({ scaleX: (active.scaleX * Math.max(1, page.width - border)) / w0, scaleY: (active.scaleY * Math.max(1, page.height - border)) / h0 })
-        bakeInPlace(active)
+        // A baked shape has a new width and height, so its frame (a placeholder's crop shape) is rebuilt to match.
+        if (bakeInPlace(active) && asDory(active).maskShape) applyMask(active)
       }
       active.setPositionByOrigin(new Point(page.width / 2, page.height / 2), 'center', 'center')
     })
