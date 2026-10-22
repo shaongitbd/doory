@@ -24,8 +24,9 @@ describe('your sizes', () => {
     togglePinned('logo', ['a4'])
     expect(getSizeChoices().pinned).toEqual(['a4', 'logo'])
     setCollapsed(['social'])
-    noteUsedSize('poster') // the server reads recent sizes from the person's designs
-    expect(getSizeChoices().recent).toEqual(['a4'])
+    // The server reads recent sizes from the person's designs; until they load again, the page notes it itself.
+    noteUsedSize('poster')
+    expect(getSizeChoices().recent).toEqual(['poster', 'a4'])
     await vi.waitFor(() => expect(saved).toEqual([{ pinned: ['a4', 'logo'] }, { collapsed: ['social'] }]))
     expect(localStorage.getItem('doory.sizeChoices')).toBeNull()
   })

@@ -119,9 +119,8 @@ export function setCollapsed(collapsed: string[]): void {
   save({ collapsed })
 }
 
-/** Notes that a size was just used. On the server the person's designs say it already. */
+/** Notes that a size was just used. Signed in, the person's designs say it too, the next time they load. */
 export function noteUsedSize(id: string): void {
-  if (onServer) return
   publish({ ...current, recent: [id, ...current.recent.filter((item) => item !== id)].slice(0, MAX_RECENT) })
 }
 
