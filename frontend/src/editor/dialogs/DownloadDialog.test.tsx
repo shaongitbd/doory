@@ -593,6 +593,23 @@ describe('Download dialog: pictures', () => {
     expect(within(dialog()).getByRole('button', { name: /Small file/ })).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('an emptied quality number keeps the quality until a new one is typed, and comes back when left empty', async () => {
+    ;({ engine } = setup({ doc: story() }))
+    const number = within(dialog()).getByRole('spinbutton', { name: t.dialog.downloadQualityValue })
+    const slider = within(dialog()).getByRole('slider', { name: t.dialog.downloadQuality })
+    await userEvent.clear(number)
+    expect(number).toHaveValue(null)
+    expect(slider).toHaveValue('82')
+    await userEvent.tab()
+    expect(number).toHaveValue(82)
+    await userEvent.clear(number)
+    await userEvent.type(number, '150')
+    expect(slider).toHaveValue('15')
+    await userEvent.tab()
+    expect(number).toHaveValue(100)
+    expect(slider).toHaveValue('100')
+  })
+
   it('downloads at the typed size, and remembers the settings as Last used', async () => {
     ;({ engine } = setup({ doc: story() }))
     await userEvent.clear(sizeField())
