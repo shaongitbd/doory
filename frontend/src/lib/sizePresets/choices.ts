@@ -7,7 +7,7 @@ import { quickPresets, type SizePreset, type SizePresetCatalogue } from './catal
  * The sizes a person keeps at hand: the ones they pinned (null until they choose, so the catalogue's popular sizes
  * stand in), the ones they used lately, and the picker sections they folded. Signed in, they live on the server
  * (`/size-presets/mine/`, recent sizes from the person's latest designs) and follow them to other devices; signed
- * out, in this browser.
+ * out, in this browser. They belong to whoever is signed in: `setSizeChoicesUser` starts over when that changes.
  */
 export interface SizeChoices {
   pinned: string[] | null
@@ -23,6 +23,10 @@ const EMPTY: SizeChoices = { pinned: null, recent: [], collapsed: [] }
 let current: SizeChoices = EMPTY
 let onServer = false
 let request: Promise<void> | null = null
+/** Whose choices these are: a user id, null signed out, undefined until the session is known. */
+let owner: string | null | undefined
+/** Bumped on every load and every change of person, so an answer that comes back late is dropped. */
+let generation = 0
 const listeners = new Set<() => void>()
 
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [])
@@ -43,16 +47,19 @@ function publish(next: SizeChoices): void {
   for (const listener of listeners) listener()
 }
 
-/** Loads the person's choices once per page load (again with `refresh`); signed out, the browser's. */
+/** Loads the person's choices once per person (again with `refresh`); signed out, the browser's. */
 export function loadSizeChoices(refresh = false): Promise<void> {
   if (request && !refresh) return request
+  const mine = ++generation
   request = http
     .get<SizeChoices>('/size-presets/mine/')
-    .then((mine) => {
+    .then((answer) => {
+      if (mine !== generation) return
       onServer = true
-      publish({ pinned: mine.pinned === null ? null : strings(mine.pinned), recent: strings(mine.recent), collapsed: strings(mine.collapsed) })
+      publish({ pinned: answer.pinned === null ? null : strings(answer.pinned), recent: strings(answer.recent), collapsed: strings(answer.collapsed) })
     })
     .catch((error: unknown) => {
+      if (mine !== generation) return
       // Signed out (or the server cannot be reached): keep them in this browser.
       if (!isApiError(error) || error.status === 401 || error.status === 403 || error.isNetwork) {
         onServer = false
@@ -60,6 +67,23 @@ export function loadSizeChoices(refresh = false): Promise<void> {
       }
     })
   return request
+}
+
+/**
+ * Says who is signed in (null: nobody). When that changes, the previous person's choices are dropped (never shown
+ * to, or saved for, the next one) and loaded again for the new one if anything shows them.
+ */
+export function setSizeChoicesUser(userId: string | null): void {
+  const previous = owner
+  owner = userId
+  // The first answer only says whose choices were already being loaded.
+  if (previous === undefined || previous === userId) return
+  generation += 1
+  request = null
+  onServer = false
+  current = EMPTY
+  for (const listener of listeners) listener()
+  if (listeners.size > 0) void loadSizeChoices()
 }
 
 function save(patch: Partial<Pick<SizeChoices, 'pinned' | 'collapsed'>>): void {
@@ -104,6 +128,8 @@ export function noteUsedSize(id: string): void {
 /** Tests: start from these choices (default: none), kept in the browser, without fetching. */
 export function setSizeChoicesForTests(choices: Partial<SizeChoices> = {}): void {
   onServer = false
+  owner = undefined
+  generation += 1
   request = Promise.resolve()
   current = { ...EMPTY, ...choices }
   for (const listener of listeners) listener()

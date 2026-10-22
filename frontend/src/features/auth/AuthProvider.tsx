@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { configureBackgroundRemoval } from '@/editor/engine/bgRemoval/install'
 import { ApiError, authApi, configApi, DEFAULT_CONFIG, isApiError, setUnauthorizedHandler } from '@/lib/api'
+import { setSizeChoicesUser } from '@/lib/sizePresets/choices'
 import type { ApiUser, AppConfig, RegisterInput } from '@/types/api'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous'
@@ -105,6 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserState(null)
     setStatus('anonymous')
   }, [])
+
+  // Pinned and recent sizes belong to the person signed in, not to the page.
+  const userId = user?.id ?? null
+  useEffect(() => {
+    if (status !== 'loading') setSizeChoicesUser(userId)
+  }, [status, userId])
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
