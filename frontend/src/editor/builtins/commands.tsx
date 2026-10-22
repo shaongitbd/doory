@@ -160,7 +160,11 @@ export function registerBuiltinCommands(): void {
     label: t.clips.menu.detachAudio,
     group: t.cmdGroup.image,
     run: (e) => void e.videos.detachAudio(),
-    enabled: ({ editor, state }) => state.selection.ids.length === 1 && state.selection.kinds[0] === 'video' && !!editor.videos.get()?.audioSrc && editor.videos.get()?.muted !== true,
+    // A track has no playback speed: the sound of a faster or slower clip would drift from its picture.
+    enabled: ({ editor, state }) => {
+      const clip = editor.videos.get()
+      return oneClip({ state }) && !!clip?.audioSrc && !clip.muted && clip.speed === 1
+    },
   })
   registerCommand({
     id: 'video.background',

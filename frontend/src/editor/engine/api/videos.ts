@@ -400,14 +400,15 @@ export class VideosApi {
 
   /**
    * Moves the clip's sound to an audio track of the page (same start, trim and volume) and mutes the clip: one undo step.
-   * Afterwards the sound can be moved, trimmed, faded and ducked like any track.
+   * Afterwards the sound can be moved, trimmed, faded and ducked like any track. Not for a clip that plays faster or
+   * slower: a track has no speed, so its sound would drift from the picture.
    */
   detachAudio(id?: string): boolean {
     if (this.engine.readOnly) return false
     const obj = this.target(id)
     const clip = obj ? liveClip(obj) : null
     const objectId = obj ? asDory(obj).id : undefined
-    if (!obj || !clip || !clip.audioSrc || !objectId) return false
+    if (!obj || !clip || !clip.audioSrc || clip.speed !== 1 || !objectId) return false
     const doc = this.engine.getDocument()
     const tracks = readTracks(doc)
     if (tracks.length >= MAX_TRACKS) {

@@ -104,6 +104,18 @@ describe('video clip commands', () => {
     expect(stored().videoMuted).not.toBe(true)
   })
 
+  it('cannot detach the sound of a clip that plays faster or slower (a track would drift from it)', async () => {
+    const { commands, isCommandEnabled } = await import('../../commands')
+    await import('../../builtins/commands')
+    const detach = commands.get('video.detachAudio')!
+    engine.select(['clip'])
+    expect(isCommandEnabled(detach, { editor: engine, state: engine.state })).toBe(true)
+    engine.videos.update('clip', { speed: 2 })
+    expect(isCommandEnabled(detach, { editor: engine, state: engine.state })).toBe(false)
+    expect(engine.videos.detachAudio('clip')).toBe(false)
+    expect(readTracks(engine.getDocument())).toHaveLength(0)
+  })
+
   it('cannot detach the sound of a silent clip', async () => {
     engine.dispose()
     ;({ engine } = await setupEditor({ objects: [clipObject({ videoAudioSrc: undefined })] }))
