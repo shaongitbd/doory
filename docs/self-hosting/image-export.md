@@ -43,7 +43,7 @@ The REST endpoint (a JSON body) and the MCP tool `export_design` take the same o
 |--------|---------|--------------|
 | `page` | first page | One page, by its id or its number counting from 1 |
 | `pages` | | Several pages instead: `"all"` or a list such as `[1, 3]`. They come back as one ZIP |
-| `format` | `png` | `png`, `jpg`, `webp`, `avif`, or `auto`: all of them, keeping the smallest file (no JPG when `transparent`). Also `svg`, `pdf` and `pdf-print`: see [SVG and PDF](#svg-and-pdf); and `mp4`, `webm` and `gif`: see [Video](#video) |
+| `format` | `png` | `png`, `jpg`, `webp`, `avif`, or `auto`: all of them, keeping the smallest file (no JPG when `transparent`, and no AVIF for images of more than 8 million pixels, which are slow to make in AVIF). Also `svg`, `pdf` and `pdf-print`: see [SVG and PDF](#svg-and-pdf); and `mp4`, `webm` and `gif`: see [Video](#video) |
 | `quality` | `90` | JPG, WebP and AVIF: 1 to 100, or `small` (65), `balanced` (82), `best` (95), `original` (100) |
 | `max_bytes` | | Largest file wanted. JPG, WebP and AVIF use the highest quality, up to `quality`, that fits. If even the lowest doesn't fit, the smallest file comes back with a warning |
 | `scale` | `1` | Output pixels per page pixel, from 0.1 to 4 |

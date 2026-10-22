@@ -141,7 +141,8 @@ AUTO = "auto"  # every format this server makes; the smallest file wins
 ZIP_MIME = "application/zip"
 MIN_SCALE, MAX_SCALE = 0.1, 4.0
 QUALITY_PRESETS = {"small": 65, "balanced": 82, "best": 95, "original": 100}
-# AVIF is slow to encode: above this many pixels it uses speed 6 instead of 4 (much faster, a little bigger).
+# AVIF is slow to encode: above this many pixels it uses speed 6 instead of 4 (much faster, a little bigger),
+# and `auto` leaves it out (with `max_bytes` it could take eight encodes of each format).
 AVIF_FAST_PIXELS = 8_000_000
 _SIZE = re.compile(r"^\s*(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>[xwh])\s*$", re.IGNORECASE)
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -391,7 +392,8 @@ def _late(deadline: float | None) -> bool:
 
 def _convert(png: bytes, encoding: Encoding, *, deadline: float | None = None) -> Converted:
     """PNG as drawn (or with fewer colours); JPG flattened on white (no alpha); WebP and AVIF with alpha only
-    for a transparent export. `auto` makes every format that fits and keeps the smallest file. Past
+    for a transparent export. `auto` makes every format that fits (no AVIF above `AVIF_FAST_PIXELS`) and
+    keeps the smallest file. Past
     `deadline`, a `max_bytes` search and `auto` stop with the files made so far."""
     image, info = None, {}
     if encoding.format != "png" or encoding.png_colors:  # a PNG as drawn is not decoded at all
@@ -400,7 +402,12 @@ def _convert(png: bytes, encoding: Encoding, *, deadline: float | None = None) -
         image.info = {}  # metadata goes in only on request (`_metadata`)
     if encoding.format != AUTO:
         return _convert_to(png, image, info, encoding, deadline)
-    formats = [fmt for fmt in image_formats() if not (fmt == "jpg" and encoding.transparent)]
+    large = image.width * image.height > AVIF_FAST_PIXELS
+    formats = [
+        fmt
+        for fmt in image_formats()
+        if not (fmt == "jpg" and encoding.transparent) and not (fmt == "avif" and large)
+    ]
     tried: list[Converted] = []
     for fmt in formats:
         if tried and _late(deadline):

@@ -108,13 +108,14 @@ def export_design(
         Literal["png", "jpg", "webp", "avif", "auto", "svg", "pdf", "pdf-print", "mp4", "webm", "gif"],
         Field(
             description=(
-                "auto: the smallest image of all formats (no JPG when transparent). svg: one vector file per "
-                "page, with its pictures and fonts inside. pdf: one PDF of all pages, each a 300 dpi picture "
-                "(as the editor's PDF download). pdf-print: one vector PDF for printing (the editor's "
-                "print-quality PDF). mp4, webm, gif: a video of the pages one after another, with their "
-                "animations, transitions and (mp4, webm) the design's sound, as the editor's video download; "
-                "each started 10 s after the first counts as one more call. AVIF, SVG, PDF and videos are "
-                "links; the image options (quality to optimize) do not apply to SVG, PDF and videos."
+                "auto: the smallest image of all formats (no JPG when transparent, no AVIF above 8 million "
+                "pixels). svg: one vector file per page, with its pictures and fonts inside. pdf: one PDF of "
+                "all pages, each a 300 dpi picture (as the editor's PDF download). pdf-print: one vector PDF "
+                "for printing (the editor's print-quality PDF). mp4, webm, gif: a video of the pages one "
+                "after another, with their animations, transitions and (mp4, webm) the design's sound, as "
+                "the editor's video download; each started 10 s after the first counts as one more call. "
+                "AVIF, SVG, PDF and videos are links; the image options (quality to optimize) do not apply "
+                "to SVG, PDF and videos."
             )
         ),
     ] = "png",

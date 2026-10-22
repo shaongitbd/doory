@@ -313,6 +313,17 @@ def test_auto_leaves_jpg_out_of_a_transparent_export(design, monkeypatch):
     assert opened(result.data).mode in ("RGBA", "P")
 
 
+@needs_avif
+def test_auto_leaves_avif_out_of_a_large_image(design, monkeypatch):
+    drawing(monkeypatch, noisy_png())
+    monkeypatch.setattr(services, "AVIF_FAST_PIXELS", 200 * 100)
+    assert "avif" in services.export_image(design, format="auto").options_used["compared"]
+    monkeypatch.setattr(services, "AVIF_FAST_PIXELS", 200 * 100 - 1)
+    result = services.export_image(design, format="auto", max_bytes=100)
+    assert set(result.options_used["compared"]) == {"png", "jpg", "webp"}
+    assert services.export_image(design, format="avif").format == "avif"  # asked for by name, it is made
+
+
 def test_a_flat_png_can_win_auto(design, renders):
     result = services.export_image(design, format="auto")
     assert result.options_used["compared"]["png"] == len(drawn_png())
