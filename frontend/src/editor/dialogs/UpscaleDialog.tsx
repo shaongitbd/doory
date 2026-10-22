@@ -22,6 +22,7 @@ export function UpscaleDialog() {
   const [scaleId, setScaleId] = useState<'2' | '4'>('2')
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const controller = useRef<AbortController | null>(null)
+  const cancelButton = useRef<HTMLButtonElement>(null)
   const supported = isUpscaleSupported()
 
   useEffect(() => () => controller.current?.abort(), [])
@@ -35,6 +36,8 @@ export function UpscaleDialog() {
     if (!supported || !source || tooLarge || controller.current) return
     const run = new AbortController()
     controller.current = run
+    // The Upscale button goes away while it runs: keep the keyboard on the dialog's Cancel.
+    cancelButton.current?.focus()
     setStatus({ kind: 'running', percent: 0 })
     editor.style
       .upscale({ scale }, (percent) => {
@@ -44,7 +47,7 @@ export function UpscaleDialog() {
         if (run.signal.aborted) return
         controller.current = null
         editor.closeDialog()
-        if (applied) editor.toast(t.dialog.upscaleDone, 'success')
+        editor.toast(applied ? t.dialog.upscaleDone : t.dialog.upscaleNotApplied, applied ? 'success' : 'info')
       })
       .catch((err: unknown) => {
         if (run.signal.aborted) return
@@ -64,16 +67,16 @@ export function UpscaleDialog() {
       onClose={close}
       width={400}
       footer={
-        status.kind === 'running' ? (
-          <Button onClick={close}>{t.dialog.cancel}</Button>
-        ) : (
-          <>
-            <Button onClick={close}>{t.dialog.cancel}</Button>
+        <>
+          <Button ref={cancelButton} onClick={close}>
+            {t.dialog.cancel}
+          </Button>
+          {status.kind === 'running' ? null : (
             <Button variant="primary" disabled={!supported || !source || tooLarge} onClick={start}>
               {status.kind === 'error' ? t.dialog.upscaleRetry : t.dialog.upscaleButton}
             </Button>
-          </>
-        )
+          )}
+        </>
       }
     >
       {!supported ? (

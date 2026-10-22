@@ -87,6 +87,22 @@ describe('UpscaleDialog', () => {
     expect(ctx.toast).toHaveBeenCalledWith(t.dialog.upscaleDone, 'success')
   })
 
+  it('says so when nothing was applied', async () => {
+    const ctx = setup(() => Promise.resolve(false))
+    engine = ctx.engine
+    await userEvent.click(screen.getByRole('button', { name: t.dialog.upscaleButton }))
+    await waitFor(() => expect(ctx.closeDialog).toHaveBeenCalledTimes(1))
+    expect(ctx.toast).toHaveBeenCalledWith(t.dialog.upscaleNotApplied, 'info')
+  })
+
+  it('moves the focus to Cancel when the run starts', async () => {
+    const ctx = setup(() => new Promise<boolean>(() => undefined))
+    engine = ctx.engine
+    await userEvent.click(screen.getByRole('button', { name: t.dialog.upscaleButton }))
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: t.dialog.cancel })).toHaveFocus()
+  })
+
   it('shows the error and offers a retry', async () => {
     const run = vi.fn<Run>().mockRejectedValueOnce(new Error('boom')).mockReturnValue(new Promise<boolean>(() => undefined))
     const ctx = setup(run)

@@ -547,6 +547,7 @@ export const t = {
     upscaleLarge: 'Large results can take a while and use a lot of memory.',
     upscaleWorking: 'Upscaling…',
     upscaleDone: 'Image upscaled',
+    upscaleNotApplied: 'Nothing was upscaled. Select the picture and try again.',
     upscaleTooLarge: 'The result would be too large. Choose a smaller factor.',
     upscaleButton: 'Upscale',
     upscaleRetry: 'Try again',
