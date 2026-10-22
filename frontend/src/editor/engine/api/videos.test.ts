@@ -163,6 +163,17 @@ describe('video clip commands', () => {
     expect(readClip(followed)).toMatchObject({ trimStartMs: 2000, speed: 2, volume: 1, muted: true })
   })
 
+  it('pastes a clip with its blurred background, the pasted background following the pasted clip', async () => {
+    engine.videos.blurredBackground('clip')
+    const [backdrop, clip] = engine.getDocument().pages[0].objects
+    await engine.insert.objects([backdrop, clip], 'Paste', { offset: 20 })
+    const objects = engine.getDocument().pages[0].objects
+    const pastedClip = objects.find((o) => o.videoSrc && !o.videoBackdropOf && o.id !== 'clip')!
+    const pastedBackdrop = objects.find((o) => o.videoBackdropOf && o.id !== backdrop.id)!
+    expect(pastedBackdrop.videoBackdropOf).toBe(pastedClip.id)
+    expect(objects.find((o) => o.id === backdrop.id)?.videoBackdropOf).toBe('clip')
+  })
+
   it('splits a clip at the playhead into two that play one after the other', async () => {
     engine.videos.update('clip', { startMs: 1000, trimStartMs: 500 })
     expect(engine.videos.split('clip', 1000)).toBeNull() // at its very start

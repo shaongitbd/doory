@@ -24,13 +24,17 @@ export type AlignTarget = 'page' | 'selection'
 export const DUPLICATE_OFFSET = 20
 
 /**
- * Re-assigns ids to an object and every object nested in it. A copy also loses its template field tag: the same
- * key twice on one page would clash, and the user tags the copy when it is meant to be a field too.
+ * Re-assigns ids to an object and every object nested in it (noting each old id's new one in `renamed`, when given).
+ * A copy also loses its template field tag: the same key twice on one page would clash, and the user tags the copy
+ * when it is meant to be a field too.
  */
-export function reidTree(obj: FabricObject): void {
-  asDory(obj).id = newId()
+export function reidTree(obj: FabricObject, renamed?: Map<string, string>): void {
+  const before = asDory(obj).id
+  const id = newId()
+  asDory(obj).id = id
+  if (before && renamed) renamed.set(before, id)
   asDory(obj).field = undefined
-  if (obj instanceof Group) for (const child of obj.getObjects()) reidTree(child)
+  if (obj instanceof Group) for (const child of obj.getObjects()) reidTree(child, renamed)
 }
 
 export function findLive(objects: readonly FabricObject[], id: string): FabricObject | undefined {

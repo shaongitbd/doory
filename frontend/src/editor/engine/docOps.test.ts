@@ -85,6 +85,17 @@ describe('page operations', () => {
     expect(ids.has('child')).toBe(false)
   })
 
+  it('duplicates a clip with its blurred background, the copy following the copied clip', () => {
+    const clip: DocObject = { id: 'clip', type: 'image', src: '/p.webp', videoSrc: '/c.mp4' }
+    const backdrop: DocObject = { ...clip, id: 'bg', videoBackdropOf: 'clip' }
+    const d = { ...createBlankDocument(800, 600), pages: [{ ...createBlankDocument(800, 600).pages[0], objects: [backdrop, clip] }] }
+    const copy = duplicatePage(d, d.pages[0].id).pages[1]
+    const [bg, c] = copy.objects
+    expect(c.id).not.toBe('clip')
+    expect(bg.videoBackdropOf).toBe(c.id)
+    expect(d.pages[0].objects[0].videoBackdropOf).toBe('clip')
+  })
+
   it('structural sharing: replacing a page keeps the others identical', () => {
     const d = doc3()
     const next = replacePage(d, { ...d.pages[1], name: 'x' })
@@ -115,6 +126,11 @@ describe('object helpers', () => {
     expect(src[0].id).toBe('g')
     expect(clone[0].id).not.toBe('g')
     expect((clone[0].objects as DocObject[])[0].id).not.toBe('c')
+  })
+
+  it('cloneObjects unlinks a blurred background copied without its clip', () => {
+    const [copy] = cloneObjects([{ id: 'bg', type: 'image', videoSrc: '/c.mp4', videoBackdropOf: 'clip' }])
+    expect(copy).not.toHaveProperty('videoBackdropOf')
   })
 
   it('finds nested objects and counts them', () => {

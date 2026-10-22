@@ -339,7 +339,16 @@ export class InsertApi {
   async objects(docs: readonly DocObject[], label: string, opts: { offset?: number; recenterOn?: { width: number; height: number } } = {}): Promise<void> {
     const fresh = cloneObjects(docs)
     const built = await deserializeObjects(fresh, this.engine.loadContext)
-    for (const o of built) reidTree(o)
+    const renamed = new Map<string, string>()
+    for (const o of built) reidTree(o, renamed)
+    // A pasted blurred background follows the pasted copy of its clip (`cloneObjects` linked the two).
+    for (const o of built) {
+      const record = o as unknown as Record<string, unknown>
+      if (typeof record.videoBackdropOf !== 'string') continue
+      const clip = renamed.get(record.videoBackdropOf)
+      if (clip) record.videoBackdropOf = clip
+      else delete record.videoBackdropOf
+    }
     if (opts.recenterOn) {
       const xs = built.map((o) => o.getBoundingRect())
       const left = Math.min(...xs.map((r) => r.left))
