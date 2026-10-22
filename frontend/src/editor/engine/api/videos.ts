@@ -78,6 +78,7 @@ export class VideosApi {
 
   private replacingId: string | null = null
   private readonly replacingListeners = new Set<() => void>()
+  private stopWatchingPanel: (() => void) | null = null
 
   /** The clip a pick in the Videos tool replaces, while "Replace video" waits for one. */
   get replacing(): string | null {
@@ -94,6 +95,14 @@ export class VideosApi {
   private setReplacing(id: string | null): void {
     if (this.replacingId === id) return
     this.replacingId = id
+    this.stopWatchingPanel?.()
+    this.stopWatchingPanel = null
+    // The pick is made in the Videos tool: closing it without one leaves the clip as it is.
+    if (id) {
+      this.stopWatchingPanel = this.engine.store.subscribe((state) => {
+        if (state.ui.panelId !== 'videos') this.setReplacing(null)
+      })
+    }
     for (const listener of [...this.replacingListeners]) listener()
   }
 

@@ -253,6 +253,18 @@ describe('video clip commands', () => {
     expect(engine.getDocument().pages[0].objects.filter((o) => o.videoSrc)).toHaveLength(1)
   })
 
+  it('stops waiting for a replacement when the Videos tool closes without a pick', () => {
+    engine.select(['clip'])
+    expect(engine.videos.startReplace()).toBe(true)
+    engine.patchUi({ grid: true })
+    expect(engine.videos.replacing).toBe('clip')
+    engine.patchUi({ panelId: null })
+    expect(engine.videos.replacing).toBeNull()
+    // Closed for good: opening the tool again only adds videos.
+    engine.patchUi({ panelId: 'videos' })
+    expect(engine.videos.replacing).toBeNull()
+  })
+
   it('keeps picture tools away from clips', async () => {
     engine.select(['clip'])
     engine.style.setPlaceholder(true)
