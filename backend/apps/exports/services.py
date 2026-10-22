@@ -964,10 +964,9 @@ def export_images(
     for every page, and before anything is drawn, `charge` is called with the number of pages after the first
     (to count them against a rate limit), so a request that is refused costs no more than one; when the
     optimizer (`optimize`) sends images off this server, `charge_offsite` is called with the number of pages
-    before that. The
-    files are named by `filenames.page_filename` in `filename_style` (default `EXPORT_FILENAME_STYLE`), the
-    ZIP after the design's title. All pages are done within one `EXPORT_IMAGE_TIMEOUT_SECONDS`, else
-    ExportTimeout.
+    before that. The files are named by `filenames.page_filename` in `filename_style` (default
+    `EXPORT_FILENAME_STYLE`), the ZIP after the design's title. All pages are done within one
+    `EXPORT_IMAGE_TIMEOUT_SECONDS`, else ExportTimeout.
 
     The formats svg, pdf and pdf-print go to `export_document` with `bleed_mm` and `crop_marks` (which
     images leave out); the image options are not used for them. `cmyk` is refused for every format. The
