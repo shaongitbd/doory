@@ -9,9 +9,10 @@ function abortError(signal: AbortSignal): Error {
 }
 
 /**
- * Runs one upscale in a dedicated worker and returns the encoded image (WebP for photos, PNG for
- * pixel art). Aborting terminates the worker, which is the only way to interrupt a synchronous pixel
- * loop; no partial result is ever applied.
+ * Runs one upscale in a dedicated worker and returns the encoded image: a PNG for pixel art and for
+ * a photo of up to about 12 megapixels whose PNG fits the upload limit, otherwise a WebP (see
+ * `encodeResult`). Aborting terminates the worker, which is the only way to interrupt a synchronous
+ * pixel loop; no partial result is ever applied.
  */
 export function upscaleImage(image: Blob, options: UpscaleRequestOptions, onProgress?: UpscaleProgress, signal?: AbortSignal): Promise<Blob> {
   if (signal?.aborted) return Promise.reject(abortError(signal))
