@@ -173,6 +173,14 @@ def configured(settings):
     settings.OIDC_TRUST_EMAIL = False
 
 
+@pytest.fixture(autouse=True)
+def resolver(monkeypatch):
+    """Host names resolve to a public address unless a test says otherwise."""
+    names: dict[str, list[str]] = {}
+    monkeypatch.setattr(oidc, "_resolve", lambda host: names.get(host, ["203.0.113.10"]))
+    return names
+
+
 @pytest.fixture
 def provider():
     fake = FakeProvider()
@@ -333,6 +341,37 @@ def test_a_slow_answer_is_cut_off(client, provider, monkeypatch):
 def test_discovery_for_another_issuer_is_refused(client, provider):
     provider.metadata["issuer"] = "https://evil.example.com/"
     assert sso_error(client.get(START)) == "oidc_unavailable"
+
+
+@pytest.mark.parametrize(
+    "jwks_uri",
+    [
+        "https://169.254.169.254/latest/meta-data/",
+        "https://[fe80::1]/keys",
+        "https://[::ffff:169.254.169.254]/keys",
+        "https://100.100.100.200/keys",
+        "https://metadata.example.com/keys",  # a host name that resolves to a metadata address
+    ],
+)
+def test_documents_never_come_from_link_local_or_metadata_addresses(client, provider, resolver, jwks_uri):
+    resolver["metadata.example.com"] = ["10.0.0.5", "169.254.169.254"]
+    provider.metadata["jwks_uri"] = jwks_uri
+    assert sso_error(sign_in(client, provider)) == "oidc_unavailable"
+    assert not [call for call in provider.calls if call[1] == jwks_uri]
+
+
+def test_a_provider_on_a_private_network_is_allowed(client, provider, resolver):
+    resolver["idp.example.com"] = ["10.0.0.5"]
+    assert sso_error(sign_in(client, provider)) is None
+
+
+def test_a_provider_whose_name_cannot_be_found_is_unavailable(client, provider, monkeypatch):
+    def missing(host):
+        raise oidc.remote.RemoteImageError("no such host")
+
+    monkeypatch.setattr(oidc, "_resolve", missing)
+    assert sso_error(client.get(START)) == "oidc_unavailable"
+    assert not provider.calls
 
 
 def test_an_unreachable_provider_is_reported_without_details(client):
