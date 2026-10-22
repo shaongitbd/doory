@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { fitsOutput, targetSize } from '../engine/upscale/types'
-import { isUpscaleSupported } from '../engine/upscale/support'
+import { isUpscaleSupported, maxOutputPixels } from '../engine/upscale/support'
 import { useEditor } from '../context'
 import { t } from '../strings'
 import { Button } from '../ui/Button'
@@ -28,7 +28,7 @@ export function UpscaleDialog() {
 
   const scale = Number(scaleId)
   const target = source ? targetSize(source.width, source.height, scale) : null
-  const tooLarge = target ? !fitsOutput(target) : false
+  const tooLarge = target ? !fitsOutput(target, maxOutputPixels()) : false
   const large = target ? target.width * target.height > 24_000_000 : false
 
   const start = (): void => {

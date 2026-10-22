@@ -75,8 +75,10 @@ export function targetSize(width: number, height: number, scale: number): Size {
   }
 }
 
-export function fitsOutput(size: Size): boolean {
-  return size.width >= 1 && size.height >= 1 && size.width <= MAX_OUTPUT_SIDE && size.height <= MAX_OUTPUT_SIDE && size.width * size.height <= MAX_OUTPUT_PIXELS
+/** Whether a result of `size` can be made and uploaded; `maxPixels` lowers the pixel limit for this device. */
+export function fitsOutput(size: Size, maxPixels: number = MAX_OUTPUT_PIXELS): boolean {
+  const pixels = Math.min(maxPixels, MAX_OUTPUT_PIXELS)
+  return size.width >= 1 && size.height >= 1 && size.width <= MAX_OUTPUT_SIDE && size.height <= MAX_OUTPUT_SIDE && size.width * size.height <= pixels
 }
 
 export function assertOutput(size: Size): void {

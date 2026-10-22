@@ -8,7 +8,7 @@ import type { ArrowHead, DocField, DocTextFit, ImageFilterSpec, MaskShape, Objec
 import type { AssetRef } from '@/types/adapter'
 import type { EditorEngine } from '../editor'
 import { BACKGROUND_REMOVAL_TASK, BackgroundRemovalError, DEVICE_OPTION, removeBackground as runRemoval, type BgRemovalPhase } from '../bgRemoval'
-import { targetSize, upscaleImage as runUpscale, type CropRect, type UpscaleMethod, type UpscaleProgress } from '../upscale'
+import { UpscaleError, fitsOutput, maxOutputPixels, targetSize, upscaleImage as runUpscale, type CropRect, type UpscaleMethod, type UpscaleProgress } from '../upscale'
 import { MAX_UPLOAD_BYTES } from '../assets'
 import { DoryLine } from '../objects/DoryLine'
 import { asDory } from '../objects/dory'
@@ -479,6 +479,9 @@ export class StyleApi {
     if (!img || !this.canUpscale() || this.engine.readOnly || asDory(img).locked || signal?.aborted) return false
     const source = this.selectedImageSource()
     if (!source) return false
+    const target = targetSize(source.width, source.height, options.scale)
+    // Refuse up front what this device cannot hold, rather than failing after the work.
+    if (!fitsOutput(target, maxOutputPixels())) throw new UpscaleError(t.dialog.upscaleTooLarge)
     const stale = (): boolean => signal?.aborted === true || this.images()[0] !== img
     let result: Blob
     try {
@@ -490,7 +493,6 @@ export class StyleApi {
       throw error
     }
     if (stale()) return false
-    const target = targetSize(source.width, source.height, options.scale)
     const ext = result.type === 'image/webp' ? 'webp' : 'png'
     const ref = await this.engine.assets.upload(result, `upscaled-${target.width}x${target.height}.${ext}`)
     if (stale()) return false

@@ -5,6 +5,7 @@ import { installImageStub } from '../../test/imageStub'
 import { EditorEngine } from '../editor'
 import { asDory } from '../objects/dory'
 import { upscaleImage } from '../upscale'
+import { t } from '../../strings'
 
 // jsdom has no worker; the engine only needs the encoded result.
 vi.mock('../upscale', async (importOriginal) => ({ ...(await importOriginal<typeof import('../upscale')>()), upscaleImage: vi.fn() }))
@@ -47,6 +48,21 @@ describe('StyleApi.upscale', () => {
     const { engine } = await setup()
     expect(engine.style.canUpscale()).toBe(true)
     engine.dispose()
+  })
+
+  it('refuses up front a result this device cannot hold', async () => {
+    restore()
+    restore = installImageStub({ width: 3000, height: 2000 })
+    Object.defineProperty(navigator, 'deviceMemory', { configurable: true, value: 4 })
+    try {
+      const { engine } = await setup()
+      await expect(engine.style.upscale({ scale: 2 })).rejects.toThrow(t.dialog.upscaleTooLarge)
+      expect(fetch).not.toHaveBeenCalled()
+      expect(upscaleImage).not.toHaveBeenCalled()
+      engine.dispose()
+    } finally {
+      Reflect.deleteProperty(navigator, 'deviceMemory')
+    }
   })
 
   it('leaves an SVG alone without fetching or starting the worker', async () => {

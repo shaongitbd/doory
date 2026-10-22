@@ -1,5 +1,5 @@
 export { upscaleImage, type UpscaleProgress } from './client'
-export { isUpscaleSupported } from './support'
+export { LOW_MEMORY_MAX_PIXELS, isUpscaleSupported, maxOutputPixels, type DeviceInfo } from './support'
 export {
   DEFAULT_DETAIL,
   MAX_OUTPUT_PIXELS,

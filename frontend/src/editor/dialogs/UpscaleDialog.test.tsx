@@ -10,7 +10,7 @@ import { t } from '../strings'
 import { UpscaleDialog } from './UpscaleDialog'
 
 // jsdom has no worker or OffscreenCanvas; the dialog only needs to know that this browser can run it.
-vi.mock('../engine/upscale/support', () => ({ isUpscaleSupported: () => true }))
+vi.mock('../engine/upscale/support', async (importOriginal) => ({ ...(await importOriginal<typeof import('../engine/upscale/support')>()), isUpscaleSupported: () => true }))
 
 type Run = (options: { scale: number; method?: UpscaleMethod; detail?: number }, onProgress?: (percent: number) => void, signal?: AbortSignal) => Promise<boolean>
 
@@ -57,6 +57,19 @@ describe('UpscaleDialog', () => {
     expect(screen.getByText(`${t.dialog.upscaleTarget}: 16000 × 12000 px`)).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent(t.dialog.upscaleTooLarge)
     expect(screen.getByRole('button', { name: t.dialog.upscaleButton })).toBeDisabled()
+  })
+
+  it('refuses a result this device cannot hold', () => {
+    Object.defineProperty(navigator, 'deviceMemory', { configurable: true, value: 4 })
+    try {
+      const ctx = setup(() => Promise.resolve(true))
+      engine = ctx.engine
+      expect(screen.getByText(`${t.dialog.upscaleTarget}: 8000 × 6000 px`)).toBeInTheDocument()
+      expect(screen.getByRole('alert')).toHaveTextContent(t.dialog.upscaleTooLarge)
+      expect(screen.getByRole('button', { name: t.dialog.upscaleButton })).toBeDisabled()
+    } finally {
+      Reflect.deleteProperty(navigator, 'deviceMemory')
+    }
   })
 
   it('runs the 2x upscale, reports progress and closes with a toast', async () => {
