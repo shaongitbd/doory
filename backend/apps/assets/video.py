@@ -215,6 +215,15 @@ def _ffmpeg(*args: str) -> list[str]:
     return [settings.FFMPEG_PATH, "-hide_banner", "-nostdin", "-loglevel", "error", "-y", *args]
 
 
+# Every file ffprobe or ffmpeg opens is read as a local file in one of the containers clips come in: a crafted
+# file can't make them open a URL or another file (HLS, concat and other playlists) or use another demuxer.
+INPUT_GUARD = ("-protocol_whitelist", "file", "-format_whitelist", "mov,matroska,avi")
+
+
+def _input(path: Path) -> list[str]:
+    return [*INPUT_GUARD, "-i", str(path)]
+
+
 # ---- probing -----------------------------------------------------------------------------------
 
 
@@ -301,7 +310,7 @@ def probe(path: Path) -> VideoInfo:
             "json",
             "-show_format",
             "-show_streams",
-            str(path),
+            *_input(path),
         ],
         timeout=PROBE_TIMEOUT_SECONDS,
         capture=True,
@@ -331,7 +340,7 @@ def output_size(info: VideoInfo) -> tuple[int, int]:
 
 def remux_args(source: Path, target: Path) -> list[str]:
     return _ffmpeg(
-        "-i", str(source),
+        *_input(source),
         "-map", "0:v:0", "-map", "0:a:0?",
         "-c", "copy",
         "-map_metadata", "-1",
@@ -358,7 +367,7 @@ def transcode_args(source: Path, target: Path, info: VideoInfo) -> list[str]:
     # The result is always tagged as ordinary (BT.709) video, so a browser never treats it as HDR.
     colour = ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709"]
     return _ffmpeg(
-        "-i", str(source),
+        *_input(source),
         "-map", "0:v:0", "-map", "0:a:0?",
         "-vf", ",".join(filters),
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-profile:v", "high",
@@ -402,8 +411,7 @@ def extract_audio(clip: Path, target: Path) -> bool:
     try:
         _run(
             _ffmpeg(
-                "-i",
-                str(clip),
+                *_input(clip),
                 "-vn",
                 "-map",
                 "0:a:0",
@@ -450,7 +458,7 @@ def make_stills(clip: Path, info: VideoInfo) -> Stills:
     poster_png, strip_png = workdir / "poster.png", workdir / "strip.png"
     at = min(1.0, info.duration_ms / 10_000)
     _run(
-        _ffmpeg("-ss", f"{at:.3f}", "-i", str(clip), "-frames:v", "1", "-update", "1", str(poster_png)),
+        _ffmpeg("-ss", f"{at:.3f}", *_input(clip), "-frames:v", "1", "-update", "1", str(poster_png)),
         timeout=STILLS_TIMEOUT_SECONDS,
         workdir=workdir,
     )
@@ -465,7 +473,7 @@ def make_stills(clip: Path, info: VideoInfo) -> Stills:
     try:
         _run(
             _ffmpeg(
-                "-i", str(clip),
+                *_input(clip),
                 "-vf", f"fps=1000/{interval},scale=-2:{STRIP_HEIGHT},tile={frames}x1",
                 "-frames:v", "1", "-update", "1",
                 str(strip_png),

@@ -153,3 +153,36 @@ class TestPlans:
         settings.VIDEO_MAX_CONCURRENCY = 1
         with video.slot(), pytest.raises(video.VideoBusy), video.slot(wait=0):
             pass
+
+
+class TestInputs:
+    """ffprobe and ffmpeg read every input as a local file in a clip container, never a URL or a playlist."""
+
+    @staticmethod
+    def guarded(args: list[str]) -> bool:
+        guard = list(video.INPUT_GUARD)
+        return (
+            all(args[i - len(guard) : i] == guard for i, arg in enumerate(args) if arg == "-i")
+            and "-i" in args
+        )
+
+    def test_conversions(self):
+        clip = info(codec_name="hevc")
+        assert self.guarded(video.remux_args(video.Path("in"), video.Path("out.mp4")))
+        assert self.guarded(video.transcode_args(video.Path("in"), video.Path("out.mp4"), clip))
+
+    def test_probe_sound_and_stills(self, monkeypatch, tmp_path):
+        commands = []
+
+        def run(args, **kwargs):
+            commands.append(args)
+            raise video.Unreadable("stop here")
+
+        monkeypatch.setattr(video, "_run", run)
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"x")
+        for call in (lambda: video.probe(clip), lambda: video.make_stills(clip, info())):
+            with pytest.raises(video.VideoError):
+                call()
+        assert video.extract_audio(clip, tmp_path / "sound.m4a") is False
+        assert len(commands) == 3 and all(self.guarded(args) for args in commands)
