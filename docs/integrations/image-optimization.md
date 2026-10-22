@@ -107,7 +107,8 @@ See [Image optimization in configuration.md](../self-hosting/configuration.md#im
 
 ## Check it works
 
-- `docker compose exec api python manage.py check` reports optimizers that are listed but not set up.
+- `docker compose exec api python manage.py check` reports optimizers that are listed but not set up, and a
+  custom optimizer key that would be sent over plain `http://`.
 - `curl -s https://doory.example.com/api/v1/config/ | jq .features.image_optimize` lists the optimizers on offer.
 - With [server-side image export](../self-hosting/image-export.md) on, export a page with
   `{"format": "jpg", "quality": 82, "optimize": true}`. Over MCP, the result reports `optimizer` and

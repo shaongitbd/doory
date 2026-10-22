@@ -139,7 +139,7 @@ See [image-optimization.md](../integrations/image-optimization.md).
 | `KRAKEN_API_SECRET` | | Kraken.io API secret |
 | `IMAGE_OPTIMIZER_CUSTOM_NAME` | `Custom` | The name people see for the custom optimizer |
 | `IMAGE_OPTIMIZER_CUSTOM_URL` | | Address of an optimizer that follows the [custom contract](../integrations/image-optimization.md#custom-optimizer-contract) |
-| `IMAGE_OPTIMIZER_CUSTOM_KEY` | | Sent to the custom optimizer as `Authorization: Bearer …`. Empty: no header |
+| `IMAGE_OPTIMIZER_CUSTOM_KEY` | | Sent to the custom optimizer as `Authorization: Bearer …`. Empty: no header. Use an `https://` address with a key: `manage.py check` warns about a key sent over plain `http://` |
 
 ## Size presets
 
