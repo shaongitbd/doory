@@ -139,6 +139,7 @@ MAX_VIDEO_UPLOAD_BYTES = env.int("MAX_VIDEO_UPLOAD_BYTES", default=200 * 1024 * 
 MAX_VIDEO_DURATION_SECONDS = env.int("MAX_VIDEO_DURATION_SECONDS", default=600)  # the video export's limit
 VIDEO_MAX_CONCURRENCY = env.int("VIDEO_MAX_CONCURRENCY", default=2)  # ffmpeg runs per API process
 VIDEO_TRANSCODE_TIMEOUT_SECONDS = env.int("VIDEO_TRANSCODE_TIMEOUT_SECONDS", default=900)
+VIDEO_FFMPEG_THREADS = env.int("VIDEO_FFMPEG_THREADS", default=2)  # encoder threads of one conversion
 VIDEO_DOWNLOAD_DEADLINE_SECONDS = env.int("VIDEO_DOWNLOAD_DEADLINE_SECONDS", default=90)  # stock clips
 # Where a clip is converted (the upload, the converted copy and its stills live there until stored).
 # Empty: the system temporary directory.

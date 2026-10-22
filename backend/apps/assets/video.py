@@ -376,8 +376,25 @@ def transcode_args(source: Path, target: Path, info: VideoInfo) -> list[str]:
         *audio,
         "-map_metadata", "-1",
         "-movflags", "+faststart",
+        *_bounds(),
         str(target),
     )  # fmt: skip
+
+
+def max_output_bytes() -> int:
+    """The largest converted clip, twice the largest upload: a conversion seldom outgrows its source."""
+    return 2 * settings.MAX_VIDEO_UPLOAD_BYTES
+
+
+def _bounds() -> list[str]:
+    """Output options that bound one conversion whatever the source claims: its length, its size and the
+    threads its encoder and filters use (`VIDEO_FFMPEG_THREADS`)."""
+    threads = str(max(1, int(settings.VIDEO_FFMPEG_THREADS)))
+    return [
+        "-t", str(settings.MAX_VIDEO_DURATION_SECONDS),
+        "-fs", str(max_output_bytes()),
+        "-threads", threads, "-filter_threads", threads,
+    ]  # fmt: skip
 
 
 def has_zscale() -> bool:
@@ -400,6 +417,8 @@ def normalize(source: Path, target: Path, info: VideoInfo) -> VideoInfo:
             timeout=settings.VIDEO_TRANSCODE_TIMEOUT_SECONDS,
             workdir=target.parent,
         )
+        if target.stat().st_size >= max_output_bytes():  # ffmpeg stopped at `-fs`: the clip was cut short
+            raise VideoError("The converted video is too large.")
     result = probe(target)
     if result.codec != "h264":
         raise VideoError("The video could not be converted.")

@@ -152,8 +152,9 @@ See [video.md](video.md).
 | `FFPROBE_PATH` | `ffprobe` | The ffprobe command, or a path to it |
 | `MAX_VIDEO_UPLOAD_BYTES` | `209715200` (200 MB) | Largest clip that can be uploaded or imported. Raise nginx's `client_max_body_size` for `/api/v1/assets/` with it |
 | `MAX_VIDEO_DURATION_SECONDS` | `600` | Longest clip, in seconds (the video export's own limit is 10 minutes) |
-| `VIDEO_MAX_CONCURRENCY` | `2` | Clips converted at the same time in each API process |
+| `VIDEO_MAX_CONCURRENCY` | `2` | Clips converted at the same time in each API process (the server's total is this times the number of API workers) |
 | `VIDEO_TRANSCODE_TIMEOUT_SECONDS` | `900` | Time limit for converting one clip |
+| `VIDEO_FFMPEG_THREADS` | `2` | Threads the encoder and filters of one conversion use (decoding the source takes a little more) |
 | `VIDEO_DOWNLOAD_DEADLINE_SECONDS` | `90` | Time limit for downloading one stock clip |
 | `VIDEO_WORK_DIR` | system temp folder | Where each clip gets its own temporary folder while it is converted |
 

@@ -149,6 +149,21 @@ class TestPlans:
         args = video.transcode_args(video.Path("in"), video.Path("out.mp4"), clip)
         assert args[args.index("-g") + 1] == "60" and "+faststart" in args and "libx264" in args
 
+    def test_a_conversion_is_bounded_in_length_size_and_threads(self, settings):
+        settings.MAX_VIDEO_DURATION_SECONDS, settings.MAX_VIDEO_UPLOAD_BYTES = 300, 1000
+        settings.VIDEO_FFMPEG_THREADS = 3
+        args = video.transcode_args(video.Path("in"), video.Path("out.mp4"), info(codec_name="hevc"))
+        bounds = args[args.index("+faststart") + 1 :]
+        assert bounds == ["-t", "300", "-fs", "2000", "-threads", "3", "-filter_threads", "3", "out.mp4"]
+
+    def test_a_conversion_cut_short_by_the_size_cap_is_refused(self, settings, tmp_path, monkeypatch):
+        settings.MAX_VIDEO_UPLOAD_BYTES = 10
+        target = tmp_path / "clip.mp4"
+        monkeypatch.setattr(video, "_run", lambda args, **kwargs: target.write_bytes(b"x" * 20))
+        monkeypatch.setattr(video, "probe", lambda path: pytest.fail("probed a clip that was cut short"))
+        with pytest.raises(video.VideoError, match="too large"):
+            video.normalize(tmp_path / "source", target, info(codec_name="hevc"))
+
     def test_the_slot_raises_busy_when_every_one_is_taken(self, settings):
         settings.VIDEO_MAX_CONCURRENCY = 1
         with video.slot(), pytest.raises(video.VideoBusy), video.slot(wait=0):

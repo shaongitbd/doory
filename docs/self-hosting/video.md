@@ -38,6 +38,7 @@ See [Video clips in configuration.md](configuration.md#video-clips). The ones yo
 MAX_VIDEO_UPLOAD_BYTES=209715200      # 200 MB per clip
 MAX_VIDEO_DURATION_SECONDS=600        # 10 minutes, the video export's own limit
 VIDEO_MAX_CONCURRENCY=2               # conversions at once in each API process
+VIDEO_FFMPEG_THREADS=2                # threads one conversion's encoder uses
 ```
 
 Uploads go through nginx, which limits request bodies. The configurations in this repository allow 210 MB for
@@ -45,7 +46,14 @@ Uploads go through nginx, which limits request bodies. The configurations in thi
 the `location = /api/v1/assets/` block too.
 
 Converting is CPU-heavy. Each API process converts at most `VIDEO_MAX_CONCURRENCY` clips at a time, and more
-wait their turn. On a small server, keep it at 1 or 2.
+wait their turn. The limit is per process: the whole server converts up to `VIDEO_MAX_CONCURRENCY` times the
+number of API workers at once (`WEB_CONCURRENCY` with Docker, `--workers` in `doory-api.service` without, 3 by
+default). Each conversion's encoder uses `VIDEO_FFMPEG_THREADS` threads and decoding the source takes a little
+more, so plan for about workers times `VIDEO_MAX_CONCURRENCY` times `VIDEO_FFMPEG_THREADS` busy cores at the
+peak. On a small server, keep `VIDEO_MAX_CONCURRENCY` at 1 or 2.
+
+A conversion never writes more than `MAX_VIDEO_DURATION_SECONDS` of video or a file larger than twice
+`MAX_VIDEO_UPLOAD_BYTES`, whatever the source claims. A clip that would be larger is refused.
 
 If you store media in S3-compatible storage, the bucket's CORS settings must also allow range requests: see
 [object-storage.md](../integrations/object-storage.md).
