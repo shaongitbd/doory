@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createBlankDocument } from '@/lib/document'
 import { createMemoryAdapter } from '../../dev/memoryAdapter'
 import { EditorEngine } from '../editor'
-import { describeChoice, designPreset, loadLastExport, saveLastExport, suggestionFor } from './choices'
+import { describeChoice, designPreset, loadLastExport, saveLastExport, suggestionFor, withOfferedOptimizer } from './choices'
 import { DEFAULT_EXPORT_OPTIONS } from './registry'
 import './formats'
 
@@ -49,5 +49,16 @@ describe('export choices', () => {
     expect(loadLastExport()).toBeNull()
     localStorage.setItem('doory-export-last', JSON.stringify({ formatId: 'png', options: { scale: 99, quality: 'x', transparent: 'yes' } }))
     expect(loadLastExport()?.options).toMatchObject({ scale: 1, quality: DEFAULT_EXPORT_OPTIONS.quality, transparent: false })
+  })
+
+  it('replaces an optimizer the server no longer offers with its default, and drops it without a server', () => {
+    saveLastExport({ formatId: 'jpg', options: { ...DEFAULT_EXPORT_OPTIONS, optimize: true, optimizer: 'gone' } })
+    const served = make(800, 600, '', true)
+    expect(loadLastExport(served)?.options).toMatchObject({ optimize: true, optimizer: 'builtin' })
+    expect(withOfferedOptimizer(served, { ...DEFAULT_EXPORT_OPTIONS, optimizer: 'builtin' }).optimizer).toBe('builtin')
+    const alone = make(800, 600, '')
+    expect(loadLastExport(alone)?.options).not.toHaveProperty('optimizer')
+    // Without the editor, what was stored is read as it is.
+    expect(loadLastExport()?.options.optimizer).toBe('gone')
   })
 })

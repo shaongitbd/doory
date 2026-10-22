@@ -196,6 +196,18 @@ describe('editor chrome', () => {
     await waitFor(() => expect(JSON.parse(localStorage.getItem('doory-export-last') ?? '{}').formatId).toBe('jpg'))
   })
 
+  it('Last used sends an optimizer the server still offers, not one it dropped since', async () => {
+    localStorage.clear()
+    vi.mocked(runExport).mockClear()
+    saveLastExport({ formatId: 'jpg', options: { ...DEFAULT_EXPORT_OPTIONS, optimize: true, optimizer: 'gone' } })
+    engine = await mount()
+    engine.adapter.imageOptimize = { formats: ['png', 'jpg'], optimizers: [{ id: 'builtin', name: 'Built-in', formats: ['jpg', 'png'], sendsOffsite: false }], default: 'builtin' }
+    await userEvent.click(screen.getByTestId('ed-share'))
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: new RegExp(t.topbar.lastUsed) }))
+    await waitFor(() => expect(runExport).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(runExport).mock.calls[0][1].options).toMatchObject({ optimize: true, optimizer: 'builtin' })
+  })
+
   it('has no suggestion once the page no longer has the preset\'s size', async () => {
     engine = await mount(undefined, { ...createBlankDocument(1000, 1000), meta: { presetId: 'instagram-story' } })
     await userEvent.click(screen.getByTestId('ed-share'))

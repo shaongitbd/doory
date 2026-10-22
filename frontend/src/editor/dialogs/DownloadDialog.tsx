@@ -55,7 +55,7 @@ function startingPoint(editor: ReturnType<typeof useEditor>, asked: unknown, pur
   if (typeof asked === 'string' && usable(asked)) return { formatId: asked, options: fresh(asked), purpose: null }
   const own = purposes.find((p) => p.own && p.id === 'preset')
   if (own) return { formatId: own.formatId, options: own.options, purpose: own.id }
-  const last = loadLastExport()
+  const last = loadLastExport(editor)
   if (last && usable(last.formatId)) return { formatId: last.formatId, options: last.options, purpose: null }
   return { formatId: 'png', options: fresh('png'), purpose: null }
 }

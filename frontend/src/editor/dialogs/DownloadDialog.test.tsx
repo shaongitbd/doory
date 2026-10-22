@@ -7,7 +7,9 @@ import type { DocPage, DoryDocument } from '@/types/document'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { EditorProvider } from '../EditorProvider'
 import { EditorEngine } from '../engine/editor'
+import { saveLastExport } from '../engine/export/choices'
 import { downloadFiles } from '../engine/export/exporter'
+import { DEFAULT_EXPORT_OPTIONS } from '../engine/export/registry'
 import { t } from '../strings'
 import { DownloadDialog } from './DownloadDialog'
 import { ComparePreview } from './download/ComparePreview'
@@ -607,6 +609,18 @@ describe('Download dialog: pictures', () => {
     const sent = ctx.optimizeImage.mock.calls.map(([input]) => input).find((input) => input.optimize === 'builtin' && input.format === 'jpg')
     expect(sent).toMatchObject({ format: 'jpg', quality: 82, optimize: 'builtin' })
     expect(vi.mocked(downloadFiles).mock.calls[0][0][0].filename).toBe('Menu.jpg')
+  })
+
+  it('starts on the default optimizer when the one used last is no longer offered', async () => {
+    saveLastExport({ formatId: 'jpg', options: { ...DEFAULT_EXPORT_OPTIONS, optimize: true, optimizer: 'gone' } })
+    const answer = async (input: OptimizeImageInput): Promise<OptimizedImage> => ({ blob: new Blob(['small'], { type: 'image/jpeg' }), format: input.format, width: 1080, height: 1080, quality: 82, bytesBefore: 9000, optimizer: 'builtin', optimized: true, warnings: [] })
+    const ctx = withServer(createBlankDocument(1080, 1080), answer)
+    engine = ctx.engine
+    expect(within(dialog()).getByRole('radio', { name: 'Built-in' })).toBeChecked()
+    await download()
+    await waitFor(() => expect(downloadFiles).toHaveBeenCalled())
+    expect(ctx.optimizeImage.mock.calls.map(([input]) => input.optimize)).not.toContain('gone')
+    expect(ctx.optimizeImage).toHaveBeenCalledWith(expect.objectContaining({ format: 'jpg', optimize: 'builtin' }))
   })
 
   it('when the server fails, downloads the browser file and says so', async () => {
