@@ -107,6 +107,18 @@ describe('Create a design dialog', () => {
     localStorage.removeItem('doory.sizeChoices')
   })
 
+  it('shows every entry of a folded section on a phone, where sections have no titles to unfold them', () => {
+    setSizeChoicesForTests({ collapsed: ['social'] })
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(max-width: 639px)', addEventListener: () => undefined, removeEventListener: () => undefined }))
+    try {
+      renderWithProviders(<CreateDesignDialog open onClose={() => undefined} />)
+      expect(within(list()).getByRole('button', { name: /Platform A/ })).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+      setSizeChoicesForTests()
+    }
+  })
+
   it('pins a size to your sizes and shows recent ones', async () => {
     setSizeChoicesForTests({ recent: ['example-square'] })
     renderWithProviders(<CreateDesignDialog open onClose={() => undefined} />)

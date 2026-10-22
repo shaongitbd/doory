@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Clock, Ruler, Search, Star } from 'lucide-react'
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
+import { useMediaQuery } from '@/ui/hooks'
 import { type PresetGroup, type SizePreset } from './catalogue'
 import { knownPresets, setCollapsed, togglePinned, useSizeChoices, yourSizes } from './choices'
 import { GroupIcon } from './GroupIcon'
@@ -61,6 +62,8 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
   const [shape, setShape] = useState<ShapeFilter>('all')
   const [kind, setKind] = useState<KindFilter>('all')
   const collapsed = choices.collapsed
+  // On a phone the list is one row without section titles, so nothing could unfold a folded section there.
+  const narrow = useMediaQuery('(max-width: 639px)')
   const headingId = useId()
 
   const group = useMemo(() => {
@@ -123,7 +126,7 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
             </button>
           ) : null}
           {sections.map((section) => {
-            const closed = collapsed.includes(section.key)
+            const closed = !narrow && collapsed.includes(section.key)
             // A folded section still shows the entry that is open, so the list never hides where you are.
             const entries = closed ? section.entries.filter((item) => item.group.slug === entry) : section.entries
             return (
