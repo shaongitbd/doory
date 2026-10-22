@@ -381,8 +381,13 @@ export class VideosApi {
     const obj = this.target(id)
     if (!view || !obj) return false
     const page = this.engine.pageSizeOf(this.engine.state.activePageId)
-    const scale = Math.max(page.width / (obj.width || 1), page.height / (obj.height || 1))
-    obj.set({ left: page.width / 2, top: page.height / 2, originX: 'center', originY: 'center', scaleX: scale, scaleY: scale, angle: 0, skewX: 0, skewY: 0, cropX: 0, cropY: 0 })
+    // The whole video covers the page: the crop window goes back to the full picture, as "Reset crop" does.
+    const natural = obj.getOriginalSize()
+    const width = natural.width || obj.width || 1
+    const height = natural.height || obj.height || 1
+    const scale = Math.max(page.width / width, page.height / height)
+    obj.set({ left: page.width / 2, top: page.height / 2, originX: 'center', originY: 'center', scaleX: scale, scaleY: scale, angle: 0, skewX: 0, skewY: 0, cropX: 0, cropY: 0, width, height })
+    applyMask(obj)
     asDory(obj).locked = true
     applyLock(obj)
     view.canvas.sendObjectToBack(obj)

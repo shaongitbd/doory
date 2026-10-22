@@ -123,6 +123,16 @@ describe('video clip commands', () => {
     expect([clip.left, clip.top]).toEqual([400, 300])
   })
 
+  it('sets a cropped clip as the background with the whole video, not the crop window moved to the corner', async () => {
+    engine.dispose()
+    ;({ engine } = await setupEditor({ objects: [clipObject({ cropX: 40, cropY: 20, width: 80, height: 45 })] }))
+    expect(engine.videos.setAsBackground('clip')).toBe(true)
+    const clip = stored()
+    expect([clip.cropX, clip.cropY, clip.width, clip.height]).toEqual([0, 0, 160, 90])
+    expect(Number(clip.scaleX) * 160).toBeGreaterThanOrEqual(800)
+    expect(Number(clip.scaleY) * 90).toBeGreaterThanOrEqual(600)
+  })
+
   it('adds a blurred background behind everything, which follows the clip', async () => {
     expect(engine.videos.blurredBackground('clip')).toBe(true)
     const objects = engine.getDocument().pages[0].objects
