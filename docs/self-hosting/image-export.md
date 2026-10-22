@@ -85,7 +85,10 @@ These formats make the same files as the editor's Download:
 All pages are made in one browser, within `EXPORT_TIMEOUT_SECONDS` for each page. A PDF is then printed within
 another `EXPORT_TIMEOUT_SECONDS`. Both PDFs take `bleed_mm` and `crop_marks`, and their pages get TrimBox and
 BleedBox entries like the print PDF. A `pdf` page whose picture would have more than `EXPORT_IMAGE_MAX_PIXELS`
-pixels at 300 dpi is drawn at a lower resolution, with a warning. The image options (from `quality` to
+pixels at 300 dpi is drawn at a lower resolution, with a warning. An SVG page may be at most 50 MB and a
+`pdf-print` page 5 MB, and all pages of one export 200 MB together; a page over that is refused with
+`too_large` (400) before the next one is made. An SVG holds a copy of a picture for every time the design uses
+it, so a large picture used many times is the usual cause. The image options (from `quality` to
 `optimize`) don't apply to these formats. Each page after the first counts once more against the rates, as for
 images. There is no CMYK conversion.
 
@@ -167,6 +170,8 @@ images are deleted each time a new one is stored. On a quiet site, `manage.py pu
   than 30 MB). The error names it.
 - **Video exports end with 504 at the proxy:** raise the proxy's read timeout for
   `/api/v1/designs/*/export/image/` and `/mcp` to at least `EXPORT_VIDEO_TIMEOUT_SECONDS`.
+- **An SVG or `pdf-print` export fails with `too_large`:** a page would be larger than the limits in
+  [SVG and PDF](#svg-and-pdf). Use large pictures fewer times, or export PNG, JPG or `pdf`.
 - **An SVG export fails with `image_unavailable`:** a picture of the design could not be fetched to put into the
   file. Check that it is under `/media/` on an allowed origin.
 - **macOS development, "socket path too long":** set `EXPORT_WORK_DIR` to a short path such as `/tmp/dxw`.
