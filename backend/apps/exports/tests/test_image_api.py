@@ -342,8 +342,11 @@ def test_pdf_and_svg_with_the_print_options(client, design, documents, renders):
         "unix": None,
         "charge": None,
     }
+    assert "Content-Security-Policy" not in response
     response = client.post(url(design), {"format": "svg", "page": 1}, format="json")
     assert response["Content-Type"] == "image/svg+xml" and documents[1]["pages"] == [0]
+    assert response["Content-Security-Policy"] == views.SVG_SANDBOX_CSP
+    assert response["Content-Security-Policy"].startswith("sandbox; default-src 'none';")
     assert documents[1]["bleed_mm"] == 0 and documents[1]["crop_marks"] is False
     assert renders == []
 

@@ -45,6 +45,8 @@ from .services import (
 from .throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 
 MULTIPART_OVERHEAD_BYTES = 2 * 1024 * 1024
+# An SVG may carry markup: never let it run as a page of this site, however it is opened.
+SVG_SANDBOX_CSP = "sandbox; default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
 
 
 class AnyAcceptNegotiation(DefaultContentNegotiation):
@@ -192,6 +194,8 @@ class ImageExportView(APIView):
         )
         response = HttpResponse(result.data, content_type=result.mime)
         response["X-Doory-Placeholders"] = str(result.placeholders)
+        if result.mime == SVG_MIME:
+            response["Content-Security-Policy"] = SVG_SANDBOX_CSP
         return _file_headers(response, result.filename, attachment=True)
 
 
@@ -279,8 +283,5 @@ class ImageDownloadView(APIView):
             raise Http404 from exc
         response = FileResponse(stream, content_type=mime)
         if mime == SVG_MIME:
-            # An SVG may carry markup: never let it run as a page of this site.
-            response["Content-Security-Policy"] = (
-                "sandbox; default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
-            )
+            response["Content-Security-Policy"] = SVG_SANDBOX_CSP
         return _file_headers(response, name, attachment=mime in (ZIP_MIME, SVG_MIME))
