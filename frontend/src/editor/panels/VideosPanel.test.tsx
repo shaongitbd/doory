@@ -84,6 +84,7 @@ describe('Videos tool', () => {
     engine?.dispose()
     engine = null
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     document.body.innerHTML = ''
   })
 
@@ -189,5 +190,16 @@ describe('Videos tool', () => {
     expect(screen.getByTestId('stock-video-preview')).toHaveAttribute('src', 'https://videos.pexels.com/1.mp4')
     fireEvent.pointerLeave(first)
     expect(screen.queryByTestId('stock-video-preview')).toBeNull()
+  })
+
+  it('plays no preview on focus when the system asks for reduced motion, still on the pointer', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), addEventListener: () => undefined, removeEventListener: () => undefined }))
+    ;({ engine } = await open(fakeService()))
+    fireEvent.click(await screen.findByTestId('video-tab-stock'))
+    const [first] = await screen.findAllByTestId('stock-video')
+    fireEvent.focus(first)
+    expect(screen.queryByTestId('stock-video-preview')).toBeNull()
+    fireEvent.pointerEnter(first)
+    expect(screen.getByTestId('stock-video-preview')).toBeInTheDocument()
   })
 })

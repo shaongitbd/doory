@@ -1,13 +1,14 @@
 /**
  * The Videos tool's Stock tab: search free clips from the server's video providers (Pexels, Pixabay), by orientation
- * and length. A clip previews while the pointer rests on it (or it has focus); picking one has the server download
- * and convert it into the person's uploads, then it is added to the page with its credit.
+ * and length. A clip previews while the pointer rests on it (or it has focus, without reduced motion); picking one has
+ * the server download and convert it into the person's uploads, then it is added to the page with its credit.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { isApiError } from '@/lib/api'
 import { safeGetItem, safeSetItem } from '@/lib/storage'
 import type { VideoService } from '@/types/adapter'
 import type { StockSkipped, StockVideo, VideoInfo, VideoLength, VideoOrientation } from '@/types/api'
+import { useReducedMotion } from '../animation/useReducedMotion'
 import { I } from '../chrome/icons'
 import { whenProcessed } from '../clips/assets'
 import { formatClipTime } from '../clips/strings'
@@ -33,9 +34,13 @@ function initialSource(info: VideoInfo): string {
   return offered.includes(info.default) ? info.default : (offered[0] ?? '')
 }
 
-/** One result: its still, and the clip itself playing (muted) while the pointer rests on it. */
+/**
+ * One result: its still, and the clip itself playing (muted) while the pointer rests on it. Focus plays it too, unless
+ * the system asks for reduced motion: moving through the results with the keyboard then leaves them still.
+ */
 function StockClip({ video, provider, badge, busy, onPick }: { video: StockVideo; provider: string; badge: boolean; busy: boolean; onPick: () => void }) {
   const [hover, setHover] = useState(false)
+  const reduced = useReducedMotion()
   const credit = s.byOn(video.author, provider)
   return (
     <div className={styles.tile}>
@@ -49,7 +54,7 @@ function StockClip({ video, provider, badge, busy, onPick }: { video: StockVideo
         onClick={onPick}
         onPointerEnter={() => setHover(true)}
         onPointerLeave={() => setHover(false)}
-        onFocus={() => setHover(true)}
+        onFocus={() => setHover(!reduced)}
         onBlur={() => setHover(false)}
       >
         <img src={video.thumb_url} alt="" loading="lazy" draggable={false} />
