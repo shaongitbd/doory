@@ -659,6 +659,41 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('fit to page scales a group evenly until it covers the page', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.shape('rect')
+    await engine.insert.shape('ellipse')
+    engine.selectAll()
+    engine.arrange.group()
+    const group = view.canvas.getObjects()[0]
+    const w = group.getScaledWidth()
+    const h = group.getScaledHeight()
+    engine.arrange.fitToPage()
+    expect(group.scaleX).toBeCloseTo(group.scaleY)
+    // Narrower than the page: the width fits exactly and the top and bottom spill over evenly.
+    const r = group.getBoundingRect()
+    expect(w / h).toBeLessThan(800 / 600)
+    expect(r.width).toBeCloseTo(800)
+    expect(r.height).toBeCloseTo((800 * h) / w)
+    expect(r.left).toBeCloseTo(0)
+    expect(r.top + r.height / 2).toBeCloseTo(300)
+    engine.dispose()
+  })
+
+  it('fit to page scales an element evenly until it covers the page', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.svgElement('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 300"><path d="M0 0 H100 V300 H0 Z" fill="#7c5cff"/></svg>', 'test:tall', 'Tall')
+    expect(engine.state.selection.kinds).toEqual(['element'])
+    const el = view.canvas.getObjects()[0]
+    engine.arrange.fitToPage()
+    expect(el.scaleX).toBeCloseTo(el.scaleY)
+    const r = el.getBoundingRect()
+    expect(r.width).toBeCloseTo(800)
+    expect(r.height).toBeGreaterThan(2300)
+    expect(r.top + r.height / 2).toBeCloseTo(300)
+    engine.dispose()
+  })
+
   it('fit to page leaves text alone', async () => {
     const { engine, view } = await setup()
     await engine.insert.text('heading')

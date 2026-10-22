@@ -447,8 +447,9 @@ export class ArrangeApi {
 
   /**
    * Makes the selected object, unrotated, cover the whole page: a picture is scaled and cropped, a picture in a
-   * placeholder frame gets a page-sized frame and a shape is stretched. Text, QR codes and lines are left alone
-   * (see `canFitKind`).
+   * placeholder frame gets a page-sized frame, a group or an element is scaled evenly until it covers the page (what
+   * spills over is cut off by the page edge, like a picture's crop) and a shape is stretched. Text, QR codes and
+   * lines are left alone (see `canFitKind`).
    */
   fitToPage(): void {
     const view = this.view
@@ -457,6 +458,11 @@ export class ArrangeApi {
     const page = this.engine.pageSizeOf(this.engine.state.activePageId)
     const centre = new Point(page.width / 2, page.height / 2)
     const border = active.strokeUniform ? active.strokeWidth || 0 : 0
+    // The object's own size and the size it gets, both without a uniform border (which keeps its width when scaled).
+    const w0 = Math.max(1, (active.getScaledWidth() || 1) - border)
+    const h0 = Math.max(1, (active.getScaledHeight() || 1) - border)
+    const pageW = Math.max(1, page.width - border)
+    const pageH = Math.max(1, page.height - border)
     this.carrying(active, () => {
       active.rotate(0)
       const slot = asDory(active).slot
@@ -470,10 +476,12 @@ export class ArrangeApi {
       } else if (active instanceof FabricImage) {
         coverFrame(active, page.width, page.height)
         applyMask(active)
+      } else if (active instanceof Group || kindOfLive(active) === 'element') {
+        // Stretching would distort the parts of a group or a drawing, so it is scaled by one factor, like a picture.
+        const k = Math.max(pageW / w0, pageH / h0)
+        active.set({ scaleX: active.scaleX * k, scaleY: active.scaleY * k })
       } else {
-        const w0 = Math.max(1, (active.getScaledWidth() || 1) - border)
-        const h0 = Math.max(1, (active.getScaledHeight() || 1) - border)
-        active.set({ scaleX: (active.scaleX * Math.max(1, page.width - border)) / w0, scaleY: (active.scaleY * Math.max(1, page.height - border)) / h0 })
+        active.set({ scaleX: (active.scaleX * pageW) / w0, scaleY: (active.scaleY * pageH) / h0 })
         // A baked shape has a new width and height, so its frame (a placeholder's crop shape) is rebuilt to match.
         if (bakeInPlace(active) && asDory(active).maskShape) applyMask(active)
       }
