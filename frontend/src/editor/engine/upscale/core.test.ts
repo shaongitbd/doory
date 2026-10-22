@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { upscaleImageData } from './core'
-import { MAX_OUTPUT_PIXELS, assertOutput, fitsOutput, targetSize } from './types'
+import { MAX_OUTPUT_PIXELS, MAX_OUTPUT_SIDE, SERVER_MAX_PIXELS, SERVER_MAX_SIDE, assertOutput, fitsOutput, targetSize } from './types'
 
 function solid(width: number, height: number, rgba: readonly [number, number, number, number]): Uint8ClampedArray {
   const data = new Uint8ClampedArray(width * height * 4)
@@ -98,5 +98,26 @@ describe('upscaleImageData', () => {
     expect(fitsOutput({ width: 10, height: 10 })).toBe(true)
     expect(fitsOutput({ width: 20_000, height: 10 })).toBe(false)
     expect(fitsOutput({ width: Math.sqrt(MAX_OUTPUT_PIXELS) + 1, height: Math.sqrt(MAX_OUTPUT_PIXELS) + 1 })).toBe(false)
+  })
+
+  it('never allows a result the server would refuse', () => {
+    expect(MAX_OUTPUT_SIDE).toBeLessThanOrEqual(SERVER_MAX_SIDE)
+    expect(MAX_OUTPUT_PIXELS).toBeLessThanOrEqual(SERVER_MAX_PIXELS)
+  })
+
+  it('fitsOutput accepts a side of exactly the server limit and refuses one pixel more', () => {
+    expect(fitsOutput({ width: 12_000, height: 1_000 })).toBe(true)
+    expect(fitsOutput({ width: 12_001, height: 1_000 })).toBe(false)
+    expect(fitsOutput({ width: 1_000, height: 12_000 })).toBe(true)
+    expect(fitsOutput({ width: 1_000, height: 12_001 })).toBe(false)
+    // 6500 x 1500 at 2x is under the pixel limit but wider than the server takes.
+    expect(fitsOutput(targetSize(6_500, 1_500, 2))).toBe(false)
+    expect(fitsOutput(targetSize(6_000, 1_500, 2))).toBe(true)
+  })
+
+  it('fitsOutput accepts exactly the pixel limit and refuses one pixel more', () => {
+    expect(fitsOutput({ width: 8_000, height: MAX_OUTPUT_PIXELS / 8_000 })).toBe(true)
+    expect(fitsOutput({ width: 8_000, height: MAX_OUTPUT_PIXELS / 8_000 + 1 })).toBe(false)
+    expect(fitsOutput({ width: 0, height: 10 })).toBe(false)
   })
 })

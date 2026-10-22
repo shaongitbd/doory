@@ -39,11 +39,19 @@ export interface UpscaleOptions extends UpscaleRequestOptions {
 }
 
 /**
- * About 48 megapixels: enough for 2x of a 12-megapixel photo, and small enough that the float working
- * buffers (one horizontal plane at a time) stay in the low hundreds of megabytes.
+ * The server's limits for an uploaded picture, mirrored from MAX_DIMENSION and MAX_PIXELS in
+ * backend/apps/core/images.py: a result over either is refused on upload, so it is never computed.
  */
-export const MAX_OUTPUT_PIXELS = 48_000_000
-export const MAX_OUTPUT_SIDE = 16_384
+export const SERVER_MAX_SIDE = 12_000
+export const SERVER_MAX_PIXELS = 80_000_000
+
+/**
+ * About 48 megapixels: enough for 2x of a 12-megapixel photo, and small enough that the float working
+ * buffers (one horizontal plane at a time) stay in the low hundreds of megabytes. Never above the
+ * server's own limits.
+ */
+export const MAX_OUTPUT_PIXELS = Math.min(48_000_000, SERVER_MAX_PIXELS)
+export const MAX_OUTPUT_SIDE = SERVER_MAX_SIDE
 export const MAX_SCALE = 8
 export const DEFAULT_DETAIL = 0.25
 
