@@ -466,6 +466,25 @@ def test_video_export_is_off_unless_turned_on(client, design, settings):
     assert "video export is not enabled" in response.content.decode()
 
 
+def test_a_video_file_is_streamed_and_closed_after(client, design, monkeypatch):
+    file = io.BytesIO(b"video-from-a-file")
+
+    def fake_export_video(design, **options):
+        video = ImageResult(b"", "mp4", "video/mp4", 1920, 1080, "p", 0)
+        return services.ImageBundle(
+            b"", "mp4", "video/mp4", "Clip.mp4", (video,), ("Clip.mp4",), file=file, file_size=17
+        )
+
+    monkeypatch.setattr(services, "export_video", fake_export_video)
+    response = client.post(url(design), {"format": "mp4"}, format="json")
+    assert response.status_code == 200 and response.streaming
+    assert response["Content-Length"] == "17" and response["Content-Type"] == "video/mp4"
+    assert response["Content-Disposition"] == 'attachment; filename="Clip.mp4"'
+    assert b"".join(response.streaming_content) == b"video-from-a-file"
+    response.close()
+    assert file.closed
+
+
 def test_the_schema_documents_video(client, db):
     schema = client.get("/api/v1/schema/", {"format": "json"}).json()
     operation = schema["paths"]["/api/v1/designs/{id}/export/image/"]["post"]

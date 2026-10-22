@@ -610,7 +610,9 @@ def test_a_video_comes_back_from_its_file_with_what_the_page_reported(use_worker
     # A design's sound files are larger than its pictures may be.
     assert seen["max_asset_bytes"] == renderer.MAX_SOUND_BYTES > renderer.MAX_ASSET_BYTES
     assert seen["payload"] == {"document": {"pages": []}, "pages": [0, 1], "format": "mp4"}
-    assert (result.data, result.mime, result.width, result.height) == (b"ftypmp42", "video/mp4", 1920, 1080)
+    with result.file:
+        assert (result.file.read(), result.size) == (b"ftypmp42", 8)
+    assert (result.mime, result.width, result.height) == ("video/mp4", 1920, 1080)
     assert (result.fps, result.frames, result.duration_ms, result.video, result.audio) == (
         30,
         150,

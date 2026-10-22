@@ -1,5 +1,6 @@
 """`export_video`: MP4, WebM and GIF of a saved design, from the file the render page made (no browser)."""
 
+import io
 import json
 
 import pytest
@@ -51,8 +52,10 @@ class FakeVideo:
         )
         pages = payload["document"]["pages"]
         indexes = self.page_indexes if self.page_indexes is not None else payload["pages"]
+        data = b"video-" + payload["format"].encode()
         return VideoResult(
-            data=b"video-" + payload["format"].encode(),
+            file=io.BytesIO(data),
+            size=len(data),
             mime=MIME[payload["format"]],
             width=1920,
             height=960,
@@ -104,7 +107,8 @@ def test_an_mp4_of_all_pages_with_the_editor_defaults(design, made):
         "fonts": [],
     }
     assert (bundle.format, bundle.mime, bundle.filename) == ("mp4", "video/mp4", "Poster.mp4")
-    assert bundle.data == b"video-mp4" and bundle.filenames == ("Poster.mp4",)
+    assert bundle.data == b"" and bundle.file.read() == b"video-mp4" and bundle.size == 9
+    assert bundle.filenames == ("Poster.mp4",) and bundle.images[0].bytes_before == 9
     assert bundle.options == {
         "format": "mp4",
         "resolution": "design",

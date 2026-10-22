@@ -21,7 +21,7 @@ import zipfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime
-from typing import Any
+from typing import Any, BinaryIO
 
 from django.conf import settings
 from django.db.models.functions import Lower
@@ -186,6 +186,14 @@ class ImageBundle:
     images: tuple[ImageResult, ...]  # one per page, in order
     filenames: tuple[str, ...]  # the name of each page's file (inside the ZIP); a PDF's own name
     options: dict[str, Any] = field(default_factory=dict)  # SVG and PDF: how the file was made
+    # A video: the file, open at its start, instead of `data` (empty). A temporary file: whoever hands it on
+    # closes it, which deletes it.
+    file: BinaryIO | None = None
+    file_size: int = 0
+
+    @property
+    def size(self) -> int:
+        return self.file_size if self.file is not None else len(self.data)
 
     @property
     def placeholders(self) -> int:
@@ -1365,8 +1373,9 @@ def export_video(
     page (`fit`) or covers the frame (`fill`); `page_seconds` holds every page that long instead of its own
     time. GIF: `loop` plays it that many times (0: forever) and `dither` smooths gradients. The video is made
     within `EXPORT_VIDEO_TIMEOUT_SECONDS`, at most `EXPORT_VIDEO_MAX_SECONDS` long and
-    `EXPORT_VIDEO_MAX_BYTES` large. Before anything is drawn, `charge` is called with one for every started
-    10 s of the pages' time after the first. Raises `InvalidExport`, `PayloadTooLarge` and the `Export*`
+    `EXPORT_VIDEO_MAX_BYTES` large; it comes back as the bundle's `file`, which the caller closes. Before
+    anything is drawn, `charge` is called with one for every started 10 s of the pages' time after the first.
+    Raises `InvalidExport`, `PayloadTooLarge` and the `Export*`
     exceptions."""
     fmt_id = str(format).lower()
     if fmt_id not in VIDEO_FORMATS:
@@ -1423,6 +1432,7 @@ def export_video(
             max_bytes=settings.EXPORT_VIDEO_MAX_BYTES,
         )
     if list(made.page_indexes) != indexes or made.mime != VIDEO_FORMATS[fmt_id]:
+        made.file.close()
         logger.error("Video export: the render page made another video than asked for")
         raise ExportFailed
     warnings = _drawing_warnings(made.placeholders, made.missing_fonts)
@@ -1442,7 +1452,7 @@ def export_video(
         "audio": made.audio,
     }
     video = ImageResult(
-        data=made.data,
+        data=b"",  # the file is the bundle's
         format=fmt_id,
         mime=made.mime,
         width=made.width,
@@ -1457,7 +1467,7 @@ def export_video(
         page_height=first[1],
         page_count=len(document["pages"]),
         preset=_preset_id(document) or design.preset,
-        bytes_before=len(made.data),
+        bytes_before=made.size,
         options_used=options,
     )
     style = filename_style or settings.EXPORT_FILENAME_STYLE
@@ -1471,9 +1481,11 @@ def export_video(
         made.height,
         made.fps,
         made.duration_ms,
-        len(made.data),
+        made.size,
         len(indexes),
         made.placeholders,
         made.blocked_total,
     )
-    return ImageBundle(made.data, fmt_id, made.mime, name, (video,), (name,), options)
+    return ImageBundle(
+        b"", fmt_id, made.mime, name, (video,), (name,), options, file=made.file, file_size=made.size
+    )

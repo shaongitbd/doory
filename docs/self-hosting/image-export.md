@@ -121,7 +121,9 @@ SERVER_VIDEO_EXPORT_ENABLED=true
   for its whole time.
 - **Rates:** each started 10 s of the pages' time after the first counts once more against the `export` rate,
   and over MCP against `MCP_CALLS_PER_MINUTE`.
-- **Delivery:** the REST endpoint answers with the file. Over MCP, a video is always a download link.
+- **Delivery:** the REST endpoint answers with the file, streamed from a temporary file in `EXPORT_WORK_DIR`
+  (the system temp folder by default) rather than held in memory. Leave room there for two copies of
+  `EXPORT_VIDEO_MAX_BYTES` for each video being made. Over MCP, a video is always a download link.
 - **Proxy:** the request stays open while the video is made. The bundled nginx waits 330 s for this endpoint and
   for `/mcp`; a proxy of your own needs at least `EXPORT_VIDEO_TIMEOUT_SECONDS` there too.
 - **Secure page:** the browser's video encoders only work on a secure page. When `EXPORT_RENDER_PAGE_URL` is a

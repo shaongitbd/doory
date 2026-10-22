@@ -192,7 +192,10 @@ class ImageExportView(APIView):
             dither=data["dither"],
             page_seconds=data["page_seconds"],
         )
-        response = HttpResponse(result.data, content_type=result.mime)
+        if result.file is not None:  # a video: streamed from its file, deleted when the response closes it
+            response = FileResponse(result.file, content_type=result.mime)
+        else:
+            response = HttpResponse(result.data, content_type=result.mime)
         response["X-Doory-Placeholders"] = str(result.placeholders)
         if result.mime == SVG_MIME:
             response["Content-Security-Policy"] = SVG_SANDBOX_CSP

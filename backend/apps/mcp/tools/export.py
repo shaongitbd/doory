@@ -83,7 +83,7 @@ def _video_info(bundle: ImageBundle) -> dict[str, Any]:
     video, options = bundle.images[0], bundle.options
     return {
         "format": bundle.format,
-        "bytes": len(bundle.data),
+        "bytes": bundle.size,
         "width": video.width,
         "height": video.height,
         **{key: options[key] for key in ("fps", "duration_ms", "frames", "video", "audio", "pages")},
@@ -283,14 +283,18 @@ def export_design(
             "AVIF images, SVG files, PDFs, ZIPs of several pages and videos are always sent as a link."
         )
         delivery = "url"
-    if delivery == "inline" and len(bundle.data) > settings.MCP_EXPORT_INLINE_MAX_BYTES:
+    if delivery == "inline" and bundle.size > settings.MCP_EXPORT_INLINE_MAX_BYTES:
         info["note"] = (
             f"The image is larger than {settings.MCP_EXPORT_INLINE_MAX_BYTES} bytes, so it is sent as a "
             "link. Use a smaller scale, or jpg/webp, to get it inline."
         )
         delivery = "url"
     if delivery == "url":
-        info["url"] = store_image(bundle.data, bundle.mime)
+        if bundle.file is not None:  # a video: stored from its file, which closing deletes
+            with bundle.file:
+                info["url"] = store_image(bundle.file, bundle.mime)
+        else:
+            info["url"] = store_image(bundle.data, bundle.mime)
         info["expires_in_seconds"] = settings.MCP_EXPORT_URL_TTL_SECONDS
         return [TextContent(text=json.dumps(info))]
     return [

@@ -474,8 +474,10 @@ def videos(monkeypatch, settings) -> list[dict]:
     def fake_render_video(payload, **kwargs):
         calls.append(payload)
         pages = payload["document"]["pages"]
+        data = b"\x00\x00\x00\x18ftypisom-video"
         return RenderedVideo(
-            data=b"\x00\x00\x00\x18ftypisom-video",
+            file=io.BytesIO(data),
+            size=len(data),
             mime=services.VIDEO_FORMATS[payload["format"]],
             width=480,
             height=240,
@@ -511,6 +513,7 @@ def test_a_video_of_all_pages_is_a_link_with_what_it_holds(as_caller, design, vi
     )
     assert info["pages"] == [1, 2] and info["options"]["resolution"] == "design"
     assert info["warnings"][0].startswith("The sound is Opus") and "always sent as a link" in info["note"]
+    assert info["bytes"] == len(b"\x00\x00\x00\x18ftypisom-video")
     response = APIClient().get(info["url"].removeprefix("http://localhost:5173"))
     assert response["Content-Type"] == "video/mp4"
     assert b"".join(response.streaming_content) == b"\x00\x00\x00\x18ftypisom-video"
