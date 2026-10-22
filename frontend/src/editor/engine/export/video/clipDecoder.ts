@@ -5,7 +5,8 @@
  * rewrapped one with the key frames it came with), so the clip is demuxed once (mp4box.js, while it downloads) into its
  * encoded samples, and frames are decoded forward as the export asks for later and later times. A loop or a trim that
  * goes back restarts from the key frame at or before the time wanted. Only one decoded picture is held at a time (plus
- * the few the decoder hands over ahead of it).
+ * the few the decoder hands over ahead of it). Times are the clip's own, as a player shows them: the track's edit list
+ * (the delay an encoder adds for B-frames) is applied.
  *
  * Where WebCodecs can't decode the clip (no `VideoDecoder`, or the codec isn't supported), the clip is played by a
  * `<video>` that seeks to each frame instead: slower and less exact, but it works everywhere.
