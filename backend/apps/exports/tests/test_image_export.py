@@ -531,6 +531,41 @@ def test_warnings_of_several_pages_name_the_page(user, monkeypatch):
     assert [w.split(":")[0] for w in bundle.warnings] == ["Page 1", "Page 2"]
 
 
+@pytest.mark.parametrize(
+    ("options", "code"),
+    [
+        ({"format": "avif"}, "format_unavailable"),
+        ({"size": "9000w"}, "invalid_size"),
+        ({"size": "big"}, "invalid_size"),
+        ({"scale": 2}, "too_large"),
+        ({"optimize": "tinypng"}, "optimizer_unavailable"),
+        ({"quality": 0}, "invalid_quality"),
+    ],
+)
+def test_options_are_checked_for_every_page_before_the_extra_pages_are_charged(
+    user, renders, monkeypatch, settings, options, code
+):
+    monkeypatch.setattr(services.features, "check", lambda feature: feature != "avif")
+    settings.EXPORT_IMAGE_MAX_PIXELS = 400 * 200 * 4
+    document = make_doc(pages=3, width=400, height=200)
+    document["pages"][2] |= {"width": 800, "height": 400}  # only the last page is too large at 2x
+    charged = []
+    with pytest.raises(InvalidExport) as raised:
+        services.export_images(
+            make_design(user, document=document), pages="all", charge=charged.append, **options
+        )
+    assert raised.value.get_codes() == code
+    assert charged == [] and renders == []
+
+
+def test_a_design_too_large_to_draw_is_refused_before_the_extra_pages_are_charged(design, renders, settings):
+    settings.EXPORT_IMAGE_MAX_DOCUMENT_BYTES = 100
+    charged = []
+    with pytest.raises(PayloadTooLarge):
+        services.export_images(design, pages="all", charge=charged.append)
+    assert charged == [] and renders == []
+
+
 def test_bad_pages_are_refused_before_anything_is_drawn(design, renders):
     with pytest.raises(InvalidExport):
         services.export_images(design, pages=[0, 7])

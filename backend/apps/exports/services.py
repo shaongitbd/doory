@@ -543,6 +543,72 @@ def _drawing_warnings(placeholders: int, missing_fonts: Sequence[str]) -> list[s
     return warnings
 
 
+def _image_options(
+    *,
+    format: str = "png",
+    quality: int | str = 90,
+    scale: float = 1,
+    transparent: bool = False,
+    size: str | None = None,
+    max_bytes: int | None = None,
+    png_colors: int | None = None,
+    strip_metadata: bool = True,
+    srgb: bool = True,
+    progressive: bool = False,
+    optimize: bool | str = False,
+) -> tuple[Encoding, optimizers.Optimizer | None, float]:
+    """`export_image`'s options (all but `page`), checked before anything is drawn: the encoding, the
+    optimizer and the scale (`size` is checked against each page by `_page_scale`)."""
+    if not settings.SERVER_IMAGE_EXPORT_ENABLED:
+        raise ImageExportDisabled
+    if not settings.EXPORT_RENDER_PAGE_URL:
+        raise ExportUnavailable
+    encoding = _encoding(
+        format,
+        quality,
+        transparent=transparent,
+        max_bytes=max_bytes,
+        png_colors=png_colors,
+        strip_metadata=strip_metadata,
+        srgb=srgb,
+        progressive=progressive,
+    )
+    optimizer = optimizers.choose(optimize)
+    if size is None:
+        try:
+            scale = float(scale)
+        except (TypeError, ValueError):
+            scale = 0.0
+        if not MIN_SCALE <= scale <= MAX_SCALE:
+            raise InvalidExport(
+                "invalid_scale", f"The scale must be between {MIN_SCALE:g} and {MAX_SCALE:g}."
+            )
+    return encoding, optimizer, scale
+
+
+def _image_document(design) -> dict:
+    """The design as it is now (see `export_image`), refused when it is too large to draw on the server."""
+    document = current_document(design)
+    if len(json.dumps(document, separators=(",", ":"))) > settings.EXPORT_IMAGE_MAX_DOCUMENT_BYTES:
+        raise PayloadTooLarge("The design is too large to export as an image on the server.")
+    return document
+
+
+def _page_scale(document: dict, page: dict, scale: float, size: str | None) -> tuple[float, float, float]:
+    """The page's size and the scale it is drawn at (`size` replaces `scale`); refused when the picture would
+    have more than `EXPORT_IMAGE_MAX_PIXELS`."""
+    width, height = _page_size(document, page)
+    if size is not None:
+        scale = parse_size(size, width, height)
+    if round(width * scale) * round(height * scale) > settings.EXPORT_IMAGE_MAX_PIXELS:
+        raise InvalidExport(
+            "too_large",
+            f"{round(width * scale)} x {round(height * scale)} px is more than this server exports "
+            f"({settings.EXPORT_IMAGE_MAX_PIXELS} pixels); use a smaller scale.",
+        )
+    return width, height, scale
+
+
 def export_image(
     design,
     *,
@@ -569,45 +635,24 @@ def export_image(
     PNG's metadata and colour profile out; `progressive` is for JPG. `optimize` makes the file smaller
     afterwards: True (the server's default optimizer) or an optimizer's id (`apps.exports.optimizers`). Raises
     `InvalidExport`, `PayloadTooLarge` and the `Export*` exceptions."""
-    if not settings.SERVER_IMAGE_EXPORT_ENABLED:
-        raise ImageExportDisabled
-    if not settings.EXPORT_RENDER_PAGE_URL:
-        raise ExportUnavailable
-    encoding = _encoding(
-        format,
-        quality,
+    encoding, optimizer, scale = _image_options(
+        format=format,
+        quality=quality,
+        scale=scale,
         transparent=transparent,
+        size=size,
         max_bytes=max_bytes,
         png_colors=png_colors,
         strip_metadata=strip_metadata,
         srgb=srgb,
         progressive=progressive,
+        optimize=optimize,
     )
-    optimizer = optimizers.choose(optimize)
-    if size is None:
-        try:
-            scale = float(scale)
-        except (TypeError, ValueError):
-            scale = 0.0
-        if not MIN_SCALE <= scale <= MAX_SCALE:
-            raise InvalidExport(
-                "invalid_scale", f"The scale must be between {MIN_SCALE:g} and {MAX_SCALE:g}."
-            )
     transparent = encoding.transparent
 
-    document = current_document(design)
-    if len(json.dumps(document, separators=(",", ":"))) > settings.EXPORT_IMAGE_MAX_DOCUMENT_BYTES:
-        raise PayloadTooLarge("The design is too large to export as an image on the server.")
+    document = _image_document(design)
     page_obj, index = _pick_page(document, page)
-    width, height = _page_size(document, page_obj)
-    if size is not None:
-        scale = parse_size(size, width, height)
-    if round(width * scale) * round(height * scale) > settings.EXPORT_IMAGE_MAX_PIXELS:
-        raise InvalidExport(
-            "too_large",
-            f"{round(width * scale)} x {round(height * scale)} px is more than this server exports "
-            f"({settings.EXPORT_IMAGE_MAX_PIXELS} pixels); use a smaller scale.",
-        )
+    width, height, scale = _page_scale(document, page_obj, scale, size)
     payload = {
         "document": document,
         "page": index,
@@ -810,8 +855,9 @@ def export_images(
     **options: Any,
 ) -> ImageBundle:
     """Draw `pages` (see `pick_pages`) of `design` with `export_image` and its `options`, one render at a
-    time, and pack them into a ZIP; a single page comes back as its own file. Before anything is drawn,
-    `charge` is called with the number of pages after the first (to count them against a rate limit). The
+    time, and pack them into a ZIP; a single page comes back as its own file. Once the options are checked
+    for every page, and before anything is drawn, `charge` is called with the number of pages after the first
+    (to count them against a rate limit), so a request that is refused costs no more than one. The
     files are named by `filenames.page_filename` in `filename_style` (default `EXPORT_FILENAME_STYLE`), the
     ZIP after the design's title.
 
@@ -845,7 +891,12 @@ def export_images(
             unix=unix,
             charge=charge,
         )
-    indexes = pick_pages(design, pages)
+    # What can be checked without drawing is checked for every page before the pages are charged.
+    _, _, scale = _image_options(**options)
+    document = _image_document(design)
+    indexes = _page_indexes(document, pages)
+    for index in indexes:
+        _page_scale(document, document["pages"][index], scale, options.get("size"))
     if charge is not None and len(indexes) > 1:
         charge(len(indexes) - 1)
     style = filename_style or settings.EXPORT_FILENAME_STYLE

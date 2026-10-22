@@ -7,10 +7,12 @@ import pytest
 from django.utils import timezone
 
 from apps.designs.tests.helpers import make_design, make_doc
-from apps.exports import services, views
+from apps.exports import optimizers, services, views
 from apps.exports.exceptions import ExportBusy, InvalidExport
 from apps.exports.services import IMAGE_FORMATS, ImageResult
 from apps.exports.throttling import ExportRateThrottle
+
+from .helpers import FakeOptimizer
 
 IMAGE = b"\x89PNG\r\n\x1a\nfake"
 # What the view passes on when the body only names the page and format.
@@ -30,6 +32,12 @@ DEFAULTS = {
 
 def url(design) -> str:
     return f"/api/v1/designs/{design.pk}/export/image/"
+
+
+@pytest.fixture(autouse=True)
+def _image_export_on(settings):
+    """The options are checked (server switch included) before `export_image`, which is faked below."""
+    settings.SERVER_IMAGE_EXPORT_ENABLED = True
 
 
 @pytest.fixture
@@ -185,7 +193,9 @@ def test_renders_are_rate_limited(client, design, renders, monkeypatch):
     assert client.post(url(design), {}, format="json").status_code == 429
 
 
-def test_the_new_options_are_passed_on(client, design, renders):
+def test_the_new_options_are_passed_on(client, design, renders, settings, monkeypatch):
+    settings.IMAGE_OPTIMIZERS = ["builtin", "tinypng"]
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "tinypng", FakeOptimizer("tinypng"))
     body = {
         "format": "avif",
         "quality": "small",
@@ -241,6 +251,15 @@ def test_each_extra_page_counts_against_the_export_rate(client, user, renders, m
     response = client.post(url(design), {"pages": [1, 2]}, format="json")
     assert response.status_code == 429
     assert len(renders) == 2  # nothing is drawn once the budget is spent
+
+
+def test_a_refused_export_of_several_pages_costs_one_export(client, user, renders, monkeypatch):
+    monkeypatch.setattr(ExportRateThrottle, "THROTTLE_RATES", {"export": "2/min"})
+    design = make_design(user, document=make_doc(pages=3))
+    response = client.post(url(design), {"pages": "all", "optimize": "tinypng"}, format="json")
+    assert response.status_code == 400 and response.json()["error"]["code"] == "optimizer_unavailable"
+    assert client.post(url(design), {"pages": [1]}, format="json").status_code == 200
+    assert client.post(url(design), {"pages": [1]}, format="json").status_code == 429
 
 
 def test_too_many_pages_are_refused_before_anything_is_drawn(client, user, renders, settings):

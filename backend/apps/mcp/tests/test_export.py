@@ -14,10 +14,11 @@ from mcp_types import ImageContent, TextContent
 from rest_framework.test import APIClient
 
 from apps.designs.tests.helpers import make_design, make_doc
-from apps.exports import delivery, services
+from apps.exports import delivery, optimizers, services
 from apps.exports.exceptions import ExportBusy, InvalidExport
 from apps.exports.renderer import VideoResult as RenderedVideo
 from apps.exports.services import IMAGE_FORMATS, ImageResult
+from apps.exports.tests.helpers import FakeOptimizer
 from apps.exports.throttling import ExportRateThrottle
 from apps.mcp.tools import export
 
@@ -36,6 +37,12 @@ DEFAULTS = {
     "progressive": False,
     "optimize": False,
 }
+
+
+@pytest.fixture(autouse=True)
+def _image_export_on(settings):
+    """The options are checked (server switch included) before `export_image`, which is faked below."""
+    settings.SERVER_IMAGE_EXPORT_ENABLED = True
 
 
 @pytest.fixture
@@ -122,7 +129,9 @@ def test_pages_are_numbered_from_one_or_named_by_id(as_caller, design, renders):
         export.export_design(str(design.pk), page=0)
 
 
-def test_the_new_options_are_passed_on(as_caller, design, renders):
+def test_the_new_options_are_passed_on(as_caller, design, renders, settings, monkeypatch):
+    settings.IMAGE_OPTIMIZERS = ["builtin", "kraken"]
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "kraken", FakeOptimizer("kraken"))
     export.export_design(
         str(design.pk),
         format="auto",
