@@ -114,3 +114,14 @@ describe('lazy editor chunks', () => {
     expect(bytes).toBeLessThan(1_200_000)
   })
 })
+
+describe('the size picker', () => {
+  // The landing page and the dashboard offer the create dialog; its picker (and its icons) loads when it first opens.
+  const PICKER = '/src/lib/sizePresets/SizePicker.tsx'
+
+  it.each(['/src/features/landing/Hero.tsx', '/src/features/dashboard/CreateMenu.tsx', '/src/pages/dashboard/HomePage.tsx'])('is not imported statically by %s', (entry) => {
+    expect(entry in sources, `${entry} no longer exists: update lazyChunks.test.ts`).toBe(true)
+    const closure = eagerClosure(entry)
+    expect(closure.has(PICKER) ? chain(closure, PICKER) : null).toBeNull()
+  })
+})
