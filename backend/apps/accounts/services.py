@@ -15,7 +15,7 @@ from apps.core.storage import delete_file_after_commit
 
 from .google import GoogleIdentity
 from .models import OidcIdentity, User
-from .oidc import OidcClaims, OidcError
+from .oidc import FAILED, OidcClaims, OidcError
 from .serializers import clean_display_name
 
 AVATAR_SIZE = 512
@@ -110,7 +110,10 @@ def sign_in_with_oidc(claims: OidcClaims) -> tuple[User, bool]:
     try:
         return _oidc_find_link_or_create(claims)
     except IntegrityError:  # two first sign-ins for the same identity raced; the retry finds the winner
-        return _oidc_find_link_or_create(claims)
+        try:
+            return _oidc_find_link_or_create(claims)
+        except IntegrityError:  # raced again: the user starts over rather than seeing a server error
+            raise OidcError(FAILED, "OIDC sign-in raced another one for the same account twice.") from None
 
 
 @transaction.atomic
@@ -162,17 +165,26 @@ def _oidc_find_link_or_create(claims: OidcClaims) -> tuple[User, bool]:
 def connect_oidc(user: User, claims: OidcClaims) -> None:
     """Let the OIDC account in `claims` sign in as `user`, who has just confirmed their password."""
     try:
-        with transaction.atomic():
-            identity = OidcIdentity.objects.filter(issuer=claims.issuer, subject=claims.subject).first()
-            if identity is not None:
-                if identity.user_id != user.pk:
-                    raise OidcError("oidc_identity_in_use", "That provider account belongs to someone else.")
-                return
-            if user.oidc_identities.filter(issuer=claims.issuer).exists():
-                raise OidcError("oidc_account_mismatch", "Connected to another account at the provider.")
-            OidcIdentity.objects.create(user=user, issuer=claims.issuer, subject=claims.subject)
-    except IntegrityError:  # someone connected the same provider account at the same moment
-        raise OidcError("oidc_identity_in_use", "That provider account belongs to someone else.") from None
+        _connect_oidc(user, claims)
+    except IntegrityError:
+        # A connection made at the same moment: of this provider account, or of another one to `user`. Looking
+        # again tells which (and is fine when it was the same connection, made twice).
+        try:
+            _connect_oidc(user, claims)
+        except IntegrityError:
+            raise OidcError("oidc_identity_in_use", "Connecting raced another connection twice.") from None
+
+
+@transaction.atomic
+def _connect_oidc(user: User, claims: OidcClaims) -> None:
+    identity = OidcIdentity.objects.filter(issuer=claims.issuer, subject=claims.subject).first()
+    if identity is not None:
+        if identity.user_id != user.pk:
+            raise OidcError("oidc_identity_in_use", "That provider account belongs to someone else.")
+        return
+    if user.oidc_identities.filter(issuer=claims.issuer).exists():
+        raise OidcError("oidc_account_mismatch", "Connected to another account at the provider.")
+    OidcIdentity.objects.create(user=user, issuer=claims.issuer, subject=claims.subject)
 
 
 def disconnect_oidc(user: User) -> None:

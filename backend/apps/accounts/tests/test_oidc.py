@@ -15,10 +15,11 @@ import requests
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from django.core import mail
 from django.core.management import call_command
+from django.db import IntegrityError
 from rest_framework.test import APIClient
 from rest_framework.throttling import SimpleRateThrottle
 
-from apps.accounts import oidc
+from apps.accounts import oidc, services
 from apps.accounts.checks import check_oidc_settings
 from apps.accounts.google import GoogleIdentity
 from apps.accounts.models import OidcIdentity, User
@@ -457,6 +458,13 @@ def test_trusting_email_refuses_an_account_connected_to_someone_else(client, pro
     assert sso_error(sign_in(client, provider)) == "oidc_account_mismatch"
 
 
+def test_a_sign_in_that_keeps_racing_another_fails_cleanly(client, provider):
+    with mock.patch.object(services, "_oidc_find_link_or_create", side_effect=IntegrityError) as attempt:
+        assert sso_error(sign_in(client, provider)) == "oidc_failed"
+    assert attempt.call_count == 2
+    assert signed_in_email(client) is None
+
+
 def test_a_disabled_account_cannot_sign_in(client, provider):
     sign_in(client, provider)
     client.post(LOGOUT)
@@ -726,6 +734,32 @@ def test_a_provider_account_already_used_by_someone_else_is_refused(auth_client,
     OidcIdentity.objects.create(user=make_user("grace@example.com"), issuer=ISSUER, subject="sub-1")
     res = connect(auth_client, provider)
     assert location(res) == f"{SITE}/settings?sso_error=oidc_identity_in_use"
+
+
+@pytest.mark.parametrize(
+    ("owner", "subject", "result"),
+    [
+        ("grace@example.com", "sub-1", "sso_error=oidc_identity_in_use"),  # this provider account, elsewhere
+        ("ada@example.com", "sub-0", "sso_error=oidc_account_mismatch"),  # another provider account, here
+        ("ada@example.com", "sub-1", "sso=connected"),  # the same connection, made twice
+    ],
+)
+def test_a_connection_made_at_the_same_moment_is_told_apart(
+    auth_client, provider, make_user, owner, subject, result
+):
+    connect_now = services._connect_oidc
+
+    def raced(user, claims):
+        if not raced.done:  # the other connection is saved just before ours
+            raced.done = True
+            other = User.objects.filter(email=owner).first() or make_user(owner)
+            OidcIdentity.objects.create(user=other, issuer=ISSUER, subject=subject)
+            raise IntegrityError
+        connect_now(user, claims)
+
+    raced.done = False
+    with mock.patch.object(services, "_connect_oidc", side_effect=raced):
+        assert location(connect(auth_client, provider)) == f"{SITE}/settings?{result}"
 
 
 def test_a_connect_flow_is_bound_to_the_account_that_started_it(auth_client, provider, make_user):
