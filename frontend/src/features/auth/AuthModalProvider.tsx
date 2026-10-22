@@ -64,7 +64,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       <Dialog open={state.open} onClose={() => settle(false)} title={copy.title} description={copy.description} size="md">
         {lostSession ? (
           <div className={styles.panel}>
-            <LoginForm onSuccess={() => settle(true)} lockedEmail={lostSession.email} expectUserId={lostSession.id} />
+            <LoginForm onSuccess={() => settle(true)} lockedEmail={lostSession.email} expectUserId={lostSession.id} lockedSso={!lostSession.hasPassword} />
           </div>
         ) : (
           <Tabs key={`${state.reason}-${state.tab}`} defaultValue={state.tab}>
