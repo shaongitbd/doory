@@ -163,12 +163,15 @@ export function AlignPanel({ selectionTarget }: { selectionTarget: boolean }) {
         <ToolButton label={t.toolbar.alignBottom} onClick={() => editor.arrange.align('bottom', at)}>
           <span style={{ display: 'inline-flex', transform: 'rotate(90deg)' }}>{I.alignRight}</span>
         </ToolButton>
-        {many || !sel.kinds.every(canFitKind) ? null : (
-          <ToolButton label={t.toolbar.fitToPage} disabled={!editor.arrange.canFitToPage()} testId="ed-fit-to-page" onClick={() => editor.arrange.fitToPage()}>
-            <Maximize size={18} />
-          </ToolButton>
-        )}
       </div>
+      {many || !sel.kinds.every(canFitKind) ? null : (
+        <div className={styles.wideTool}>
+          <ToolButton label={t.toolbar.fitToPage} disabled={!editor.arrange.canFitToPage()} testId="ed-fit-to-page" onClick={() => editor.arrange.fitToPage()}>
+            <Maximize size={18} aria-hidden="true" />
+            <span className={ed.toolText}>{t.toolbar.fitToPage}</span>
+          </ToolButton>
+        </div>
+      )}
     </PopoverStack>
   )
 }
