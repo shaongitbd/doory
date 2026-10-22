@@ -65,6 +65,23 @@ describe('StyleApi.upscale', () => {
     }
   })
 
+  it('does not upload the result when cancelled after the worker finished', async () => {
+    const { engine, handle } = await setup()
+    const uploadsBefore = handle.uploads.length
+    const doc = engine.state.doc
+    const controller = new AbortController()
+    vi.mocked(upscaleImage).mockImplementation(async () => {
+      // The worker is done; the person presses Cancel before the result is applied.
+      controller.abort()
+      return new Blob(['png'], { type: 'image/png' })
+    })
+    expect(await engine.style.upscale({ scale: 2 }, undefined, controller.signal)).toBe(false)
+    expect(upscaleImage).toHaveBeenCalledTimes(1)
+    expect(handle.uploads).toHaveLength(uploadsBefore)
+    expect(engine.state.doc).toBe(doc)
+    engine.dispose()
+  })
+
   it('leaves an SVG alone without fetching or starting the worker', async () => {
     const { engine } = await setup('/media/assets/logo.svg?v=2')
     expect(engine.style.canUpscale()).toBe(false)
