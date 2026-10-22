@@ -2,8 +2,8 @@
 
 Where each built-in size preset comes from, checked in October 2026. Standards, official help-center,
 ads-guide and developer pages were used first. "Unverified" means no official page gives the size, so it
-comes from third-party guides or common practice. For Instagram, Facebook, X, Telegram, LinkedIn and Meta
-ads, the sources are listed for the platform as a whole, below its table.
+comes from third-party guides or common practice; "No source recorded" means its source still has to be found.
+For Instagram, Facebook, X and Telegram, the sources are listed for the platform as a whole, below its table.
 
 Sizes change. If a platform publishes a new size, edit it in the admin site or import a file (see
 [content.md](content.md#size-presets)), and send a pull request for `backend/data/size_presets.json`.
@@ -379,25 +379,25 @@ Sources:
 
 | Size | W × H | Ratio | Type | Source |
 |---|---|---|---|---|
-| Feed / link post | 1200 × 627 | 1.91:1 | Organic | see sources below |
-| Feed | 1080 × 1080 | 1:1 | Organic | see sources below |
-| Feed / multi-image | 1080 × 1350 | 4:5 | Organic | see sources below |
-| Document post | 1080 × 1350 | 4:5 | Organic | see sources below |
-| Feed / video feed | 1080 × 1920 | 9:16 | Organic | see sources below |
-| Article / newsletter | 1920 × 1080 | 16:9 | Organic | see sources below |
-| Event | 1280 × 720 | 16:9 | Organic | see sources below |
-| Group | 1776 × 444 | 4:1 | Organic | see sources below |
-| Personal background | 1584 × 396 | 4:1 | Organic | see sources below |
-| Company Page cover | 1512 × 256 | ~5.9:1 | Organic | see sources below |
-| Profile photo / Page logo | 400 × 400 | 1:1 | Organic | see sources below |
-| Single image ad | 1200 × 628 | 1.91:1 | Ad | see sources below |
-| Single image ad | 1200 × 1200 | 1:1 | Ad | see sources below |
-| Single image / video ad | 720 × 900 | 4:5 | Ad | see sources below |
-| Carousel card | 1080 × 1080 | 1:1 | Ad | see sources below |
-| Video ad | 1080 × 1920 | 9:16 | Ad | see sources below |
-| Message / Conversation ad banner | 300 × 250 | 6:5 | Ad | see sources below |
-| Spotlight / Follower / Text ad | 100 × 100 | 1:1 | Ad | see sources below |
-| Lead gen form header | 552 × 200 | ~2.76:1 | Ad | see sources below |
+| Feed / link post | 1200 × 627 | 1.91:1 | Organic | Unverified. No source recorded. |
+| Feed | 1080 × 1080 | 1:1 | Organic | Unverified. No source recorded. |
+| Feed / multi-image | 1080 × 1350 | 4:5 | Organic | Unverified. No source recorded. |
+| Document post | 1080 × 1350 | 4:5 | Organic | Unverified. [LinkedIn Help, "Upload and share documents on LinkedIn"](https://www.linkedin.com/help/linkedin/answer/a518909), [Guide to LinkedIn PDF carousels (Metricool)](https://metricool.com/linkedin-pdf-carousels/) |
+| Feed / video feed | 1080 × 1920 | 9:16 | Organic | Unverified. No source recorded. |
+| Article / newsletter | 1920 × 1080 | 16:9 | Organic | Unverified. No source recorded. |
+| Event | 1280 × 720 | 16:9 | Organic | Unverified. No source recorded. |
+| Group | 1776 × 444 | 4:1 | Organic | Unverified. No source recorded. |
+| Personal background | 1584 × 396 | 4:1 | Organic | Unverified. No source recorded. |
+| Company Page cover | 1512 × 256 | ~5.9:1 | Organic | Unverified. No source recorded. |
+| Profile photo / Page logo | 400 × 400 | 1:1 | Organic | Unverified. [Influencer Marketing Hub, LinkedIn image size recommendations (third-party)](https://influencermarketinghub.com/linkedin-image-size/) |
+| Single image ad | 1200 × 628 | 1.91:1 | Ad | Unverified. No source recorded. |
+| Single image ad | 1200 × 1200 | 1:1 | Ad | Unverified. No source recorded. |
+| Single image / video ad | 720 × 900 | 4:5 | Ad | Unverified. No source recorded. |
+| Carousel card | 1080 × 1080 | 1:1 | Ad | Unverified. No source recorded. |
+| Video ad | 1080 × 1920 | 9:16 | Ad | Unverified. No source recorded. |
+| Message / Conversation ad banner | 300 × 250 | 6:5 | Ad | Unverified. No source recorded. |
+| Spotlight / Follower / Text ad | 100 × 100 | 1:1 | Ad | Unverified. No source recorded. |
+| Lead gen form header | 552 × 200 | ~2.76:1 | Ad | Unverified. No source recorded. |
 
 ### Mastodon
 
@@ -537,7 +537,7 @@ Sources:
 | Product thumbnail / logo | 240 × 240 | 1:1 | Organic | [Product Hunt: Preparing for launch](https://www.producthunt.com/launch/preparing-for-launch), [Product Hunt Help Center: How to post a product](https://help.producthunt.com/en/articles/479557-how-to-post-a-product) |
 | Gallery image | 1270 × 760 |  | Organic | [Product Hunt: Preparing for launch](https://www.producthunt.com/launch/preparing-for-launch), [Product Hunt Help Center: How to post a product](https://help.producthunt.com/en/articles/479557-how-to-post-a-product) |
 | Gallery video | 1920 × 1080 | 16:9 | Organic | [Product Hunt: Preparing for launch](https://www.producthunt.com/launch/preparing-for-launch), [Product Hunt Help Center: How to post a product](https://help.producthunt.com/en/articles/479557-how-to-post-a-product) |
-| Social share image (og:image) | 1024 × 512 | 2:1 | Organic | [Product Hunt product page og:image / twitter:image meta tags (e.g.](https://www.producthunt.com/products/notion) |
+| Social share image (og:image) | 1024 × 512 | 2:1 | Organic | [Product Hunt product page og:image / twitter:image meta tags (for example, Notion)](https://www.producthunt.com/products/notion) |
 | Maker profile avatar | 400 × 400 | 1:1 | Organic | Unverified. [Screenhance: Product Hunt gallery and header image sizes](https://screenhance.com/blog/product-hunt-gallery-size) |
 | Profile header | 1500 × 500 | 3:1 | Organic | Unverified. [Indie Hackers post on Product Hunt header size](https://indiehackers.com/post/d46584b7f2) |
 
@@ -569,7 +569,7 @@ Sources:
 | Community banner, mobile | 1080 × 128 | 135:16 | Organic | [Banner – Reddit Help](https://support.reddithelp.com/hc/en-us/articles/15484339588884-Banner) |
 | Community banner, desktop | 1072 × 128 | 67:8 | Organic | [Banner – Reddit Help](https://support.reddithelp.com/hc/en-us/articles/15484339588884-Banner) |
 | Profile picture (avatar) | 256 × 256 | 1:1 | Organic | [(U) r/help: profile picture upload message "exactly 256x256"](https://www.reddit.com/r/help/comments/1lx4lgo/hi_im_trying_to_change_my_profile_pic_but_it_says) |
-| Profile banner | 1600 × 480 | 10:3 | Organic | Unverified. [(U) r/help: profile picture upload message "exactly 256x256"](https://www.reddit.com/r/help/comments/1lx4lgo/hi_im_trying_to_change_my_profile_pic_but_it_says) |
+| Profile banner | 1600 × 480 | 10:3 | Organic | Unverified. No source recorded. |
 | Image ad, square | 1080 × 1080 | 1:1 | Ad | [Image Ad Specifications – Reddit Ads Help](https://business.reddithelp.com/s/article/image-ad-specifications) |
 | Image ad, portrait 4:5 | 1080 × 1350 | 4:5 | Ad | [Image Ad Specifications – Reddit Ads Help](https://business.reddithelp.com/s/article/image-ad-specifications) |
 | Image ad, portrait 3:4 | 1080 × 1440 | 3:4 | Ad | [Image Ad Specifications – Reddit Ads Help](https://business.reddithelp.com/s/article/image-ad-specifications) |
@@ -739,7 +739,7 @@ Sources:
 
 | Size | W × H | Ratio | Type | Source |
 |---|---|---|---|---|
-| Feed ad | 1440 × 1440 | 1:1 | Ad | see sources below |
+| Feed ad | 1440 × 1440 | 1:1 | Ad | [Threads Ads Creation (Marketing API)](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ad-creative/threads-ads/creation), [Meta Ads Guide, Facebook Feed image specs](https://www.facebook.com/business/ads-guide/update/image) |
 | Feed post (portrait) | 1080 × 1350 | 4:5 | Organic | [Threads API Overview (image and video specifications, carousel limits)](https://developers.facebook.com/documentation/threads/overview) |
 | Feed post (portrait, high-res) | 1440 × 1800 | 4:5 | Organic | [Threads API Overview (image and video specifications, carousel limits)](https://developers.facebook.com/documentation/threads/overview) |
 | Feed post (square) | 1080 × 1080 | 1:1 | Organic | [Threads API Overview (image and video specifications, carousel limits)](https://developers.facebook.com/documentation/threads/overview) |
@@ -759,13 +759,13 @@ Sources:
 
 | Size | W × H | Ratio | Type | Source |
 |---|---|---|---|---|
-| Feed video (full screen) | 1080 × 1920 | 9:16 | Organic | Unverified. [TikTok Ads Help Center – Creative best practices for performance ads](https://ads.tiktok.com/help/article/creative-best-practices;), [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [AdKit – TikTok Ad Safe Zones (v2026-09-10)](https://adkit.so/tools/safe-zones/tiktok) |
-| Feed video (landscape) | 1920 × 1080 | 16:9 | Organic | Unverified. [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [Moda – TikTok sizes / thumbnail](https://moda.app/resources/sizes/tiktok-thumbnail;) |
-| Feed video (square) | 1080 × 1080 | 1:1 | Organic | Unverified. [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [Moda – TikTok sizes / thumbnail](https://moda.app/resources/sizes/tiktok-thumbnail;) |
-| Photo mode carousel slide | 1080 × 1920 | 9:16 | Organic | Unverified. [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [Kapwing – How to post photos and carousels on TikTok with Photo Mode](https://kapwing.com/resources/how-to-post-photos-and-carousels-on-tiktok-with-photo-mode;) |
-| Photo mode slide (portrait) | 1080 × 1440 | 3:4 | Organic | Unverified. [Kapwing – How to post photos and carousels on TikTok with Photo Mode](https://kapwing.com/resources/how-to-post-photos-and-carousels-on-tiktok-with-photo-mode;), [TikTok Discover – How to get back the ratio on Photo Mode](https://www.tiktok.com/discover/how-to-get-back-the-ratio-on-photo-mode?lang=en) |
-| Video cover / thumbnail | 1080 × 1920 | 9:16 | Organic | Unverified. [Moda – TikTok sizes / thumbnail](https://moda.app/resources/sizes/tiktok-thumbnail;) |
-| Profile photo | 400 × 400 | 1:1 | Organic | Unverified. [Socialsizes.io – TikTok profile picture size](https://socialsizes.io/tiktok-profile-picture-size/;) |
+| Feed video (full screen) | 1080 × 1920 | 9:16 | Organic | Unverified. [TikTok Ads Help Center – Creative best practices for performance ads](https://ads.tiktok.com/help/article/creative-best-practices), [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [AdKit – TikTok Ad Safe Zones (v2026-09-10)](https://adkit.so/tools/safe-zones/tiktok) |
+| Feed video (landscape) | 1920 × 1080 | 16:9 | Organic | Unverified. [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [Moda – TikTok sizes / thumbnail](https://moda.app/resources/sizes/tiktok-thumbnail) |
+| Feed video (square) | 1080 × 1080 | 1:1 | Organic | Unverified. [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [Moda – TikTok sizes / thumbnail](https://moda.app/resources/sizes/tiktok-thumbnail) |
+| Photo mode carousel slide | 1080 × 1920 | 9:16 | Organic | Unverified. [TikTok for Developers – Content Posting API, Media Transfer Guide](https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide), [Kapwing – How to post photos and carousels on TikTok with Photo Mode](https://kapwing.com/resources/how-to-post-photos-and-carousels-on-tiktok-with-photo-mode) |
+| Photo mode slide (portrait) | 1080 × 1440 | 3:4 | Organic | Unverified. [Kapwing – How to post photos and carousels on TikTok with Photo Mode](https://kapwing.com/resources/how-to-post-photos-and-carousels-on-tiktok-with-photo-mode), [TikTok Discover – How to get back the ratio on Photo Mode](https://www.tiktok.com/discover/how-to-get-back-the-ratio-on-photo-mode?lang=en) |
+| Video cover / thumbnail | 1080 × 1920 | 9:16 | Organic | Unverified. [Moda – TikTok sizes / thumbnail](https://moda.app/resources/sizes/tiktok-thumbnail) |
+| Profile photo | 400 × 400 | 1:1 | Organic | Unverified. [Socialsizes.io – TikTok profile picture size](https://socialsizes.io/tiktok-profile-picture-size/) |
 | In-Feed video ad | 1080 × 1920 | 9:16 | Ad | Unverified. [TikTok Ads Help Center – Video ads specifications](https://ads.tiktok.com/help/article/video-ads-specifications), [AdKit – TikTok Ad Safe Zones (v2026-09-10)](https://adkit.so/tools/safe-zones/tiktok) |
 | In-Feed video ad (square) | 1080 × 1080 | 1:1 | Ad | [TikTok Ads Help Center – Video ads specifications](https://ads.tiktok.com/help/article/video-ads-specifications) |
 | In-Feed video ad (horizontal) | 1920 × 1080 | 16:9 | Ad | [TikTok Ads Help Center – Video ads specifications](https://ads.tiktok.com/help/article/video-ads-specifications) |
@@ -1377,12 +1377,12 @@ Sources:
 
 | Size | W × H | Ratio | Type | Source |
 |---|---|---|---|---|
-| Feed ad | 1440 × 1800 | 4:5 | Ad | see sources below |
-| Feed, Marketplace, Search, Right column | 1440 × 1440 | 1:1 | Ad | see sources below |
-| Stories / Reels ad | 1440 × 2560 | 9:16 | Ad | see sources below |
-| Reels overlay | 1080 × 1080 | 1:1 | Ad | see sources below |
-| In-stream video | 1920 × 1080 | 16:9 | Ad | see sources below |
-| Carousel card | 1080 × 1080 | 1:1 | Ad | see sources below |
+| Feed ad | 1440 × 1800 | 4:5 | Ad | [Meta Ads Guide: Facebook Feed image](https://www.facebook.com/business/ads-guide/update/image/facebook-feed), [Meta Ads Guide, Facebook Feed image specs](https://www.facebook.com/business/ads-guide/update/image) |
+| Feed, Marketplace, Search, Right column | 1440 × 1440 | 1:1 | Ad | [Meta Ads Guide, Facebook Feed image specs](https://www.facebook.com/business/ads-guide/update/image) |
+| Stories / Reels ad | 1440 × 2560 | 9:16 | Ad | [Meta Ads Guide: Facebook Stories image](https://www.facebook.com/business/ads-guide/update/image/facebook-story), [Meta Ads Guide, Instagram Stories image and video specs](https://www.facebook.com/business/ads-guide/update/image/instagram-story) |
+| Reels overlay | 1080 × 1080 | 1:1 | Ad | Unverified. No source recorded. |
+| In-stream video | 1920 × 1080 | 16:9 | Ad | [Meta Ads Guide: video specs](https://www.facebook.com/business/ads-guide/update/video) |
+| Carousel card | 1080 × 1080 | 1:1 | Ad | [Meta Ads Guide, Facebook Feed carousel specs](https://www.facebook.com/business/ads-guide/update/carousel/facebook-feed) |
 
 ### Microsoft Advertising
 
