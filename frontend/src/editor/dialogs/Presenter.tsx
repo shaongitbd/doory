@@ -98,7 +98,7 @@ export function Presenter({ props }: { props?: Record<string, unknown> }) {
   const [windowOpen, setWindowOpen] = useState(true)
   const say = useCallback((text: string, heading?: string) => setMessage({ text, title: heading }), [])
   // Sound the browser held back, or a file that did not load, is reported in the same place as the other notices.
-  const sound = useShowAudio(doc, state, say)
+  const sound = useShowAudio(doc, plan, state, say)
   const idle = useIdle(IDLE_MS)
 
   const close = useCallback(() => editor.closeDialog(), [editor])
