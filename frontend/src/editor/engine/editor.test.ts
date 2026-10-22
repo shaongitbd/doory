@@ -594,6 +594,43 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('fit to page leaves lines and QR codes alone', async () => {
+    const restore = installImageStub({ width: 512, height: 512 })
+    vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined)
+    const { engine, view } = await setup()
+    await engine.insert.shape('line')
+    await engine.insert.qr()
+    await vi.waitFor(() => expect(view.canvas.getObjects()).toHaveLength(2))
+    for (const id of objectsOf(engine).map((o) => o.id)) {
+      engine.select([id])
+      const before = structuredClone(objectsOf(engine))
+      expect(engine.arrange.canFitToPage()).toBe(false)
+      engine.arrange.fitToPage()
+      expect(objectsOf(engine)).toEqual(before)
+    }
+    expect(engine.state.selection.kinds).toEqual(['qr'])
+    expect(engine.state.history.undoLabel).not.toBe('Fit to page')
+    await nextFrame()
+    engine.dispose()
+    restore()
+  })
+
+  it('fit to page leaves alone an object picked inside a group', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.shape('rect')
+    await engine.insert.shape('ellipse')
+    engine.selectAll()
+    engine.arrange.group()
+    const group = objectsOf(engine)[0] as unknown as { objects: { id: string }[] }
+    engine.arrange.selectLayer(group.objects[0].id)
+    expect(view.canvas.getActiveObject()?.group).toBeDefined()
+    const before = structuredClone(objectsOf(engine))
+    expect(engine.arrange.canFitToPage()).toBe(false)
+    engine.arrange.fitToPage()
+    expect(objectsOf(engine)).toEqual(before)
+    engine.dispose()
+  })
+
   it('fit to page leaves text alone', async () => {
     const { engine, view } = await setup()
     await engine.insert.text('heading')

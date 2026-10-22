@@ -10,6 +10,7 @@ import { type Rect, normalizeAngle } from '../geometry'
 import { asDory, ensureId, isLocked } from '../objects/dory'
 import { bakeInPlace } from '../objects/bake'
 import { applyMask } from '../objects/masks'
+import { kindOfLive } from '../objects/kinds'
 import { anchorFrames, carriedPictures, clampSlotImage, followFrames, hasSlot, mirrorSlot, shiftSlot } from '../objects/slot'
 import { getExtraProps } from '../serialization'
 import { coverFrame } from './insert'
@@ -20,6 +21,17 @@ import { newId } from '@/lib/document'
 import { t } from '../../strings'
 
 export type AlignTarget = 'page' | 'selection'
+
+/**
+ * Kinds Fit to page never applies to: text (stretching it would only blow up the font), QR codes (cropping one
+ * would break it) and lines (a line has no height to fill).
+ */
+const NO_FIT_KINDS: ReadonlySet<string> = new Set(['text', 'qr', 'line'])
+
+/** False for the object kinds Fit to page leaves alone. */
+export function canFitKind(kind: string): boolean {
+  return !NO_FIT_KINDS.has(kind)
+}
 
 /** Distance a duplicate or paste lands from its source, in page px. */
 export const DUPLICATE_OFFSET = 20
@@ -421,13 +433,26 @@ export class ArrangeApi {
   }
 
   /**
+   * True when Fit to page can act on the selection: one unlocked object of a kind it suits, on the page itself. A
+   * member of an entered group is left out: its size and position are in the group's terms, not the page's.
+   */
+  canFitToPage(): boolean {
+    const active = this.view?.canvas.getActiveObject()
+    return !!active && this.fitsPage(active)
+  }
+
+  private fitsPage(obj: FabricObject): boolean {
+    return !isLocked(obj) && !(obj instanceof ActiveSelection) && !(obj instanceof IText) && !obj.group && canFitKind(kindOfLive(obj))
+  }
+
+  /**
    * Makes the selected object, unrotated, cover the whole page: a picture is scaled and cropped, a shape stretched.
-   * Text is left alone, since stretching it would only blow up the font.
+   * Text, QR codes and lines are left alone (see `canFitKind`).
    */
   fitToPage(): void {
     const view = this.view
     const active = view?.canvas.getActiveObject()
-    if (!view || !active || isLocked(active) || active instanceof ActiveSelection || active instanceof IText) return
+    if (!view || !active || !this.fitsPage(active)) return
     const page = this.engine.pageSizeOf(this.engine.state.activePageId)
     const border = active.strokeUniform ? active.strokeWidth || 0 : 0
     this.carrying(active, () => {

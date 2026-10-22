@@ -2,6 +2,7 @@ import { Check, Group, LayoutGrid, Maximize, Ungroup } from 'lucide-react'
 import { useState } from 'react'
 import { I } from '../../chrome/icons'
 import { useEditor, useEditorState, useSelection } from '../../context'
+import { canFitKind } from '../../engine/api/arrange'
 import { FIELD_KEY, FIELD_LABEL_MAX, fieldTypeFor, keyClashes, readField } from '../../engine/fields'
 import { MIN_FIT_FONT_SIZE, defaultMinFontSize, readTextFit } from '../../engine/objects/textStyle'
 import { pxToUnit, unitDecimals, unitToPx } from '../../engine/units'
@@ -162,8 +163,8 @@ export function AlignPanel({ selectionTarget }: { selectionTarget: boolean }) {
         <ToolButton label={t.toolbar.alignBottom} onClick={() => editor.arrange.align('bottom', at)}>
           <span style={{ display: 'inline-flex', transform: 'rotate(90deg)' }}>{I.alignRight}</span>
         </ToolButton>
-        {many || sel.kinds.includes('text') ? null : (
-          <ToolButton label={t.toolbar.fitToPage} disabled={sel.locked} testId="ed-fit-to-page" onClick={() => editor.arrange.fitToPage()}>
+        {many || !sel.kinds.every(canFitKind) ? null : (
+          <ToolButton label={t.toolbar.fitToPage} disabled={!editor.arrange.canFitToPage()} testId="ed-fit-to-page" onClick={() => editor.arrange.fitToPage()}>
             <Maximize size={18} />
           </ToolButton>
         )}

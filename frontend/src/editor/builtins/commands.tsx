@@ -91,7 +91,7 @@ export function registerBuiltinCommands(): void {
   registerCommand({ id: 'edit.group', label: t.cmd.editGroup, shortcut: 'Mod+G', group: t.cmdGroup.edit, icon: <Group size={18} />, run: (e) => e.arrange.group(), enabled: ({ state }) => state.selection.ids.length > 1 })
   registerCommand({ id: 'edit.ungroup', label: t.cmd.editUngroup, shortcut: 'Mod+Shift+G', group: t.cmdGroup.edit, icon: <Ungroup size={18} />, run: (e) => e.arrange.ungroup(), enabled: ({ state }) => state.selection.ids.length === 1 && state.selection.kinds.includes('group') })
   registerCommand({ id: 'edit.lock', label: t.cmd.editLock, shortcut: 'Mod+L|Alt+Shift+L', group: t.cmdGroup.edit, icon: <Lock size={18} />, run: (e) => e.arrange.toggleLock(), enabled: ({ state }) => state.selection.ids.length > 0 })
-  registerCommand({ id: 'arrange.fitToPage', label: t.toolbar.fitToPage, group: t.cmdGroup.edit, icon: <Maximize size={18} />, run: (e) => e.arrange.fitToPage(), enabled: ({ state }) => state.selection.ids.length === 1 && !state.selection.locked && !state.selection.kinds.includes('text') })
+  registerCommand({ id: 'arrange.fitToPage', label: t.toolbar.fitToPage, group: t.cmdGroup.edit, icon: <Maximize size={18} />, run: (e) => e.arrange.fitToPage(), enabled: ({ editor }) => editor.arrange.canFitToPage() })
   registerCommand({ id: 'edit.flipH', label: t.cmd.editFlipH, group: t.cmdGroup.edit, icon: <FlipHorizontal2 size={18} />, run: (e) => e.arrange.flip('horizontal'), enabled: ({ state }) => state.selection.ids.length > 0 })
   registerCommand({ id: 'edit.flipV', label: t.cmd.editFlipV, group: t.cmdGroup.edit, icon: <FlipVertical2 size={18} />, run: (e) => e.arrange.flip('vertical'), enabled: ({ state }) => state.selection.ids.length > 0 })
 
