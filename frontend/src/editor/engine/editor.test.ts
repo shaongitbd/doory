@@ -594,6 +594,33 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('fit to page is one undo step', async () => {
+    const { engine } = await setup()
+    await engine.insert.shape('rect')
+    engine.arrange.setAngle(30)
+    engine.history.seal()
+    const before = structuredClone(objectsOf(engine))
+    engine.arrange.fitToPage()
+    expect(engine.state.history.undoLabel).toBe('Fit to page')
+    await engine.undo()
+    expect(objectsOf(engine)).toEqual(before)
+    engine.dispose()
+  })
+
+  it('fit to page puts the outer edge of a thick border on the page edge', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.shape('rect')
+    engine.style.setStroke({ color: '#000000', width: 24 })
+    engine.arrange.fitToPage()
+    const rect = view.canvas.getObjects()[0]
+    const r = rect.getBoundingRect()
+    expect([r.left, r.top, r.width, r.height].map((v) => Math.round(v * 100) / 100)).toEqual([0, 0, 800, 600])
+    // Half the border lies outside the shape's own box.
+    expect(rect.width).toBeCloseTo(800 - 24)
+    expect(rect.height).toBeCloseTo(600 - 24)
+    engine.dispose()
+  })
+
   it('fit to page leaves lines and QR codes alone', async () => {
     const restore = installImageStub({ width: 512, height: 512 })
     vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined)
