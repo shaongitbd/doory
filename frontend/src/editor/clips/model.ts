@@ -229,6 +229,8 @@ export function clipPropsFromAsset(ref: AssetRef): Record<string, unknown> {
     videoMuted: false,
     videoVolume: 1,
     videoSpeed: 1,
+    videoFadeInMs: 0,
+    videoFadeOutMs: 0,
   }
   if (info?.audioUrl) props.videoAudioSrc = info.audioUrl
   const strip = info?.filmstrip

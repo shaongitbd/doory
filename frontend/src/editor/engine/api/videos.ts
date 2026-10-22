@@ -151,22 +151,19 @@ export class VideosApi {
     for (const [key, value] of Object.entries(patch) as [keyof ClipPatch, unknown][]) if (value !== undefined) merged[PROP[key]] = value
     const next = readClip({ ...merged, type: 'image' })
     if (!next) return false
-    const values: Record<string, unknown> = {
-      videoStartMs: next.startMs,
-      videoTrimStartMs: next.trimStartMs,
-      videoTrimEndMs: next.trimEndMs,
-      videoLoop: next.loop,
-      videoMuted: next.muted,
-      videoVolume: next.volume,
-      videoSpeed: next.speed,
-      videoFadeInMs: next.fadeInMs,
-      videoFadeOutMs: next.fadeOutMs,
+    // Only what the patch sets, and what clamping moves because of it (a trim end before its start swaps the two): a
+    // setting the patch leaves alone is never written, so a co-editor's change to it stands.
+    const changed: string[] = []
+    for (const key of Object.keys(PROP) as (keyof ClipPatch)[]) {
+      if (patch[key] === undefined && next[key] === clip[key]) continue
+      const prop = PROP[key]
+      if (record[prop] === next[key]) continue
+      record[prop] = next[key]
+      changed.push(prop)
     }
-    const changed = Object.entries(values).filter(([key, value]) => record[key] !== value)
     if (changed.length === 0) return false
-    for (const [key, value] of changed) record[key] = value
     obj.set('dirty', true)
-    this.followTiming(obj)
+    this.followTiming(obj, changed)
     this.engine.commitActive({ label, coalesceKey })
     return true
   }
@@ -184,12 +181,14 @@ export class VideosApi {
     return new Set((page?.objects ?? []).filter((o) => o.videoBackdropOf === id).map((o) => o.id))
   }
 
-  /** Gives the clip's blurred backgrounds its timing (without committing: the caller does). */
-  private followTiming(obj: FabricImage): void {
+  /** Gives the clip's blurred backgrounds its timing, or only the `props` of it that changed (without committing: the caller does). */
+  private followTiming(obj: FabricImage, props?: readonly string[]): void {
     const record = asRecord(obj)
+    const keys = props ? BACKDROP_TIMING_PROPS.filter((key) => props.includes(key)) : BACKDROP_TIMING_PROPS
+    if (keys.length === 0) return
     for (const backdrop of this.backdropsOf(asDory(obj).id)) {
       const other = asRecord(backdrop)
-      for (const key of BACKDROP_TIMING_PROPS) other[key] = record[key]
+      for (const key of keys) other[key] = record[key]
       backdrop.set('dirty', true)
     }
   }

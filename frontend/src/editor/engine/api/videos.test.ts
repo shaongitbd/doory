@@ -71,6 +71,23 @@ describe('video clip commands', () => {
     expect(readClip(stored())?.trimEndMs).toBe(8000)
   })
 
+  it('writes only the settings it was given, and what clamping moves because of them', () => {
+    expect(engine.videos.update('clip', { volume: 0.5 })).toBe(true)
+    const after = stored()
+    expect(after.videoVolume).toBe(0.5)
+    // The clip never had these: a co-editor's change to them is not overwritten by defaults.
+    for (const key of ['videoFadeInMs', 'videoFadeOutMs', 'videoSpeed', 'videoStartMs', 'videoLoop', 'videoMuted']) expect(after).not.toHaveProperty(key)
+    // A trim end before the start swaps the two: both are written.
+    engine.videos.update('clip', { trimStartMs: 3000 })
+    engine.videos.update('clip', { trimEndMs: 1000 })
+    expect([stored().videoTrimStartMs, stored().videoTrimEndMs]).toEqual([1000, 3000])
+    // Too short a trim moves the end along.
+    engine.videos.update('clip', { trimStartMs: 2950 })
+    expect([stored().videoTrimStartMs, stored().videoTrimEndMs]).toEqual([2950, 3050])
+    expect(stored()).not.toHaveProperty('videoFadeInMs')
+    expect(engine.videos.update('clip', { volume: 0.5 })).toBe(false)
+  })
+
   it('does nothing to plain pictures', () => {
     expect(engine.videos.update('pic', { muted: true })).toBe(false)
     expect(engine.videos.get('pic')).toBeNull()

@@ -95,6 +95,8 @@ describe('a clip from an asset', () => {
       videoMuted: false,
       videoVolume: 1,
       videoSpeed: 1,
+      videoFadeInMs: 0,
+      videoFadeOutMs: 0,
       videoFilmstrip: { url: '/media/s.webp', frames: 25, intervalMs: 500, tileWidth: 160, tileHeight: 90 },
     })
   })
