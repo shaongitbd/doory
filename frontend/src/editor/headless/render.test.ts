@@ -125,6 +125,19 @@ describe('renderDesignPages', () => {
     expect(atob(first.data).slice(0, 3)).toBe('\xff\xd8\xff')
   })
 
+  it('stops at the first page over the size limits with too_large', async () => {
+    const first = (await renderDesignPages({ document: doc, pages: [0], output: 'svg' })).pages[0]
+    const size = new TextEncoder().encode(first.data).length
+    const page = await renderError(renderDesignPages({ document: doc, pages: [1, 0], output: 'svg', maxPageBytes: size - 1 }))
+    expect(page.code).toBe('too_large')
+    expect(page.message).toMatch(/^Page 1 would be a file of .* MB; this server makes SVG files of at most/)
+    const total = await renderError(renderDesignPages({ document: doc, pages: [0, 1], output: 'print', maxTotalBytes: size }))
+    expect(total.code).toBe('too_large')
+    expect(total.message).toContain('together')
+    const fits = await renderDesignPages({ document: doc, pages: [0, 1], output: 'svg', maxPageBytes: size, maxTotalBytes: 3 * size })
+    expect(fits.pages).toHaveLength(2)
+  })
+
   it('refuses unknown outputs, a negative bleed and a missing page with a code', async () => {
     expect((await renderError(renderDesignPages({ document: doc, output: 'eps' as 'svg' }))).code).toBe('invalid_options')
     expect((await renderError(renderDesignPages({ document: doc, output: 'print', bleed: -1 }))).code).toBe('invalid_options')
