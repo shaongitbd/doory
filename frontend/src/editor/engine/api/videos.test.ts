@@ -163,6 +163,16 @@ describe('video clip commands', () => {
     expect(readClip(followed)).toMatchObject({ trimStartMs: 2000, speed: 2, volume: 1, muted: true })
   })
 
+  it('deletes a clip with its blurred background, in one step', async () => {
+    engine.videos.blurredBackground('clip')
+    await settle()
+    engine.select(['clip'])
+    engine.arrange.delete()
+    expect(engine.getDocument().pages[0].objects.filter((o) => o.videoSrc)).toHaveLength(0)
+    await engine.undo()
+    expect(engine.getDocument().pages[0].objects.filter((o) => o.videoSrc)).toHaveLength(2)
+  })
+
   it('pastes a clip with its blurred background, the pasted background following the pasted clip', async () => {
     engine.videos.blurredBackground('clip')
     const [backdrop, clip] = engine.getDocument().pages[0].objects

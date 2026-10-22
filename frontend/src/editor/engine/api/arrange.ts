@@ -91,8 +91,14 @@ export class ArrangeApi {
     if (!view) return
     const objs = view.selectedObjects().filter((o) => !isLocked(o))
     if (objs.length === 0) return
+    // A clip's blurred background goes with it: it is locked in place and means nothing without its clip.
+    const gone = new Set(objs.map((o) => asDory(o).id))
+    const backdrops = view.canvas.getObjects().filter((o) => {
+      const of = (o as unknown as Record<string, unknown>).videoBackdropOf
+      return typeof of === 'string' && gone.has(of) && !objs.includes(o)
+    })
     view.canvas.discardActiveObject()
-    view.canvas.remove(...objs)
+    view.canvas.remove(...objs, ...backdrops)
     view.canvas.requestRenderAll()
     this.done(objs.length === 1 ? t.history.deleteLayer : t.history.deleteLayers)
     this.engine.announce(t.announce.deleted(objs.length))
