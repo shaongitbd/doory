@@ -9,7 +9,10 @@ GROUP_TYPES = frozenset({"group", "activeselection"})
 
 
 def object_kind(obj: dict) -> str:
-    """qr, placeholder, element, image, text, line, shape, group or unknown (highest priority first)."""
+    """qr, placeholder, element, video, image, text, line, shape, group or unknown (highest priority first).
+
+    A video clip is a picture (its poster) that also names the clip (`videoSrc`); it is never treated as a
+    plain picture, so a picture tool can't swap its poster and leave the clip behind."""
     kind = str(obj.get("type", "")).lower()
     if obj.get("qr"):
         return "qr"
@@ -18,7 +21,7 @@ def object_kind(obj: dict) -> str:
     if isinstance(obj.get("elementId"), str):
         return "element"
     if kind == "image":
-        return "image"
+        return "video" if isinstance(obj.get("videoSrc"), str) else "image"
     if kind in TEXT_TYPES:
         return "text"
     if kind in LINE_TYPES:

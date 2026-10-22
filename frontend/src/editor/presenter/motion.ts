@@ -17,6 +17,7 @@ import { transitionPresets } from '../animation/presets'
 import type { EditorEngine } from '../engine/editor'
 import { getPageSize } from '../engine/pageSizes'
 import { DURATION_MAX_SEC } from './timing'
+import { elementSources } from '../clips/elementSource'
 
 /** The fade that stands in for every transition when the viewer asked for reduced motion. */
 export const REDUCED_TRANSITION: PageTransition = { preset: 'fade', durationMs: 250, easing: 'ease-in-out' }
@@ -53,7 +54,7 @@ export function planMotion(doc: Pick<DoryDocument, 'pages'>, reduced: boolean): 
     const wanted = playableTransition(original.transition)
     return { page, transition: wanted ? (reduced ? REDUCED_TRANSITION : wanted) : null, timing: pageTiming(page) }
   })
-  return { pages, reduced, moves: pages.some((p) => p.transition !== null || p.timing.spans.length > 0) }
+  return { pages, reduced, moves: pages.some((p) => p.transition !== null || p.timing.spans.length > 0 || p.timing.clips > 0) }
 }
 
 /**
@@ -153,9 +154,10 @@ export class MotionCache {
     if (page) this.get(page, width).catch(() => undefined)
   }
 
-  /** The page on screen is never evicted. */
+  /** The page on screen is never evicted. The clips of every other prepared page stop playing. */
   keep(page: DocPage, width: number): void {
     this.current = this.key(page, width)
+    for (const [key, entry] of this.entries) if (key !== this.current) entry.renderer.suspendMedia()
   }
 
   /** Forgets every renderer (the stage changed size); preparations that are still running finish but are not kept. */
@@ -192,7 +194,7 @@ export class MotionCache {
 /** A cache that renders with the editor's own loaders, so fonts, uploads and effects match the editor and exports. */
 export function createMotionCache(editor: EditorEngine, snapshot: DoryDocument): MotionCache {
   return new MotionCache(
-    (page, multiplier) => createFrameRenderer(page, getPageSize(snapshot, page.id), editor.loadContext, { multiplier }),
+    (page, multiplier) => createFrameRenderer(page, getPageSize(snapshot, page.id), editor.loadContext, { multiplier, media: elementSources }),
     (page) => getPageSize(snapshot, page.id),
   )
 }

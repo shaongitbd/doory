@@ -81,6 +81,16 @@
     background var(--duration-fast) var(--ease-out);
 }
 
+.allSizes {
+  width: 100%;
+  height: 100%;
+  color: var(--color-brand-strong);
+  font: inherit;
+  cursor: pointer;
+  background: rgb(255 255 255 / 0.55);
+  border: 1.5px dashed var(--color-border-strong);
+}
+
 .chip:hover {
   border-color: var(--accent-lilac);
   text-decoration: none;

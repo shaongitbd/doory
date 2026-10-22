@@ -18,6 +18,7 @@ import type { DocPage, DoryDocument } from '@/types/document'
 import { encodeAudio } from '../../../audio/encoder'
 import { isAudible, readTracks } from '../../../audio/model'
 import { mixAudio } from '../../../audio/mixer'
+import { exportSources } from './clipDecoder'
 import { pageSize } from '../../docOps'
 import { type EncodingPlan, browserCodecs, planEncoding } from './codecs'
 import { FrameComposer } from './composer'
@@ -29,7 +30,7 @@ import { FORMAT_RULES, type VideoOptions, isValidVideoOptions } from './options'
 import { FrameCursor, type FramePlan, frameCount, frameDurationUs, frameTimestampUs, gifDelayCs, repeatsPrevious } from './schedule'
 import { frameSize } from './geometry'
 import { Slicer, waitForQueue } from './slicer'
-import { compileTimeline, slotDurationsMs } from './timeline'
+import { clipSoundOf, compileTimeline, slotDurationsMs } from './timeline'
 import { AUDIO_RATE, type Deps, type Prepared, type VideoJob, type VideoProgress, type VideoResult, type VideoWarning, fileNameFor } from './types'
 
 /** Frames waiting in the video encoder before the next is drawn. */
@@ -50,7 +51,8 @@ export function prepare(document: DoryDocument, pages: readonly { page: DocPage;
   const timeline = compileTimeline(sized, { pageSeconds: options.pageSeconds })
   if (timeline.totalMs > FORMAT_RULES[options.format].maxMs) throw new VideoExportError('too-long', 'The video is longer than this format allows.')
   const frame = frameSize(sized[0].size, options.resolution, options.format)
-  return { timeline, frame, frames: frameCount(timeline.totalMs, options.fps), hasSound: options.format !== 'gif' && options.audio && readTracks(document).some(isAudible) }
+  const audible = readTracks(document).some(isAudible) || clipSoundOf(timeline).length > 0
+  return { timeline, frame, frames: frameCount(timeline.totalMs, options.fps), hasSound: options.format !== 'gif' && options.audio && audible }
 }
 
 /** Makes the file. Rejects with an `AbortError` when `job.signal` fires and with a `VideoExportError` for everything else. */
@@ -107,7 +109,7 @@ async function runWebCodecs(job: VideoJob, prepared: Prepared, plan: Extract<Enc
   if (prepared.hasSound && plan.audio) {
     report('sound', 0, frames, 0, null, true)
     const durations = slotDurationsMs(job.document.pages.length, timeline)
-    const mix = await deps.mix(job.document, durations, AUDIO_RATE, { load: job.host.loadSound, signal, onProgress: (f) => report('sound', 0, frames, f * 0.85) })
+    const mix = await deps.mix(job.document, durations, AUDIO_RATE, { load: job.host.loadSound, signal, onProgress: (f) => report('sound', 0, frames, f * 0.85), extraTracks: clipSoundOf(timeline) })
     throwIfAborted(signal)
     sound = await deps.encodeSound(mix, plan.audio.format, { signal, onProgress: (f) => report('sound', 0, frames, 0.85 + f * 0.15) })
     if (sound.format === 'wav') {
@@ -150,7 +152,7 @@ async function runWebCodecs(job: VideoJob, prepared: Prepared, plan: Extract<Enc
       failure ??= error
     },
   })
-  const composer = new FrameComposer({ frame, fit: options.fit, loadContext: job.host.loadContext, readback: false })
+  const composer = new FrameComposer({ frame, fit: options.fit, loadContext: job.host.loadContext, readback: false, media: exportSources })
   try {
     encoder.configure(plan.video.config)
     const cursor = new FrameCursor(timeline, fps)
@@ -212,7 +214,7 @@ async function runGif(job: VideoJob, prepared: Prepared, deps: Deps, startedAt: 
   const framesStartAt = { value: deps.now() }
   const report = progressReporter(job, deps, startedAt, framesStartAt, { sound: 0, finishing: 0.03 })
   const sink = await createGifSink({ width: frame.width, height: frame.height, loops: options.loops, dither: options.dither, maxBytes: GIF_MAX_BYTES }, deps.gifWorker)
-  const composer = new FrameComposer({ frame, fit: options.fit, loadContext: job.host.loadContext, readback: true })
+  const composer = new FrameComposer({ frame, fit: options.fit, loadContext: job.host.loadContext, readback: true, media: exportSources })
   try {
     const cursor = new FrameCursor(timeline, fps)
     const slicer = new Slicer()

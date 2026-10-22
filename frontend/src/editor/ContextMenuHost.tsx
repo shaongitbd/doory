@@ -38,6 +38,7 @@ export function ContextMenuHost() {
     if (selection.ids.length === 1 && selection.kinds[0] !== 'text') list.push(...pick('arrange.fitToPage'))
     if (selection.ids.length === 1 && selection.kinds[0] === 'image') list.push(sep('s3'), ...pick('image.replace', 'image.crop'))
     else if (selection.ids.length === 1 && selection.kinds[0] === 'placeholder') list.push(sep('s3'), ...pick('image.replace'))
+    else if (selection.ids.length === 1 && selection.kinds[0] === 'video') list.push(sep('s3'), ...pick('image.crop', 'video.split', 'video.replace', 'video.blurredBackground', 'video.detachAudio', 'video.background'))
     return list
   }, [menu, selection, editor])
 

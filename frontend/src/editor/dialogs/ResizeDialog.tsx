@@ -1,6 +1,7 @@
 import { Lock, LockOpen } from 'lucide-react'
 import { useState } from 'react'
-import { filterPresets, useSizePresets } from '@/lib/sizePresets'
+import { findPresetBySize, quickPresets, useSizePresets, type SizePresetCatalogue } from '@/lib/sizePresets'
+import { SizePicker } from '@/lib/sizePresets/SizePicker'
 import type { DocUnit } from '@/types/document'
 import { useDocument, useEditor } from '../context'
 import type { ResizeScope } from '../engine/api/pages'
@@ -23,6 +24,14 @@ const MODES: { id: ResizeMode; label: string; hint: string }[] = [
   { id: 'keep', label: t.dialog.resizeKeep, hint: t.dialog.resizeKeepHint },
 ]
 
+/** The size the dialog opens on: the design's own preset if it still fits, else a popular one of this size, else any. */
+function presetOfSize(catalogue: SizePresetCatalogue, width: number, height: number, own?: string): string | null {
+  const fits = (preset?: { width: number; height: number }) => preset !== undefined && preset.width === width && preset.height === height
+  const mine = own ? catalogue.byId.get(own) : undefined
+  if (fits(mine)) return mine!.id
+  return quickPresets(catalogue).find(fits)?.id ?? findPresetBySize(catalogue, width, height)?.id ?? null
+}
+
 /**
  * Props: `pageId` (default the page in view) names the page whose size is shown and previewed, `scope` says which
  * pages Resize reaches (default: every page of a design of one size, this page when the sizes already differ),
@@ -41,8 +50,8 @@ export function ResizeDialog({ props }: { props?: Record<string, unknown> }) {
   const [h, setH] = useState(initH)
   const [lock, setLock] = useState(false)
   const [mode, setMode] = useState<ResizeMode>('scale')
-  const [query, setQuery] = useState('')
   const catalogue = useSizePresets()
+  const [pickedId, setPickedId] = useState<string | null>(() => presetOfSize(catalogue, initW, initH, doc.meta?.presetId))
   const [scope, setScope] = useState<ResizeScope>(!multiple ? 'all' : props?.scope === 'page' || props?.scope === 'all' ? props.scope : isUniform(doc) ? 'all' : 'page')
   const ratio = current.width / current.height
   const dec = unitDecimals(unit)
@@ -54,10 +63,12 @@ export function ResizeDialog({ props }: { props?: Record<string, unknown> }) {
   // With the ratio locked the other side follows, but it cannot leave the canvas limits either.
   const withinLimits = (px: number): number => Math.min(CANVAS_SIDE_PX.max, Math.max(CANVAS_SIDE_PX.min, px))
   const setWidth = (px: number): void => {
+    setPickedId(null)
     setW(px)
     if (lock) setH(withinLimits(px / ratio))
   }
   const setHeight = (px: number): void => {
+    setPickedId(null)
     setH(px)
     if (lock) setW(withinLimits(px * ratio))
   }
@@ -67,13 +78,11 @@ export function ResizeDialog({ props }: { props?: Record<string, unknown> }) {
     editor.closeDialog()
   }
 
-  const sections = filterPresets(catalogue, { query })
-
   return (
     <Dialog
       title={t.dialog.resizeTitle}
       onClose={() => editor.closeDialog()}
-      width={720}
+      width={1120}
       footer={
         <>
           <Button onClick={() => editor.closeDialog()}>{t.dialog.cancel}</Button>
@@ -85,23 +94,18 @@ export function ResizeDialog({ props }: { props?: Record<string, unknown> }) {
     >
       <div className={styles.resize}>
         <div className={styles.presets}>
-          <input type="search" className={styles.presetSearch} placeholder={t.dialog.resizeSearch} aria-label={t.dialog.resizeSearch} value={query} onChange={(e) => setQuery(e.target.value)} />
-          {sections.length === 0 ? <p className={styles.muted}>{t.dialog.resizeNoMatch}</p> : null}
-          {sections.map(({ path, presets }) => (
-            <section key={path.map((g) => g.slug).join('/')}>
-              <h3 className={styles.groupTitle}>{path.map((g) => g.label).join(' › ')}</h3>
-              <div className={styles.presetList}>
-                {presets.map((p) => (
-                  <button key={p.id} type="button" className={`${styles.preset} ${Math.round(w) === p.width && Math.round(h) === p.height ? styles.presetOn : ''}`} onClick={() => { setW(p.width); setH(p.height) }}>
-                    <span>{p.label}</span>
-                    <small>
-                      {p.width} × {p.height}
-                    </small>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
+          <SizePicker
+            selectedId={pickedId}
+            onSelect={(preset) => {
+              setPickedId(preset.id)
+              setW(preset.width)
+              setH(preset.height)
+            }}
+            onConfirm={(preset) => {
+              editor.pages.resize(preset.width, preset.height, mode, { scope, pageId })
+              editor.closeDialog()
+            }}
+          />
         </div>
         <div className={styles.custom}>
           <h3 className={styles.groupTitle}>{t.dialog.resizeCustom}</h3>

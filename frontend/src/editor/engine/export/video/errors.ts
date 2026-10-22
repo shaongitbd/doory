@@ -17,6 +17,10 @@ export type VideoErrorCode =
   | 'encoder'
   /** A page could not be drawn (a font or a picture would not load). */
   | 'render'
+  /** A video clip could not be read or decoded. */
+  | 'clip'
+  /** A video clip's file refused to be drawn into the video (its storage does not allow it: CORS). */
+  | 'tainted'
 
 export class VideoExportError extends Error {
   constructor(
@@ -44,6 +48,8 @@ export function describeFailure(error: unknown): unknown {
   if (error instanceof VideoExportError || isAbort(error)) return error
   const name = error instanceof Error ? error.name : ''
   const message = error instanceof Error ? error.message : String(error)
+  if (name === 'ClipDecodeError') return new VideoExportError('clip', 'A video clip could not be read.', message, { cause: error })
+  if (name === 'SecurityError') return new VideoExportError('tainted', 'A video clip may not be drawn into the file.', message, { cause: error })
   if (name === 'RangeError' || name === 'QuotaExceededError' || MEMORY.test(message)) return new VideoExportError('memory', 'The browser ran out of memory.', message, { cause: error })
   if (name === 'NotSupportedError') return new VideoExportError('unsupported', 'The browser cannot encode this video.', message, { cause: error })
   if (name === 'EncodingError' || name === 'InvalidStateError' || name === 'OperationError') return new VideoExportError('encoder', 'The video encoder stopped.', message, { cause: error })

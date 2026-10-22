@@ -38,6 +38,7 @@ import { t } from '../strings'
 import { openAccountDialog } from '../chrome/accountGate'
 import { registerCommand } from '../commands'
 import type { EditorEngine } from '../engine/editor'
+import { playbackOf } from '../animation/playback'
 import { isBold, textValue } from './textState'
 
 const hasSelection = (e: EditorEngine): boolean => e.state.selection.ids.length > 0
@@ -135,7 +136,40 @@ export function registerBuiltinCommands(): void {
   registerCommand({ id: 'page.next', label: t.cmd.pageNext, shortcut: 'PageDown', group: t.cmdGroup.pages, run: (e) => stepPage(e, 1) })
 
   registerCommand({ id: 'image.replace', label: t.cmd.imageReplace, group: t.cmdGroup.image, icon: <Replace size={18} />, run: (e) => void e.insert.pickAndReplaceImage(), enabled: ({ state }) => !state.readOnly && state.selection.ids.length === 1 && (state.selection.kinds.includes('image') || state.selection.kinds.includes('placeholder')) && !state.selection.editing })
-  registerCommand({ id: 'image.crop', label: t.cmd.imageCrop, shortcut: 'Enter', group: t.cmdGroup.image, run: (e) => (e.state.ui.cropping ? e.crop.apply() : e.crop.start()), enabled: ({ state }) => state.ui.cropping !== null || (state.selection.ids.length === 1 && state.selection.kinds.includes('image') && !state.selection.editing) })
+  const oneClip = ({ state }: { state: EditorEngine['state'] }): boolean => state.selection.ids.length === 1 && state.selection.kinds[0] === 'video'
+  registerCommand({
+    id: 'video.split',
+    label: t.clips.menu.split,
+    shortcut: 'S',
+    group: t.cmdGroup.image,
+    run: (e) => {
+      if (!e.videos.split(undefined, playbackOf(e).state.timeMs)) e.toast(t.clips.toolbar.splitHint, 'info')
+    },
+    enabled: oneClip,
+  })
+  registerCommand({ id: 'video.replace', label: t.clips.menu.replace, group: t.cmdGroup.image, run: (e) => void e.videos.startReplace(), enabled: oneClip })
+  registerCommand({
+    id: 'video.blurredBackground',
+    label: t.clips.menu.blurredBackground,
+    group: t.cmdGroup.image,
+    run: (e) => void e.videos.blurredBackground(),
+    enabled: ({ editor, state }) => oneClip({ state }) && !editor.videos.get()?.backdropOf,
+  })
+  registerCommand({
+    id: 'video.detachAudio',
+    label: t.clips.menu.detachAudio,
+    group: t.cmdGroup.image,
+    run: (e) => void e.videos.detachAudio(),
+    enabled: ({ editor, state }) => state.selection.ids.length === 1 && state.selection.kinds[0] === 'video' && !!editor.videos.get()?.audioSrc && editor.videos.get()?.muted !== true,
+  })
+  registerCommand({
+    id: 'video.background',
+    label: t.clips.menu.setAsBackground,
+    group: t.cmdGroup.image,
+    run: (e) => void e.videos.setAsBackground(),
+    enabled: ({ state }) => state.selection.ids.length === 1 && state.selection.kinds[0] === 'video' && !state.selection.locked,
+  })
+  registerCommand({ id: 'image.crop', label: t.cmd.imageCrop, shortcut: 'Enter', group: t.cmdGroup.image, run: (e) => (e.state.ui.cropping ? e.crop.apply() : e.crop.start()), enabled: ({ state }) => state.ui.cropping !== null || (state.selection.ids.length === 1 && (state.selection.kinds.includes('image') || state.selection.kinds.includes('video')) && !state.selection.editing) })
 }
 
 function stepPage(e: EditorEngine, delta: number): void {

@@ -1,7 +1,7 @@
-import { aiApi, assetsApi, audioStockApi, authApi, brandApi, commentsApi, designsApi, elementsApi, foldersApi, fontsApi, isApiError, shareApi, stockApi, templatesApi } from '@/lib/api'
+import { aiApi, assetsApi, audioStockApi, authApi, brandApi, commentsApi, designsApi, elementsApi, foldersApi, fontsApi, isApiError, shareApi, stockApi, templatesApi, videoStockApi } from '@/lib/api'
 import { safeGetItem, safeSetItem } from '@/lib/storage'
 import type { AiConfig, AiTaskOptions, Asset, BrandKit, BrandKitInput, Page } from '@/types/api'
-import type { AiService, AssetRef, CommentViewer, EditorServices, UserFontsService } from '@/types/adapter'
+import type { AiService, AssetRef, CommentViewer, EditorServices, UserFontsService, VideoService } from '@/types/adapter'
 
 /** The page's language for stock providers that search in it (Pixabay). */
 function uiLanguage(): string | undefined {
@@ -24,7 +24,34 @@ export function createViewerLookup(owner: boolean): () => Promise<CommentViewer 
 }
 
 export function assetToRef(asset: Asset): AssetRef {
-  return { id: asset.id, url: asset.url, thumbUrl: asset.thumb_url, width: asset.width, height: asset.height, name: asset.name, kind: asset.kind }
+  const ref: AssetRef = { id: asset.id, url: asset.url, thumbUrl: asset.thumb_url, width: asset.width, height: asset.height, name: asset.name, kind: asset.kind }
+  if (asset.kind === 'video') {
+    ref.video = {
+      status: asset.status ?? 'ready',
+      error: asset.error ?? '',
+      posterUrl: asset.poster_url ?? '',
+      audioUrl: asset.audio_url ?? '',
+      durationMs: asset.duration_ms ?? 0,
+      fps: asset.video?.fps ?? 0,
+      filmstrip: asset.video?.filmstrip ?? null,
+    }
+  }
+  return ref
+}
+
+/** Video clips of a signed-in user: uploads (converted by the server) and stock videos. */
+export function createVideoService(): VideoService {
+  return {
+    info: () => videoStockApi.info(),
+    list: async (page) => {
+      const found = await assetsApi.list({ kind: 'video', page, page_size: 20 })
+      return { ...found, results: found.results.map(assetToRef) }
+    },
+    get: async (id) => assetToRef(await assetsApi.get(id)),
+    upload: async (file, options = {}) => assetToRef(await assetsApi.upload(file, { name: file.name, signal: options.signal, onProgress: options.onProgress })),
+    search: (q, page, { provider, orientation, length, signal }) => videoStockApi.search(q, page, { provider, orientation, length, signal, lang: uiLanguage() }),
+    importVideo: async (video) => assetToRef(await videoStockApi.importVideo(video)),
+  }
 }
 
 type PublicServices = Pick<EditorServices, 'fonts' | 'elements' | 'templates'>
@@ -136,6 +163,7 @@ export function createAccountServices(designId: string | null, beforeVersion: ()
       search: (query, page, provider) => stockApi.search(query, page, { provider, lang: uiLanguage() }),
       importPhoto: async (photo) => assetToRef(await stockApi.importPhoto(photo)),
     },
+    video: createVideoService(),
     audioStock: {
       info: () => audioStockApi.info(),
       search: (q, options) => audioStockApi.search(q, options),

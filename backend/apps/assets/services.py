@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import Path
 from xml.etree.ElementTree import ParseError
 
 from defusedxml.common import DefusedXmlException
@@ -16,6 +18,7 @@ from django.db.models import Sum
 from apps.core import svg
 from apps.core.images import ImageBusy, ImageError, make_thumbnail, process_image_upload
 
+from . import video, video_jobs
 from .audio import AudioError, looks_like_audio, parse_audio
 from .exceptions import FileTooLarge, InvalidFile, QuotaExceeded, ServerBusy
 from .models import Asset
@@ -47,6 +50,85 @@ def read_upload(uploaded_file) -> bytes:
     if len(data) > limit:
         raise FileTooLarge()
     return data
+
+
+# Boxes an ISO base media file (MP4, MOV, M4A, 3GP) may start with; old QuickTime files skip `ftyp`.
+_ISO_FIRST_BOXES = frozenset({b"ftyp", b"moov", b"mdat", b"wide", b"free", b"skip"})
+# Major brands of still pictures in the same box format (AVIF, HEIF/HEIC): they stay pictures, never clips.
+_PICTURE_BRANDS = frozenset(
+    {
+        b"avif",
+        b"avis",
+        b"heic",
+        b"heix",
+        b"heim",
+        b"heis",
+        b"hevc",
+        b"hevx",
+        b"hevm",
+        b"hevs",
+        b"mif1",
+        b"msf1",
+    }
+)
+STAGE_CHUNK = 1024 * 1024
+
+
+def looks_like_media(head: bytes) -> bool:
+    """True when the first bytes start a container that may hold a video (ffprobe then decides)."""
+    if head[4:8] == b"ftyp" and head[8:12] in _PICTURE_BRANDS:
+        return False
+    if head[4:8] in _ISO_FIRST_BOXES or head[:4] == b"\x1a\x45\xdf\xa3":  # ISO base media, Matroska/WebM
+        return True
+    return head[:4] == b"RIFF" and head[8:12] == b"AVI "
+
+
+def peek(uploaded_file, size: int = 16) -> bytes:
+    uploaded_file.seek(0)
+    head = uploaded_file.read(size)
+    uploaded_file.seek(0)
+    return head
+
+
+def stage_upload(uploaded_file, limit: int) -> Path:
+    """Copy an upload into a private work directory (chunk by chunk, never whole in memory)."""
+    if uploaded_file.size is not None and uploaded_file.size > limit:
+        raise FileTooLarge()
+    workdir = video.work_dir()
+    target = workdir / "source"
+    written = 0
+    try:
+        uploaded_file.seek(0)
+        with target.open("wb") as out:
+            for chunk in uploaded_file.chunks(STAGE_CHUNK):
+                written += len(chunk)
+                if written > limit:
+                    raise FileTooLarge()
+                out.write(chunk)
+    except Exception:
+        shutil.rmtree(workdir, ignore_errors=True)
+        raise
+    return target
+
+
+def ingest_video_upload(owner, uploaded_file, *, name: str, tags: list[str] | None = None):
+    """The asset for an uploaded clip, or None when the file holds no video (audio in an MP4 or WebM box,
+    say): the caller then treats it as any other upload."""
+    head = peek(uploaded_file)
+    source = stage_upload(uploaded_file, settings.MAX_VIDEO_UPLOAD_BYTES)
+    try:
+        info = video.probe(source)
+    except video.VideoError as exc:
+        shutil.rmtree(source.parent, ignore_errors=True)
+        # Sound in an MP4 or WebM box (or a file ffprobe can't make sense of): the audio checks decide.
+        if looks_like_audio(head) and isinstance(exc, (video.NotAVideo, video.Unreadable)):
+            uploaded_file.seek(0)
+            return None
+        raise InvalidFile(str(exc)) from exc
+    except BaseException:
+        shutil.rmtree(source.parent, ignore_errors=True)
+        raise
+    return video_jobs.create_video_asset(owner, source, info, name=name, tags=tags)
 
 
 def _looks_like_markup(data: bytes) -> bool:

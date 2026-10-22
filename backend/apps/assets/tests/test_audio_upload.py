@@ -51,7 +51,8 @@ class TestAccepted:
         body = post(api, wav_bytes()).json()
         assert set(body) == {
             "id", "kind", "name", "url", "thumb_url", "width", "height", "size", "mime",
-            "tags", "attribution", "duration_ms", "created_at",
+            "tags", "attribution", "duration_ms", "status", "error", "poster_url", "audio_url", "video",
+            "created_at",
         }  # fmt: skip
 
     def test_duration_and_details(self, api):
@@ -139,6 +140,9 @@ class TestRejected:
 
     def test_declared_content_length_is_checked_first(self, api, settings):
         settings.MAX_UPLOAD_BYTES = 1_000
+        settings.VIDEO_ENABLED = (
+            False  # a server that takes clips accepts larger bodies (see test_video_upload)
+        )
         res = api.post(
             URL,
             {"file": upload(wav_bytes(), "a.wav")},

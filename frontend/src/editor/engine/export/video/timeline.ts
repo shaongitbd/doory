@@ -11,11 +11,12 @@
  *
  * During the transition the page that was left stands still as it rested; the new page is at the start of its clock.
  */
-import type { DocPage, PageTransition } from '@/types/document'
+import type { AudioTrack, DocPage, PageTransition } from '@/types/document'
 import { pageTiming } from '../../../animation/model'
 import { playableTransition } from '../../../animation/sampler'
-import { DEFAULT_DURATION_SEC, pageDuration } from '../../../presenter/timing'
+import { pageSeconds } from '../../../presenter/timing'
 import type { PageSize } from '../../docOps'
+import { clipTracks } from '../../../clips/audio'
 
 export interface PageRef {
   page: DocPage
@@ -60,8 +61,8 @@ export interface TimelineOptions {
 /** Whole milliseconds, so that every boundary of the timeline is an integer and the scheduler needs no tolerance. */
 const whole = (ms: number): number => Math.max(0, Math.round(ms))
 
-export function holdSecondsOf(page: Pick<DocPage, 'durationSec'>, options: TimelineOptions): number {
-  return options.pageSeconds ?? pageDuration(page) ?? DEFAULT_DURATION_SEC
+export function holdSecondsOf(page: Pick<DocPage, 'durationSec' | 'objects'>, options: TimelineOptions): number {
+  return options.pageSeconds ?? pageSeconds(page)
 }
 
 /** Compiles the pages (in the order they play) into segments. The first page has no transition. */
@@ -110,4 +111,13 @@ export function slotDurationsMs(documentPages: number, timeline: Timeline): numb
 /** True when the video moves at all: a page has an animation or a transition that plays. */
 export function timelineMoves(timeline: Timeline): boolean {
   return timeline.segments.some((s) => s.transition !== null || s.settledMs > 0)
+}
+
+/**
+ * The sound of the video clips on the video's pages. The video's clock starts a page with the transition into it,
+ * while its clips start when it has come in: each page's clip sounds start later by its transition.
+ */
+export function clipSoundOf(timeline: Timeline): AudioTrack[] {
+  const lead = new Map(timeline.segments.map((s) => [s.page.id, s.transitionMs]))
+  return clipTracks({ pages: timeline.segments.map((s) => s.page) }, (pageId) => lead.get(pageId) ?? 0)
 }

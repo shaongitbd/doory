@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useEditor, useEditorState } from '../context'
 import { disposeAudioRuntime } from '../audio/runtimeStore'
+import { hasClipSound } from '../clips/audio'
 import { loadable } from '../ui/loadable'
 
 // The player is only needed once the design has sound: its code (the audio graph, decoding, the mixer) comes with the first track.
@@ -12,7 +13,7 @@ const Sync = loadable(() => import('./AudioSync').then((m) => m.AudioSync), { fa
  */
 export function AudioSyncHost() {
   const editor = useEditor()
-  const hasSound = useEditorState((s) => (s.doc.audioTracks?.length ?? 0) > 0)
+  const hasSound = useEditorState((s) => (s.doc.audioTracks?.length ?? 0) > 0 || hasClipSound(s.doc))
   useEffect(() => () => disposeAudioRuntime(editor), [editor])
   return hasSound ? <Sync /> : null
 }

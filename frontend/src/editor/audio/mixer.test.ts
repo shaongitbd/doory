@@ -191,6 +191,37 @@ describe('mixAudio', () => {
     await expect(mixAudio(doc([track({ id: 'x' })]), [1000, 1000], 48000, { load: async () => pcm(), signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
   })
 
+  it('mixes in tracks that are not the document’s own (the sound of video clips)', async () => {
+    class Buffer {
+      readonly channels: Float32Array[]
+      constructor(readonly options: { length: number; sampleRate: number; numberOfChannels: number }) {
+        this.channels = Array.from({ length: options.numberOfChannels }, () => new Float32Array(options.length))
+      }
+      get length(): number {
+        return this.options.length
+      }
+      get sampleRate(): number {
+        return this.options.sampleRate
+      }
+      copyToChannel(data: Float32Array, channel: number): void {
+        this.channels[channel].set(data)
+      }
+      getChannelData(channel: number): Float32Array {
+        return this.channels[channel]
+      }
+    }
+    vi.stubGlobal('AudioBuffer', Buffer)
+    vi.stubGlobal('OfflineAudioContext', undefined)
+    const document = doc([])
+    const clip = track({ id: 'video:c1', startMs: 500, volume: 0.5 })
+    const load = vi.fn(async () => pcm())
+    const mix = await mixAudio(document, [1000, 1000], 8000, { load, extraTracks: [clip] })
+    expect(load).toHaveBeenCalledWith(expect.objectContaining({ id: 'video:c1' }), undefined)
+    expect(mix.getChannelData(0)[100]).toBe(0) // before the clip's start
+    expect(mix.getChannelData(0)[5000]).toBeCloseTo(0.25, 5) // a 0.5 source at half volume
+    expect(document.audioTracks ?? []).toHaveLength(0)
+  })
+
   it('reports progress up to one and mixes by plain arithmetic where there is no OfflineAudioContext', async () => {
     class Buffer {
       readonly channels: Float32Array[]

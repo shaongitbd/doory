@@ -234,6 +234,15 @@ def test_an_empty_button_label_falls_back_to_the_default(client, settings):
 
 
 @pytest.mark.parametrize(
+    ("value", "expected"),
+    [("", ""), ("authentik", "authentik"), (" Pocket-ID ", "pocket-id"), ("../logo", ""), ("a" * 41, "")],
+)
+def test_the_button_icon_is_a_plain_name_or_nothing(client, settings, value, expected):
+    settings.OIDC_BUTTON_ICON = value
+    assert client.get(CONFIG).json()["oidc_button_icon"] == expected
+
+
+@pytest.mark.parametrize(
     ("setting", "value", "message"),
     [
         ("OIDC_CLIENT_SECRET", "", "OIDC_CLIENT_SECRET is not set."),

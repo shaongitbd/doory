@@ -8,14 +8,14 @@ from .models import Asset
 
 @admin.register(Asset)
 class AssetAdmin(ModelAdmin):
-    list_display = ("preview", "display_name", "owner", "kind", "mime", "size", "created_at")
+    list_display = ("preview", "display_name", "owner", "kind", "status", "mime", "size", "created_at")
     list_display_links = ("preview", "display_name")
-    list_filter = ("kind", "mime", "created_at")
+    list_filter = ("kind", "status", "mime", "created_at")
     search_fields = ("name", "owner__email")
     list_select_related = ("owner",)
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
-    exclude = ("file", "thumbnail", "tags", "meta")
+    exclude = ("file", "thumbnail", "poster", "filmstrip", "audio", "tags", "meta")
     readonly_fields = (
         "owner",
         "kind",
@@ -25,6 +25,8 @@ class AssetAdmin(ModelAdmin):
         "height",
         "size",
         "mime",
+        "status",
+        "error",
         "tag_list",
         "attribution",
         "created_at",
@@ -46,6 +48,15 @@ class AssetAdmin(ModelAdmin):
             return format_html(
                 '<audio controls preload="none" src="{}" style="height:32px;max-width:220px"></audio>',
                 obj.file.url,
+            )
+        if obj.kind == Asset.Kind.VIDEO:
+            if not obj.poster:
+                return obj.get_status_display()
+            return format_html(
+                '<video controls preload="none" src="{}" poster="{}" style="max-height:72px;max-width:128px">'
+                "</video>",
+                obj.file.url,
+                obj.poster.url,
             )
         url = obj.thumbnail.url if obj.thumbnail else obj.file.url
         return format_html(

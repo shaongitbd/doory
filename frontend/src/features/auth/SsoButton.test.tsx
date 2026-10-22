@@ -37,6 +37,20 @@ describe('single sign-on on the sign-in pages', () => {
     expect(await screen.findByRole('link', { name: 'Sign in with Authentik' })).toHaveAttribute('href', start('/dashboard'))
   })
 
+  it('shows the logo the server names', async () => {
+    renderApp('/login', { config: { ...withSso(), oidc_button_icon: 'authentik' } })
+    const button = await screen.findByRole('link', { name: 'Sign in with Authentik' })
+    await waitFor(() => expect(button.querySelector('img')).toHaveAttribute('src', expect.stringMatching(/authentik|^data:image\/svg\+xml/)))
+    expect(button.querySelector('svg')).toBeNull()
+  })
+
+  it('keeps the key icon for a logo it does not have', async () => {
+    renderApp('/login', { config: { ...withSso(), oidc_button_icon: 'no-such-provider' } })
+    const button = await screen.findByRole('link', { name: 'Sign in with Authentik' })
+    expect(button.querySelector('img')).toBeNull()
+    expect(button.querySelector('svg')).not.toBeNull()
+  })
+
   it('falls back to a generic label', async () => {
     renderApp('/login', { config: { ...withSso(), oidc_button_label: '' } })
     expect(await screen.findByRole('link', { name: 'Sign in with SSO' })).toBeInTheDocument()

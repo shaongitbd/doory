@@ -92,11 +92,17 @@ def _wait_for(key: str) -> dict[str, Any] | None:
 
 
 def cached_search(
-    provider: providers.StockProvider, query: str, page: int, per_page: int, lang: str = ""
+    provider: providers.StockProvider,
+    query: str,
+    page: int,
+    per_page: int,
+    lang: str = "",
+    filters: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """One provider's page, from the cache when possible. Raises ProviderError (or ProviderBusy) only when
-    neither a fresh nor a stale copy can be served."""
-    options = provider.search_options(lang)
+    neither a fresh nor a stale copy can be served. `filters` are the editor's own (clips: orientation and
+    length); they become part of the provider's search options and so of the cache key."""
+    options = provider.search_options(lang, filters) if filters else provider.search_options(lang)
     key = _cache_key(provider.name, options, query, page, per_page)
     payload = cache.get(key)
     if payload is not None:
@@ -177,11 +183,18 @@ def _search_in_thread(provider: providers.StockProvider, *args: Any) -> dict[str
 
 
 def search_all(
-    chosen: list[providers.StockProvider], pages: dict[str, int], query: str, per_page: int, lang: str
+    chosen: list[providers.StockProvider],
+    pages: dict[str, int],
+    query: str,
+    per_page: int,
+    lang: str,
+    filters: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Search `chosen` (each at its page) in parallel and mix the results in turn: U1, Px1, Pb1, U2, …"""
     futures = {
-        _POOL.submit(_search_in_thread, provider, query, pages[provider.name], per_page, lang): provider
+        _POOL.submit(
+            _search_in_thread, provider, query, pages[provider.name], per_page, lang, filters
+        ): provider
         for provider in chosen
     }
     done, _ = wait(futures, timeout=settings.STOCK_ALL_TIMEOUT_SECONDS)

@@ -39,6 +39,7 @@
     "lib0": "^0.2.119",
     "lucide-react": "^1.57.0",
     "mp4-muxer": "^5.2.2",
+    "mp4box": "^2.4.1",
     "onnxruntime-web": "^1.30.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",

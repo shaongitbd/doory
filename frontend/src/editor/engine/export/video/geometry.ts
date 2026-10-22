@@ -49,7 +49,7 @@ export function frameSize(first: Size, resolution: Resolution, format: VideoForm
 export function placePage(page: Size, frame: Size, mode: FitMode): { rect: Rect; scale: number } {
   const sx = frame.width / page.width
   const sy = frame.height / page.height
-  const scale = mode === 'fit' ? Math.min(sx, sy) : Math.max(sx, sy)
+  const scale = mode === 'fill' ? Math.max(sx, sy) : Math.min(sx, sy)
   const width = page.width * scale
   const height = page.height * scale
   const nearly = (a: number, b: number): boolean => Math.abs(a - b) <= 1

@@ -3,7 +3,7 @@
  * lanes are ordered and when a page's animations run past its time. Pure, so it is tested without a DOM.
  */
 import type { DocObject, DocPage } from '@/types/document'
-import { DEFAULT_DURATION_SEC, pageDuration } from '../presenter/timing'
+import { pageDuration, pageSeconds } from '../presenter/timing'
 import { type AnimSlot, DELAY_RANGE, DURATION_RANGE, type AnimSpan, TIME_STEP_MS, clampNumber, pageTiming } from './model'
 
 /** Widest view of the time axis: 16 times the fitted scale. */
@@ -161,7 +161,7 @@ export function lanesOf(page: Pick<DocPage, 'objects'>): Lane[] {
 
 /** How long a page stays up under auto-advance: the time it takes to build up plus its time (the default when it has none). */
 export function pageHoldEndMs(page: Pick<DocPage, 'objects' | 'durationSec'>): number {
-  return pageTiming(page).introMs + (pageDuration(page) ?? DEFAULT_DURATION_SEC) * 1000
+  return pageTiming(page).introMs + pageSeconds(page) * 1000
 }
 
 /** Where the page ends on the timeline, or `null` when the page has no time of its own. */
@@ -198,7 +198,9 @@ export function previewLengthMs(page: Pick<DocPage, 'objects' | 'durationSec'>):
   const timing = pageTiming(page)
   const marker = pageMarkerMs(page) ?? 0
   const loops = timing.loops ? Math.max(0, ...timing.spans.filter((s) => s.anim.loop === true).map((s) => s.endMs)) + 1500 : 0
-  return Math.max(timing.endMs, marker, loops, 500)
+  // A page with clips plays for as long as it is up (a looping clip has no end of its own).
+  const clips = timing.clips > 0 ? pageHoldEndMs(page) : 0
+  return Math.max(timing.endMs, marker, loops, clips, 500)
 }
 
 /** The most pixels the preview bitmaps hold: a page at a high zoom is drawn smaller and scaled by the browser. */

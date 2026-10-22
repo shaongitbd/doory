@@ -107,7 +107,14 @@ describe('page timing', () => {
   })
 
   it('is empty for a page without animation', () => {
-    expect(pageTiming(page([obj('a')]))).toEqual({ spans: [], introMs: 0, endMs: 0, loops: false })
+    expect(pageTiming(page([obj('a')]))).toEqual({ spans: [], introMs: 0, endMs: 0, loops: false, clips: 0 })
+  })
+
+  it('lasts until its video clips have played, and loops with a looping clip', () => {
+    const clip = (id: string, extra: Record<string, unknown>) => ({ ...obj(id), type: 'image', videoSrc: '/media/c.mp4', videoDurationMs: 8000, ...extra })
+    expect(pageTiming(page([clip('a', { videoStartMs: 1000, videoTrimEndMs: 5000 })]))).toMatchObject({ endMs: 6000, loops: false, clips: 1 })
+    expect(pageTiming(page([clip('a', { videoSpeed: 2 })]))).toMatchObject({ endMs: 4000 })
+    expect(pageTiming(page([clip('a', { videoLoop: true })]))).toMatchObject({ endMs: 0, loops: true, clips: 1 })
   })
 })
 

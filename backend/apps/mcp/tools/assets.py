@@ -50,7 +50,7 @@ def list_assets(
 ) -> dict[str, Any]:
     """Your uploaded pictures, newest first. Place one with edit_design:
     {"op": "add_image", "asset_id": …}."""
-    assets = Asset.objects.filter(owner=current().user).exclude(kind=Asset.Kind.AUDIO)
+    assets = Asset.objects.filter(owner=current().user).filter(kind__in=Asset.PICTURE_KINDS)
     if query and query.strip():
         assets = assets.filter(name__icontains=query.strip())
     return {"assets": [_asset(a) for a in assets.order_by("-created_at")[:limit]]}

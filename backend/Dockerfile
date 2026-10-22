@@ -48,6 +48,10 @@ FROM python:3.14-slim AS runtime
 # export needs. The image then advertises the feature through SERVER_PDF_ENABLED. Chromium runs without
 # its own sandbox in this image: the container (non-root user) is the isolation boundary.
 ARG INSTALL_CHROMIUM=false
+# Build with `--build-arg INSTALL_FFMPEG=true` to add the ffmpeg and ffprobe commands, which video clips need
+# (upload and stock video). The image then advertises the feature through VIDEO_ENABLED. Debian's ffmpeg is
+# GPL-licensed; Doory only runs it as a separate command (see THIRD_PARTY.md).
+ARG INSTALL_FFMPEG=false
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -58,6 +62,7 @@ ENV PYTHONUNBUFFERED=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     WEB_CONCURRENCY=3 \
     SERVER_PDF_ENABLED=${INSTALL_CHROMIUM} \
+    VIDEO_ENABLED=${INSTALL_FFMPEG} \
     EXPORT_CHROMIUM_NO_SANDBOX=true
 
 RUN groupadd --system --gid 10001 doory \
@@ -69,6 +74,12 @@ COPY --from=optimizers /opt/optimizers/bin/ /usr/local/bin/
 RUN if [ "$INSTALL_CHROMIUM" = "true" ]; then \
         playwright install --with-deps chromium \
         && chmod -R a+rX /ms-playwright \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+RUN if [ "$INSTALL_FFMPEG" = "true" ]; then \
+        apt-get update \
+        && apt-get install -y --no-install-recommends ffmpeg \
         && rm -rf /var/lib/apt/lists/*; \
     fi
 

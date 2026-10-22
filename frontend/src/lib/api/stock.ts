@@ -1,4 +1,4 @@
-import type { Asset, AudioStockInfo, SoundCredit, StockPage, StockPhoto, StockProviders, StockSoundPage } from '@/types/api'
+import type { Asset, AudioStockInfo, SoundCredit, StockPage, StockPhoto, StockProviders, StockSoundPage, StockVideo, StockVideoPage, VideoInfo, VideoLength, VideoOrientation } from '@/types/api'
 import { API_BASE, http } from './client'
 
 export interface StockSearchOptions {
@@ -42,4 +42,29 @@ export const audioStockApi = {
   /** Same-origin address of the sound's short preview (relayed by the server). */
   previewUrl: (id: string) => `${API_BASE}/stock/audio/${encodeURIComponent(id)}/preview/`,
   importSound: (id: string) => http.post<Asset & { credit: SoundCredit | null }>('/stock/audio/import/', { json: { id } }),
+}
+
+export interface VideoSearchOptions extends StockSearchOptions {
+  orientation?: VideoOrientation
+  /** short (under 15 s), medium (15 to 60 s) or long (over a minute). */
+  length?: VideoLength
+}
+
+/** Stock videos through the server: it keeps the keys, downloads the clip and converts it like an upload. */
+export const videoStockApi = {
+  info: () => http.get<VideoInfo>('/stock/videos/providers/'),
+  search: (q: string, page: number | string = 1, { provider, lang, perPage = 24, orientation, length, signal }: VideoSearchOptions = {}) =>
+    http.get<StockVideoPage>('/stock/videos/', {
+      query: {
+        q,
+        ...(typeof page === 'string' ? { cursor: page } : { page }),
+        per_page: perPage,
+        ...(provider ? { provider } : {}),
+        ...(lang ? { lang } : {}),
+        ...(orientation ? { orientation } : {}),
+        ...(length ? { duration: length } : {}),
+      },
+      signal,
+    }),
+  importVideo: (video: Pick<StockVideo, 'provider' | 'id'>) => http.post<Asset>('/stock/videos/import/', { json: { provider: video.provider, id: video.id } }),
 }

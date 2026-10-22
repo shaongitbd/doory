@@ -9,9 +9,11 @@
  * The page that is left stands as it rested during the transition into the next, which is how the slideshow shows it.
  */
 import type { DocPage } from '@/types/document'
+import type { ClipMediaFactory } from '../../../animation/clipSource'
 import { type FrameRenderer, createFrameRenderer } from '../../../animation/frameRenderer'
 import { sampleTransition } from '../../../animation/sampler'
 import { drawTransition } from '../../../animation/transitionRenderer'
+import { type ClipLook, drawWithLook } from '../../../clips/look'
 import { parseColor } from '../../colors'
 import type { LoadContext } from '../../serialization'
 import { type Rect, type Size, barColour, coversFrame, placePage } from './geometry'
@@ -25,6 +27,8 @@ export interface ComposerOptions {
   loadContext: LoadContext
   /** The frames are read back as pixels (a GIF): always draw into the frame's own canvas, with a context made for reading. */
   readback: boolean
+  /** Where video clips get their pictures (each frame waits for the exact one); without it clips show their poster. */
+  media?: ClipMediaFactory
 }
 
 interface Entered {
@@ -59,6 +63,9 @@ export function isOpaquePage(page: Pick<DocPage, 'background'>): boolean {
   return false
 }
 
+/** The bars of `blur` fitting: the page scaled to cover the frame, strongly blurred and a little darker. */
+const BAR_LOOK: ClipLook = { css: 'brightness(0.85)', blur: 0.06, vignette: 0 }
+
 export class FrameComposer {
   private readonly out: HTMLCanvasElement
   private readonly outContext: CanvasRenderingContext2D
@@ -81,6 +88,7 @@ export class FrameComposer {
   async draw(plan: FramePlan): Promise<HTMLCanvasElement> {
     const entered = await this.enter(plan.segment)
     if (plan.kind === 'transition') return this.drawTransition(entered, plan.progress)
+    await entered.renderer.prepare(plan.pageMs)
     const bitmap = entered.renderer.render(plan.pageMs)
     if (entered.direct && !this.options.readback && bitmap.width === this.out.width && bitmap.height === this.out.height) return bitmap
     this.place(this.outContext, bitmap, entered)
@@ -96,6 +104,12 @@ export class FrameComposer {
     ctx.globalCompositeOperation = 'source-over'
     ctx.fillStyle = entered.bars
     ctx.fillRect(0, 0, frame.width, frame.height)
+    if (this.options.fit === 'blur' && !entered.covers) {
+      const cover = Math.max(frame.width / bitmap.width, frame.height / bitmap.height)
+      const w = bitmap.width * cover
+      const h = bitmap.height * cover
+      drawWithLook(ctx, bitmap, (frame.width - w) / 2, (frame.height - h) / 2, w, h, BAR_LOOK)
+    }
     if (entered.covers) ctx.drawImage(bitmap, 0, 0, frame.width, frame.height)
     // Whole pixels: a bitmap drawn half a pixel off is blurred by the browser.
     else ctx.drawImage(bitmap, Math.round((frame.width - bitmap.width) / 2), Math.round((frame.height - bitmap.height) / 2))
@@ -123,13 +137,14 @@ export class FrameComposer {
     if (previous && segment.transition) {
       // The page that is left, as it rests at the end of its time.
       this.from ??= this.stage()
+      await previous.renderer.prepare(previous.segment.bodyMs)
       this.place(context(this.from, false), previous.renderer.render(previous.segment.bodyMs), previous)
     }
     if (previous) previous.renderer.dispose()
     this.entered = null
     const { frame, fit } = this.options
     const { rect, scale } = placePage(segment.size, frame, fit)
-    const renderer = await createFrameRenderer(segment.page, segment.size, this.options.loadContext, { multiplier: scale })
+    const renderer = await createFrameRenderer(segment.page, segment.size, this.options.loadContext, { multiplier: scale, media: this.options.media })
     if (this.disposed) {
       renderer.dispose()
       throw new DOMException('Export cancelled', 'AbortError')
@@ -139,6 +154,8 @@ export class FrameComposer {
     this.entered = entered
     if (segment.transition) {
       this.to ??= this.stage()
+      // Clips are still during the transition into their page (as everything else on it is): its first picture.
+      await renderer.prepare(0)
       this.place(context(this.to, false), renderer.render(0), entered)
     } else {
       // No transition into this page: nothing needs holding for one.

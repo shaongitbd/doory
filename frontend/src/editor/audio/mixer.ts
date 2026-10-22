@@ -8,7 +8,7 @@
  * voices as an `OfflineAudioContext` graph, which is faster and resamples with the browser's own quality. A browser test
  * renders one plan with both and compares them.
  */
-import type { DoryDocument } from '@/types/document'
+import type { AudioTrack, DoryDocument } from '@/types/document'
 import { buildClock, MAX_CLOCK_MS } from './clock'
 import { isAudible, readTracks } from './model'
 import { type MixPlan, type Voice, planMix } from './plan'
@@ -40,6 +40,8 @@ export interface MixOptions {
   signal?: AbortSignal
   /** Play only this track (the editor's solo). */
   soloId?: string | null
+  /** Tracks that are not the document's own, mixed in with them (the sound of video clips). */
+  extraTracks?: readonly AudioTrack[]
 }
 
 const samples = (ms: number, rate: number): number => Math.round((ms * rate) / 1000)
@@ -179,7 +181,7 @@ export async function mixAudio(document: DoryDocument, pageDurationsMs: readonly
   )
   if (clock.totalMs > MAX_CLOCK_MS) throw new AudioLoadError('too-long', 'The video is longer than the 30 minutes the audio mixdown renders.')
   if (!(sampleRate >= 8000 && sampleRate <= 192000)) throw new RangeError('sampleRate must be between 8000 and 192000')
-  const plan = planMix(readTracks(document).filter(isAudible), clock, { soloId: options.soloId })
+  const plan = planMix([...readTracks(document), ...(options.extraTracks ?? [])].filter(isAudible), clock, { soloId: options.soloId })
   const loaded = await loadSources(plan, options)
   options.onProgress?.(0.9)
   const mix: AudioBuffer =

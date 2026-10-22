@@ -16,6 +16,7 @@ These docs are for people who install, run or develop Doory. The editor's featur
 | Let AI assistants edit designs (MCP)          | [self-hosting/mcp.md](self-hosting/mcp.md)                   |
 | Export images and PDFs on the server          | [self-hosting/image-export.md](self-hosting/image-export.md) |
 | Remove backgrounds on a server                | [self-hosting/ai-providers.md](self-hosting/ai-providers.md) |
+| Let people add video clips                    | [self-hosting/video.md](self-hosting/video.md)               |
 | Make exported images smaller                  | [integrations/image-optimization.md](integrations/image-optimization.md) |
 | Upgrade to a newer version                    | [self-hosting/upgrading.md](self-hosting/upgrading.md)       |
 | Back up and restore                           | [self-hosting/backup.md](self-hosting/backup.md)             |
@@ -23,7 +24,7 @@ These docs are for people who install, run or develop Doory. The editor's featur
 | Send email                                    | [integrations/email.md](integrations/email.md)               |
 | Add "Sign in with Google"                     | [integrations/google-sign-in.md](integrations/google-sign-in.md) |
 | Store uploads in S3-compatible storage        | [integrations/object-storage.md](integrations/object-storage.md) |
-| Turn on stock photo search                    | [integrations/stock-media.md](integrations/stock-media.md)   |
+| Turn on stock photo and video search          | [integrations/stock-media.md](integrations/stock-media.md)   |
 | Set up a development environment             | [development/README.md](development/README.md)               |
 | Find my way around the code                   | [development/architecture.md](development/architecture.md)   |
 | Run the tests                                 | [development/testing.md](development/testing.md)             |

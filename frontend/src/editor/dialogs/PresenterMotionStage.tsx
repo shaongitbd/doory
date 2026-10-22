@@ -149,6 +149,7 @@ export function PresenterMotionStage({ doc, index, plan, cache, loop, onPointerD
         setReadyIndex(index)
 
         const animate = (origin: number): void => {
+          renderer.setMediaClock(true, 1)
           const tick = (now: number): void => {
             if (!alive) return
             const elapsed = now - origin
@@ -203,6 +204,7 @@ export function PresenterMotionStage({ doc, index, plan, cache, loop, onPointerD
     return () => {
       alive = false
       cancelAnimationFrame(raf)
+      cache.peek(motion.page, pixelWidth)?.setMediaClock(false, 1)
     }
     // `css` and `size` describe the box this run draws into; they are read at the time the page is ready.
     // eslint-disable-next-line react-hooks/exhaustive-deps

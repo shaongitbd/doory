@@ -11,7 +11,7 @@ export interface VideoFailure {
   retryable: boolean
 }
 
-const RETRYABLE: ReadonlySet<VideoErrorCode> = new Set(['encoder', 'render', 'memory'])
+const RETRYABLE: ReadonlySet<VideoErrorCode> = new Set(['encoder', 'render', 'memory', 'clip'])
 
 /** The words for what a video export threw; `null` for a cancellation, which needs none. */
 export function describeVideoFailure(error: unknown): VideoFailure | null {

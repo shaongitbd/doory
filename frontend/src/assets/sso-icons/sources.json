@@ -1,0 +1,872 @@
+{
+  "1password": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/1password.svg"
+  },
+  "airtable": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/airtable.svg"
+  },
+  "apple": {
+    "source": "Bootstrap Icons",
+    "license": "MIT",
+    "url": "https://github.com/twbs/icons/blob/main/icons/apple.svg"
+  },
+  "asana": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/asana.svg"
+  },
+  "atlassian": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/atlassian.svg"
+  },
+  "auth0": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/auth0.svg"
+  },
+  "authelia": {
+    "source": "Authelia",
+    "license": "Apache-2.0",
+    "url": "https://github.com/authelia/authelia/blob/master/docs/static/svgs/branding/logo-cropped.svg"
+  },
+  "authentik": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/authentik.svg"
+  },
+  "aws": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/amazon.svg"
+  },
+  "bandcamp": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/bandcamp.svg"
+  },
+  "battledotnet": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/battledotnet.svg"
+  },
+  "behance": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/behance.svg"
+  },
+  "bitbucket": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/bitbucket.svg"
+  },
+  "bitwarden": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/bitwarden.svg"
+  },
+  "bluesky": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/bluesky.svg"
+  },
+  "bookstack": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/bookstack.svg"
+  },
+  "box": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/box.svg"
+  },
+  "bungie": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/bungie.svg"
+  },
+  "canvas": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/canvas.svg"
+  },
+  "circleci": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/circleci.svg"
+  },
+  "clerk": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/clerk.svg"
+  },
+  "cloudflare": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/cloudflare.svg"
+  },
+  "codeberg": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/codeberg.svg"
+  },
+  "codesandbox": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/codesandbox.svg"
+  },
+  "coinbase": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/coinbase.svg"
+  },
+  "datadog": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/datadog.svg"
+  },
+  "deezer": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/deezer.svg"
+  },
+  "devdotto": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/devdotto.svg"
+  },
+  "deviantart": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/deviantart.svg"
+  },
+  "dex": {
+    "source": "Dex",
+    "license": "Apache-2.0",
+    "url": "https://github.com/dexidp/dex/blob/master/docs/logos/dex-glyph-color.svg"
+  },
+  "digitalocean": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/digitalocean.svg"
+  },
+  "discord": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/discord.svg"
+  },
+  "docker": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/docker.svg"
+  },
+  "dribbble": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/dribbble.svg"
+  },
+  "dropbox": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/dropbox.svg"
+  },
+  "drupal": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/drupal.svg"
+  },
+  "ea": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/ea.svg"
+  },
+  "elastic": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/elastic.svg"
+  },
+  "element": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/element.svg"
+  },
+  "emby": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/emby.svg"
+  },
+  "epicgames": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/epicgames.svg"
+  },
+  "ethereum": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/ethereum.svg"
+  },
+  "facebook": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/facebook.svg"
+  },
+  "fidoalliance": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/fidoalliance.svg"
+  },
+  "figma": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/figma.svg"
+  },
+  "firebase": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/firebase.svg"
+  },
+  "foursquare": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/foursquare.svg"
+  },
+  "fusionauth": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/fusionauth.svg"
+  },
+  "gitbook": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/gitbook.svg"
+  },
+  "gitea": {
+    "source": "Gitea",
+    "license": "MIT",
+    "url": "https://github.com/go-gitea/gitea/blob/main/assets/logo.svg"
+  },
+  "github": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/github.svg"
+  },
+  "gitlab": {
+    "source": "GitLab SVGs",
+    "license": "MIT",
+    "url": "https://gitlab.com/gitlab-org/gitlab-svgs/-/blob/main/illustrations/gitlab_logo.svg"
+  },
+  "gitpod": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/gitpod.svg"
+  },
+  "glitch": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/glitch.svg"
+  },
+  "gogdotcom": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/gogdotcom.svg"
+  },
+  "goodreads": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/goodreads.svg"
+  },
+  "google": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/google.svg"
+  },
+  "grafana": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/grafana.svg"
+  },
+  "hashnode": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/hashnode.svg"
+  },
+  "hatenabookmark": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/hatenabookmark.svg"
+  },
+  "homeassistant": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/homeassistant.svg"
+  },
+  "hubspot": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/hubspot.svg"
+  },
+  "huggingface": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/huggingface.svg"
+  },
+  "immich": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/immich.svg"
+  },
+  "instagram": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/instagram.svg"
+  },
+  "intercom": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/intercom.svg"
+  },
+  "itchdotio": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/itchdotio.svg"
+  },
+  "jellyfin": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/jellyfin.svg"
+  },
+  "joomla": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/joomla.svg"
+  },
+  "kaggle": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/kaggle.svg"
+  },
+  "kakaotalk": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/kakaotalk.svg"
+  },
+  "keycloak": {
+    "source": "Keycloak website repo",
+    "license": "Apache-2.0",
+    "url": "https://github.com/keycloak/keycloak-web/blob/main/resources/images/icon.svg"
+  },
+  "kick": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/kick.svg"
+  },
+  "lastdotfm": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/lastdotfm.svg"
+  },
+  "lastpass": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/lastpass.svg"
+  },
+  "line": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/line.svg"
+  },
+  "linear": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/linear.svg"
+  },
+  "linkedin": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/linkedin.svg"
+  },
+  "magic": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/magic.svg"
+  },
+  "mailchimp": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/mailchimp.svg"
+  },
+  "mastodon": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/mastodon.svg"
+  },
+  "matrix": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/matrix.svg"
+  },
+  "mattermost": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/mattermost.svg"
+  },
+  "medium": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/medium.svg"
+  },
+  "meetup": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/meetup.svg"
+  },
+  "mendeley": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/mendeley.svg"
+  },
+  "metabase": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/metabase.svg"
+  },
+  "microsoft": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/microsoft.svg"
+  },
+  "miro": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/miro.svg"
+  },
+  "moodle": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/moodle.svg"
+  },
+  "naver": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/naver.svg"
+  },
+  "near": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/near.svg"
+  },
+  "netlify": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/netlify.svg"
+  },
+  "niconico": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/niconico.svg"
+  },
+  "notion": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/notion.svg"
+  },
+  "npm": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/npm.svg"
+  },
+  "odoo": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/odoo.svg"
+  },
+  "okta": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/okta.svg"
+  },
+  "openid": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/openid.svg"
+  },
+  "opensea": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/opensea.svg"
+  },
+  "orcid": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/orcid.svg"
+  },
+  "ory": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/ory.svg"
+  },
+  "osu": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/osu.svg"
+  },
+  "outline": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/outline.svg"
+  },
+  "owncloud": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/owncloud.svg"
+  },
+  "patreon": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/patreon.svg"
+  },
+  "paypal": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/paypal.svg"
+  },
+  "pinterest": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/pinterest.svg"
+  },
+  "pixiv": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/pixiv.svg"
+  },
+  "playstation": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/playstation.svg"
+  },
+  "plex": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/plex.svg"
+  },
+  "pocket-id": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/pocket-id.svg"
+  },
+  "portainer": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/portainer.svg"
+  },
+  "producthunt": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/producthunt.svg"
+  },
+  "proton": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/proton.svg"
+  },
+  "proxmox": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/proxmox.svg"
+  },
+  "pypi": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/pypi.svg"
+  },
+  "qiita": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/qiita.svg"
+  },
+  "qnap": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/qnap.svg"
+  },
+  "rakuten": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/rakuten.svg"
+  },
+  "rauthy": {
+    "source": "Rauthy",
+    "license": "Apache-2.0",
+    "url": "https://github.com/sebadob/rauthy/blob/main/docs/favicon.svg"
+  },
+  "redash": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/redash.svg"
+  },
+  "reddit": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/reddit.svg"
+  },
+  "replit": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/replit.svg"
+  },
+  "researchgate": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/researchgate.svg"
+  },
+  "roblox": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/roblox.svg"
+  },
+  "rocketdotchat": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/rocketdotchat.svg"
+  },
+  "salesforce": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/salesforce.svg"
+  },
+  "samsung": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/samsung.svg"
+  },
+  "sap": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/sap.svg"
+  },
+  "seafile": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/seafile.svg"
+  },
+  "sentry": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/sentry.svg"
+  },
+  "shopify": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/shopify.svg"
+  },
+  "simplelogin": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/simplelogin.svg"
+  },
+  "slack": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/slack.svg"
+  },
+  "snapchat": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/snapchat.svg"
+  },
+  "solana": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/solana.svg"
+  },
+  "soundcloud": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/soundcloud.svg"
+  },
+  "sourceforge": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/sourceforge.svg"
+  },
+  "sourcehut": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/sourcehut.svg"
+  },
+  "splunk": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/splunk.svg"
+  },
+  "spotify": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/spotify.svg"
+  },
+  "squarespace": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/squarespace.svg"
+  },
+  "stackblitz": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/stackblitz.svg"
+  },
+  "stackoverflow": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/stackoverflow.svg"
+  },
+  "steam": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/steam.svg"
+  },
+  "strava": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/strava.svg"
+  },
+  "stripe": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/stripe.svg"
+  },
+  "supabase": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/supabase.svg"
+  },
+  "synology": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/synology.svg"
+  },
+  "teamcity": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/teamcity.svg"
+  },
+  "telegram": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/telegram.svg"
+  },
+  "threads": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/threads.svg"
+  },
+  "tidal": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/tidal.svg"
+  },
+  "truenas": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/truenas.svg"
+  },
+  "tumblr": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/tumblr.svg"
+  },
+  "twitch": {
+    "source": "dashboard-icons",
+    "license": "Apache-2.0",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/twitch.svg"
+  },
+  "ubisoft": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/ubisoft.svg"
+  },
+  "unraid": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/unraid.svg"
+  },
+  "untappd": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/untappd.svg"
+  },
+  "vercel": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/vercel.svg"
+  },
+  "vimeo": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/vimeo.svg"
+  },
+  "walletconnect": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/walletconnect.svg"
+  },
+  "webauthn": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/webauthn.svg"
+  },
+  "whatsapp": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/whatsapp.svg"
+  },
+  "wix": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/wix.svg"
+  },
+  "wordpress": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/wordpress.svg"
+  },
+  "x": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/x.svg"
+  },
+  "yubico": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/yubico.svg"
+  },
+  "zendesk": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/zendesk.svg"
+  },
+  "zenn": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/zenn.svg"
+  },
+  "zoom": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/zoom.svg"
+  },
+  "zotero": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/zotero.svg"
+  },
+  "zulip": {
+    "source": "Simple Icons",
+    "license": "CC0-1.0",
+    "url": "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons/zulip.svg"
+  }
+}

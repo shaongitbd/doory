@@ -4,6 +4,8 @@ import { useEditor } from '../context'
 import { useLatest } from '../hooks/useLatest'
 import { t } from '../strings'
 import { readTracks } from '../audio/model'
+import { transitionOf } from '../animation/model'
+import { clipTracks } from '../clips/audio'
 import type { SlideshowState } from './machine'
 import { ShowAudio, type ShowAudioState } from './showAudio'
 
@@ -21,7 +23,8 @@ export function useShowAudio(doc: DoryDocument, state: SlideshowState, onNotice:
   const audio = useMemo(
     () =>
       new ShowAudio({
-        tracks: () => readTracks(doc),
+        // The clips' sounds start when their page has come in, after the transition into it (as the pictures do).
+        tracks: () => [...readTracks(doc), ...clipTracks(doc, (pageId) => transitionOf(doc.pages.find((p) => p.id === pageId) ?? { transition: undefined })?.durationMs ?? 0)],
         pageIds: () => doc.pages.map((page) => page.id),
         load: (track, signal) => editor.audio.sources.load(track, signal),
         createContext: () => new AudioContext(),

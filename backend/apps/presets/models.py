@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
@@ -137,3 +138,19 @@ def alias_clash(slug: str, aliases: list[str], *, exclude_pk=None) -> str:
         if shared:
             return f"{sorted(shared)[0]!r} is already an alias of {other_slug!r}."
     return ""
+
+
+class SizeChoices(BaseModel):
+    """One person's sizes in the picker: the ones they pinned and the list sections they folded."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="size_choices"
+    )
+    # Preset slugs in the order they were pinned; null until the person pins or unpins something, so the
+    # catalogue's popular sizes stand in for them.
+    pinned = models.JSONField(null=True, blank=True)
+    # Keys of the picker's list sections ("formats", "social"…) the person folded.
+    collapsed = models.JSONField(default=list, blank=True)
+
+    def __str__(self) -> str:
+        return f"Size choices of {self.user}"

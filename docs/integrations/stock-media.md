@@ -2,7 +2,8 @@
 
 ## What it does
 
-Lets people search free stock photos from the editor's Photos panel and the page background. Each provider with a
+Lets people search free stock photos from the editor's Photos panel and the page background, and free stock
+videos from the Videos tool ([below](#videos)). Each provider with a
 key appears as its own tab, and an "All" tab searches several providers at once. Searches go through the API, so
 your keys never reach the browser, and results are cached.
 
@@ -56,6 +57,32 @@ Open a design, go to **Photos** and search. One tab appears for each provider wi
 - **A tab stops returning results:** the provider was paused after `429`. Check the API log, and lower its
   `STOCK_<PROVIDER>_RATE` or raise its cache time.
 - **The "All" tab is slow:** lower `STOCK_ALL_TIMEOUT_SECONDS` or search fewer providers (`STOCK_ALL_PROVIDERS`).
+
+## Videos
+
+The **Videos** tool in the editor can search free stock videos from Pexels and Pixabay. It needs the server to
+[take video](../self-hosting/video.md) (ffmpeg). A clip someone picks is downloaded by the server, made
+web-ready like an upload, and stored in their uploads with its credit. Clips are never hotlinked.
+
+Video searches use keys of their own, so clip searches don't use up the photo quota. Without them, each video
+provider uses its photo key:
+
+```ini
+PEXELS_VIDEO_API_KEY=...
+PIXABAY_VIDEO_API_KEY=...
+```
+
+The video providers are `pexels_video` and `pixabay_video`. Choose them and their order with
+`STOCK_VIDEO_PROVIDERS`, and set their limits like any other provider's: `STOCK_PEXELS_VIDEO_RATE=200/h`
+(Pexels' free key; the default), `STOCK_PIXABAY_VIDEO_CACHE_SECONDS=86400` (Pixabay asks for 24 hours; the
+default).
+
+The editor plays a short preview of a clip when the pointer rests on it, straight from the provider's video CDN.
+The site's Content-Security-Policy (`frontend/nginx/security-headers.conf`) allows `videos.pexels.com` and
+`cdn.pixabay.com` in `media-src` for that.
+
+Both providers' licences allow commercial use and editing without credit, but not selling or redistributing
+the clips as they are. Pexels and Pixabay ask apps to credit them, so the Videos tool shows their names.
 
 ## Sounds (Freesound)
 

@@ -129,7 +129,7 @@ def remove_asset_background(
     except ValueError:
         pk = None
     asset = Asset.objects.filter(pk=pk, owner=user).first() if pk else None
-    if asset is None or asset.kind == Asset.Kind.AUDIO:
+    if asset is None or asset.kind not in Asset.PICTURE_KINDS:
         raise ToolError(f"There is no picture {asset_id!r} in your uploads (see list_assets).")
     option = choose_model(user, model)
     reserve_run(user, option)

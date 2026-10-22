@@ -113,7 +113,7 @@ function dehydrateTree(json: DocObject, obj: FabricObject): DocObject {
   if (!out.id) out.id = ensureId(obj)
 
   const kindId = kindOfLive(obj)
-  if (kindId === 'image' || kindId === 'qr' || kindId === 'placeholder') {
+  if (kindId === 'image' || kindId === 'video' || kindId === 'qr' || kindId === 'placeholder') {
     if (d.docSrc !== undefined && 'src' in out) {
       out.src = d.docSrc
       delete out.docSrc

@@ -6,6 +6,7 @@
  * stores a property per key, and the server validates the same bounds (`apps/designs/validators.py`).
  */
 import type { DocPage } from '@/types/document'
+import { pageClipTiming } from '../clips/model'
 
 /** The shortest and longest time a page can be given, in seconds. */
 export const DURATION_MIN_SEC = 1
@@ -25,6 +26,17 @@ export function clampDuration(sec: unknown): number | null {
 export function pageDuration(page: Pick<DocPage, 'durationSec'>): number | null {
   const sec = page.durationSec
   return typeof sec === 'number' && Number.isFinite(sec) && sec >= DURATION_MIN_SEC && sec <= DURATION_MAX_SEC ? sec : null
+}
+
+/**
+ * How long a page plays, in seconds: its own time, or else the default stretched to its video clips, so a clip on a
+ * page that was never timed plays to its end (a looping clip fills whatever time the page has).
+ */
+export function pageSeconds(page: Pick<DocPage, 'durationSec' | 'objects'>): number {
+  const own = pageDuration(page)
+  if (own !== null) return own
+  const clipsEndSec = Math.ceil(pageClipTiming(page).endMs / 1000)
+  return Math.min(DURATION_MAX_SEC, Math.max(DEFAULT_DURATION_SEC, clipsEndSec))
 }
 
 /** True when at least one page has its own time: the design is "timed" and auto-advance starts switched on. */

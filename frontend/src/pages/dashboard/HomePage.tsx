@@ -1,9 +1,12 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, LayoutGrid } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CreateDesignDialog } from '@/features/create/CreateDesignDialog'
 import { DesignTile } from '@/features/dashboard/DesignTile'
 import bunny from '@/assets/bunny-sticker.webp'
 import { createUrl, presetParts } from '@/features/presets'
-import { quickPresets, useSizePresets } from '@/lib/sizePresets'
+import { useSizePresets } from '@/lib/sizePresets'
+import { noteUsedSize, useSizeChoices, yourSizes } from '@/lib/sizePresets/choices'
 import { TemplateCard } from '@/features/templates/TemplateCard'
 import { useDesignsList, useTemplatesList } from '@/lib/api/hooks'
 import { usePageTitle } from '@/lib/usePageTitle'
@@ -26,6 +29,8 @@ function TileSkeletons({ count }: { count: number }) {
 
 export default function HomePage() {
   const catalogue = useSizePresets()
+  const choices = useSizeChoices()
+  const [allSizes, setAllSizes] = useState(false)
   usePageTitle('Home')
   const recent = useDesignsList({ ordering: '-updated_at', page_size: 8 })
   const starred = useDesignsList({ starred: true, ordering: '-updated_at', page_size: 4 })
@@ -47,12 +52,12 @@ export default function HomePage() {
           </div>
         </div>
         <ul className={homeStyles.chips}>
-          {quickPresets(catalogue).map((preset) => {
+          {yourSizes(catalogue, choices).map((preset) => {
             const { name, detail } = presetParts(preset)
             const wide = preset.width >= preset.height
             return (
               <li key={preset.id}>
-                <Link to={createUrl({ presetId: preset.id })} className={homeStyles.chip}>
+                <Link to={createUrl({ presetId: preset.id })} className={homeStyles.chip} onClick={() => noteUsedSize(preset.id)}>
                   <span className={homeStyles.shapeBox} aria-hidden="true">
                     <span className={homeStyles.shape} style={{ aspectRatio: `${preset.width} / ${preset.height}`, ...(wide ? { width: '100%' } : { height: '100%' }) }} />
                   </span>
@@ -62,7 +67,17 @@ export default function HomePage() {
               </li>
             )
           })}
+          <li>
+            <button type="button" className={`${homeStyles.chip} ${homeStyles.allSizes}`} onClick={() => setAllSizes(true)}>
+              <span className={homeStyles.shapeBox} aria-hidden="true">
+                <LayoutGrid size={24} />
+              </span>
+              <span className={homeStyles.chipName}>All sizes</span>
+              <span className={homeStyles.chipSize}>{catalogue.presets.length} sizes</span>
+            </button>
+          </li>
         </ul>
+        <CreateDesignDialog open={allSizes} onClose={() => setAllSizes(false)} />
         <img className={homeStyles.bunny} src={bunny} alt="" width={523} height={713} draggable={false} />
       </section>
 

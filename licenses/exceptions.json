@@ -84,6 +84,7 @@
     "npm:jspdf": "client-side PDF export (lazy-loaded)",
     "npm:lib0": "binary encoding helpers used by the Yjs protocols",
     "npm:lucide-react": "editor and app icons",
+    "npm:mp4box": "reads the video clips of a design (MP4 boxes and samples) so the video export can decode each frame with WebCodecs (lazy-loaded with the export)",
     "npm:mp4-muxer": "writes the MP4 file of the video export from WebCodecs output (lazy-loaded, 9 kB gzipped). Its author has deprecated it in favour of Mediabunny, which is MPL-2.0 (file-level copyleft) and so outside the permissive list; 5.2 does what the export needs",
     "npm:onnxruntime-web": "in-browser model runtime for background removal: the WebAssembly CPU build, loaded lazily and run in a Web Worker (the `.wasm` file is built by Microsoft from onnxruntime and its third-party sources, see the notes below)",
     "npm:qrcode": "QR code objects (lazy-loaded)",

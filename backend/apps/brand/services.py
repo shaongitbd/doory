@@ -27,7 +27,7 @@ def create_kit(owner, data: dict) -> BrandKit:
         if kit.is_default:
             _make_only_default(owner, kit)
         kit.save()
-        kit.logos.set(Asset.objects.filter(owner=owner, pk__in=logo_ids).exclude(kind=Asset.Kind.AUDIO))
+        kit.logos.set(Asset.objects.filter(owner=owner, pk__in=logo_ids, kind__in=Asset.PICTURE_KINDS))
     return kit
 
 
@@ -42,5 +42,5 @@ def update_kit(owner, kit: BrandKit, data: dict) -> BrandKit:
             _make_only_default(owner, kit)
         kit.save()
         if logo_ids is not None:
-            kit.logos.set(Asset.objects.filter(owner=owner, pk__in=logo_ids).exclude(kind=Asset.Kind.AUDIO))
+            kit.logos.set(Asset.objects.filter(owner=owner, pk__in=logo_ids, kind__in=Asset.PICTURE_KINDS))
     return kit

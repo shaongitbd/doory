@@ -92,7 +92,7 @@ class BrandKitSerializer(serializers.ModelSerializer):
         unique = list(dict.fromkeys(value))
         owned = set(
             Asset.objects.filter(owner=self.context["request"].user, pk__in=unique)
-            .exclude(kind=Asset.Kind.AUDIO)
+            .filter(kind__in=Asset.PICTURE_KINDS)
             .values_list("pk", flat=True)
         )
         if owned != set(unique):

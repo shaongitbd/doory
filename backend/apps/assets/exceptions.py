@@ -54,3 +54,9 @@ class ServerBusy(APIException):
     default_code = "server_busy"
     default_detail = "The server is busy processing other large uploads. Try again in a moment."
     wait = 5  # becomes the Retry-After header
+
+
+class VideoUnavailable(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_code = "video_unavailable"
+    default_detail = "This server can't take videos (ffmpeg is not installed)."

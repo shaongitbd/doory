@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react'
 import { useEditor } from '../context'
 import type { EditorEngine } from '../engine/editor'
 import { clockOf, pageDurationsMs } from './clock'
-import { readTracks } from './model'
+import { soundTracks } from '../clips/audio'
 import { AudioPlayer, type PlayerState } from './player'
 import { Previewer, type PreviewState } from './previewer'
 import { catalogueStore, type CatalogueState } from './library'
@@ -26,7 +26,7 @@ const runtimes = new WeakMap<EditorEngine, AudioRuntime>()
 
 function create(editor: EditorEngine): AudioRuntime {
   const player = new AudioPlayer({
-    tracks: () => readTracks(editor.getDocument()),
+    tracks: () => soundTracks(editor.getDocument()),
     pageIds: () => editor.getDocument().pages.map((p) => p.id),
     pageDurationsMs: () => pageDurationsMs(editor.getDocument()),
     load: (track, signal) => editor.audio.sources.load(track, signal),
@@ -36,12 +36,13 @@ function create(editor: EditorEngine): AudioRuntime {
   })
   // When the design's tracks change (or an undo or a collaborator changes them) while it plays, the player follows. Nothing
   // is computed while it is idle: the store changes on every pointer move of a drag, and playing reads the document afresh.
-  let tracks = readTracks(editor.getDocument())
+  // The design's tracks and its clips' sounds; compared by content, as a clip's sound changes with the page's objects.
+  let tracks = JSON.stringify(soundTracks(editor.getDocument()))
   let lengths = JSON.stringify(clockOf(editor.getDocument()).pages)
   const unsubscribe = editor.store.subscribe((state) => {
     const status = player.getSnapshot().status
     if (status !== 'playing' && status !== 'paused') return
-    const next = readTracks(state.doc)
+    const next = JSON.stringify(soundTracks(state.doc))
     const nextLengths = JSON.stringify(clockOf(state.doc).pages)
     if (next === tracks && nextLengths === lengths) return
     tracks = next

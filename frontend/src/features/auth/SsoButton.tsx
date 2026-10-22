@@ -5,6 +5,7 @@ import { authApi } from '@/lib/api'
 import { AnchorButton } from '@/ui'
 import { useAuth } from './AuthProvider'
 import styles from './AuthForms.module.css'
+import { useSsoIcon } from './ssoIcons'
 
 /**
  * "Sign in with …" through the server's OpenID Connect provider, only when the server has one. A plain link: the API
@@ -13,10 +14,16 @@ import styles from './AuthForms.module.css'
 export function SsoButton({ next, note }: { next?: string; note?: string }) {
   const { config } = useAuth()
   const location = useLocation()
+  const icon = useSsoIcon(config.oidc_button_icon)
   const noteId = useId()
   if (!config.features.oidc_login) return null
   const button = (
-    <AnchorButton href={authApi.oidcStartUrl(next ?? `${location.pathname}${location.search}`)} fullWidth leftIcon={<KeyRound size={16} aria-hidden="true" />} aria-describedby={note ? noteId : undefined}>
+    <AnchorButton
+      href={authApi.oidcStartUrl(next ?? `${location.pathname}${location.search}`)}
+      fullWidth
+      leftIcon={icon ? <img src={icon} width={16} height={16} alt="" /> : <KeyRound size={16} aria-hidden="true" />}
+      aria-describedby={note ? noteId : undefined}
+    >
       {config.oidc_button_label || 'Sign in with SSO'}
     </AnchorButton>
   )

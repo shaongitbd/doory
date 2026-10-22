@@ -105,7 +105,7 @@ class DjangoResolver:
             asset = (
                 Asset.objects.filter(pk=_uuid(asset_id), owner=self.user).first() if _uuid(asset_id) else None
             )
-            if asset is None or asset.kind == Asset.Kind.AUDIO:
+            if asset is None or asset.kind not in Asset.PICTURE_KINDS:
                 raise LookupError(f"There is no picture {asset_id!r} in your uploads (see list_assets).")
             return ImageSource(
                 asset.file.url,
@@ -181,7 +181,7 @@ class DjangoResolver:
         template places (copied into the caller's uploads before use). Nothing else, and never a file looked
         up by a path from the document."""
         uid = _uuid(obj.get("assetId"))
-        asset = Asset.objects.filter(pk=uid).exclude(kind=Asset.Kind.AUDIO).first() if uid else None
+        asset = Asset.objects.filter(pk=uid).filter(kind__in=Asset.PICTURE_KINDS).first() if uid else None
         if asset is not None and asset.owner_id == self.user.pk:
             return asset, False
         if asset is not None and asset.kind == Asset.Kind.IMAGE and _in_published_template(asset):

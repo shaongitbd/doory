@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PageRef } from './timeline'
-import { compileTimeline, slotDurationsMs, timelineMoves } from './timeline'
+import { clipSoundOf, compileTimeline, slotDurationsMs, timelineMoves } from './timeline'
 import { allPages, anim, deck, doc, page, push, rect } from './testing'
 
 describe('compileTimeline', () => {
@@ -87,5 +87,29 @@ describe('slotDurationsMs', () => {
     const timeline = compileTimeline(refs, { pageSeconds: null })
     // Page c keeps its fade: it comes in after page a, the page chosen before it.
     expect(slotDurationsMs(3, timeline)).toEqual([5500, 0, 6200])
+  })
+})
+
+describe('video clips on the timeline', () => {
+  const clip = (id: string, over: Record<string, unknown> = {}) => ({ id, type: 'image', videoSrc: '/media/c.mp4', videoAudioSrc: '/media/a.m4a', videoDurationMs: 12_000, ...over })
+
+  it('a page without a time of its own lasts as long as its clip, and moves until it ends', () => {
+    const timeline = compileTimeline(allPages(doc([page('a', { objects: [clip('c', { videoTrimEndMs: 8000 })] })])), { pageSeconds: null })
+    const [segment] = timeline.segments
+    expect(segment.holdMs).toBe(8000)
+    expect(segment.settledMs).toBe(8000)
+    expect(timelineMoves(timeline)).toBe(true)
+  })
+
+  it('a looping clip never settles; a page time of its own wins', () => {
+    const timeline = compileTimeline(allPages(doc([page('a', { durationSec: 3, objects: [clip('c', { videoLoop: true })] })])), { pageSeconds: null })
+    expect(timeline.segments[0].holdMs).toBe(3000)
+    expect(timeline.segments[0].settledMs).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it('starts a page’s clip sounds after the transition into it', () => {
+    const timeline = compileTimeline(allPages(doc([page('a', { durationSec: 2 }), page('b', { transition: push, objects: [clip('c', { videoStartMs: 100 })] })])), { pageSeconds: null })
+    const [sound] = clipSoundOf(timeline)
+    expect(sound).toMatchObject({ id: 'video:c', scope: { type: 'page', pageId: 'b' }, startMs: 100 + push.durationMs })
   })
 })

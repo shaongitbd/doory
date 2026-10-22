@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import type { EditorAppProps, EditorHandle } from '@/types/adapter'
 import './builtins/commands'
 import './builtins/audio'
+import './builtins/clips'
 import './builtins/panels'
 import './builtins/toolbar'
 import './animation/commands'

@@ -11,8 +11,9 @@ import { FrameComposer } from './composer'
 import { FrameCursor } from './schedule'
 import { Slicer } from './slicer'
 import { AUDIO_RATE, type Deps, type Prepared, type VideoJob, type VideoResult, type VideoWarning, fileNameFor } from './types'
-import { slotDurationsMs } from './timeline'
+import { clipSoundOf, slotDurationsMs } from './timeline'
 import { patchWebmDuration } from './webmDuration'
+import { exportSources } from './clipDecoder'
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -23,7 +24,7 @@ interface CaptureTrack extends MediaStreamTrack {
 /** Starts the sound of the design on a stream destination; `null` when the browser will not run an audio context. */
 async function soundTrack(job: VideoJob, prepared: Prepared, deps: Deps): Promise<{ track: MediaStreamTrack; start(): void; close(): void } | null> {
   if (typeof AudioContext === 'undefined') return null
-  const mix = await deps.mix(job.document, slotDurationsMs(job.document.pages.length, prepared.timeline), AUDIO_RATE, { load: job.host.loadSound, signal: job.signal })
+  const mix = await deps.mix(job.document, slotDurationsMs(job.document.pages.length, prepared.timeline), AUDIO_RATE, { load: job.host.loadSound, signal: job.signal, extraTracks: clipSoundOf(prepared.timeline) })
   const context = new AudioContext({ sampleRate: AUDIO_RATE })
   await context.resume().catch(() => undefined)
   if (context.state !== 'running') {
@@ -46,7 +47,7 @@ export async function runRecorder(job: VideoJob, prepared: Prepared, mime: strin
   const { timeline, frame, frames } = prepared
   const fps = options.fps
   const warnings: VideoWarning[] = ['real-time']
-  const composer = new FrameComposer({ frame, fit: options.fit, loadContext: job.host.loadContext, readback: false })
+  const composer = new FrameComposer({ frame, fit: options.fit, loadContext: job.host.loadContext, readback: false, media: exportSources })
   const canvas = document.createElement('canvas')
   canvas.width = frame.width
   canvas.height = frame.height

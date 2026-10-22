@@ -7,6 +7,7 @@ import type {
   AiTaskOptions,
   Asset,
   AssetQuery,
+  AssetStatus,
   BrandKit,
   BulkFillInput,
   BulkFillResult,
@@ -37,6 +38,12 @@ import type {
   UserFontUploadInput,
   UserFontUploadOptions,
   VersionSummary,
+  StockVideo,
+  StockVideoPage,
+  VideoFilmstrip,
+  VideoInfo,
+  VideoLength,
+  VideoOrientation,
 } from './api'
 import type { DoryDocument } from './document'
 
@@ -67,7 +74,23 @@ export interface AssetRef {
   width: number
   height: number
   name: string
-  kind: 'image' | 'svg' | 'audio'
+  kind: 'image' | 'svg' | 'audio' | 'video'
+  /** Video clips only. */
+  video?: VideoAssetInfo
+}
+
+/** What the editor knows of a video clip asset: enough to place it, play it and draw it on the timeline. */
+export interface VideoAssetInfo {
+  status: AssetStatus
+  /** Why the conversion failed (`status: 'failed'`). */
+  error: string
+  /** The still: what the clip object shows wherever it can't play (its `src`). */
+  posterUrl: string
+  /** The clip's sound on its own; empty for a silent clip. */
+  audioUrl: string
+  durationMs: number
+  fps: number
+  filmstrip: VideoFilmstrip | null
 }
 
 export interface SaveInput {
@@ -81,7 +104,7 @@ export interface SaveResult {
   revision?: number
 }
 
-export type AccountReason = 'save' | 'share' | 'brand-kit' | 'version-history' | 'comment'
+export type AccountReason = 'save' | 'share' | 'brand-kit' | 'version-history' | 'comment' | 'video'
 
 export type SaveState =
   | { status: 'idle' }
@@ -165,6 +188,11 @@ export interface EditorServices {
   } | null
   /** Remote AI image tasks; `null` or absent: only the in-browser model (guests, shared links). */
   ai?: AiService | null
+  /**
+   * Video clips: uploads and stock videos, converted on the server. Optional: absent or null (guests, shared links,
+   * adapters without it) turns the Videos tool into a sign-up prompt, and so does `info()` answering `enabled: false`.
+   */
+  video?: VideoService | null
   /**
    * Freesound sounds for the Audio tool, through the server. Optional: absent or null (guests, adapters without it)
    * hides the Freesound tab, and so does `info()` answering `configured: false`.
@@ -360,4 +388,22 @@ export interface EditorAppProps {
   /** Slots in the editor's top bar. */
   topBarStart?: ReactNode
   topBarEnd?: ReactNode
+}
+
+export interface VideoUploadOptions {
+  signal?: AbortSignal
+  /** Called while the file goes up (0..1). */
+  onProgress?: (fraction: number) => void
+}
+
+export interface VideoService {
+  info(): Promise<VideoInfo>
+  /** The user's clips, newest first. */
+  list(page: number): Promise<Page<AssetRef>>
+  /** One clip again: how the editor follows a clip the server is still converting. */
+  get(id: string): Promise<AssetRef>
+  upload(file: File, options?: VideoUploadOptions): Promise<AssetRef>
+  /** `page` is a page number, or the cursor an `all` search returned; `provider` is a name or `all`. */
+  search(q: string, page: number | string, options: { provider?: string; orientation?: VideoOrientation; length?: VideoLength; signal?: AbortSignal }): Promise<StockVideoPage>
+  importVideo(video: StockVideo): Promise<AssetRef>
 }

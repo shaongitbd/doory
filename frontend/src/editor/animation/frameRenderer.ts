@@ -11,12 +11,16 @@
  *
  * At rest (every enter finished, no exit started) a frame equals the page as the export renders it.
  */
-import { type FabricObject, StaticCanvas } from 'fabric'
+import { type FabricImage, type FabricObject, StaticCanvas } from 'fabric'
 import type { DocObject, DocPage } from '@/types/document'
+import { type ClipLook, drawWithLook, lookOf } from '../clips/look'
+import { type Clip, clipPlaysAt, clipShownAt, clipTimeAt, readClip } from '../clips/model'
+import { asDory } from '../engine/objects/dory'
 import { type BuiltBackground, buildBackground } from '../engine/objects/background'
 import { renderableObjects } from '../engine/render'
 import { type LoadContext, deserializeObjects } from '../engine/serialization'
 import { type Surface, context2d, createCanvas, drawBlurred } from './canvasFx'
+import { type ClipFrameSource, type ClipMediaFactory, sharedSources } from './clipSource'
 import { animationOf, type PageTiming, pageTiming } from './model'
 import { emphasisPresets, inOutPresets } from './presets'
 import { type Box, type PageDims, type Sample, type UnitPlan, isRest, isSplittableText, sampleObject, sampleUnit, unitFor } from './sampler'
@@ -34,6 +38,13 @@ export interface FrameRendererOptions {
   multiplier: number
   /** Leave the page background out (a frame with transparency). */
   transparent?: boolean
+  /**
+   * Where video clips get their pictures. Without it a clip is drawn as its poster, like any picture (thumbnails, the
+   * server's image export); with it, each clip shows the frame of the moment.
+   */
+  media?: ClipMediaFactory
+  /** A clip's picture changed on its own (a seek landed while the clock stood still): draw the frame again. */
+  onMediaFrame?: () => void
 }
 
 export interface FrameRenderer {
@@ -45,8 +56,16 @@ export interface FrameRenderer {
   /** The bitmap every call of `render` draws on and returns. Copy it if you need an earlier frame. */
   readonly canvas: HTMLCanvasElement
   readonly timing: PageTiming
+  /** The page has video clips (drawn from `options.media`). */
+  readonly hasClips: boolean
   /** Draws the page at `tMs` on the page clock (0 = the page has just come in). Returns `canvas`. */
   render(tMs: number): HTMLCanvasElement
+  /** Resolves when every clip has the picture of `tMs` ready, so the next `render(tMs)` shows it (the exporter waits). */
+  prepare(tMs: number): Promise<void>
+  /** The page clock started, stopped or changed speed: clips play along with it. */
+  setMediaClock(playing: boolean, rate: number): void
+  /** Stops the clips' playback while this page is off screen. */
+  suspendMedia(): void
   dispose(): void
 }
 
@@ -83,6 +102,25 @@ interface AnimatedLayer {
   box: Box
   tile: Placed
   units: Map<SplitBy, UnitBitmap[]>
+  /** A video clip: its tile is painted again whenever the clip shows another picture. */
+  clip?: ClipPart
+}
+
+/**
+ * The moving part of a clip layer. The clip object stays on a canvas of its own (painting a tile disposes what it
+ * painted), over a bitmap the size of its poster that each new picture is drawn into, so crop, mask, flip, opacity
+ * and shadow apply exactly as on the poster.
+ */
+interface ClipPart {
+  spec: Clip
+  source: ClipFrameSource
+  holder: StaticCanvas
+  image: FabricImage
+  frame: HTMLCanvasElement
+  /** The clip's adjustments, drawn on each picture (Fabric's own filters stay on the still). */
+  look: ClipLook
+  /** The source's `version` the tile shows. */
+  drawn: number
 }
 
 type Layer = StaticLayer | AnimatedLayer
@@ -151,6 +189,64 @@ function placeTile(objects: readonly FabricObject[], background: BuiltBackground
   }
   const canvas = paint(objects, background, { x: x0 / scale, y: y0 / scale, w: w / scale, h: h / scale }, scale)
   return { canvas, x: (x0 / scale) * m, y: (y0 / scale) * m, w: (w / scale) * m, h: (h / scale) * m }
+}
+
+/** Like `placeTile`, but the object stays on a canvas that draws the tile again on request (a clip); not painted yet. */
+function holdTile(obj: FabricObject, region: Rect, m: number): { placed: Placed; holder: StaticCanvas } | null {
+  let x0 = Math.floor(region.x * m)
+  let y0 = Math.floor(region.y * m)
+  let w = Math.ceil((region.x + region.w) * m) - x0
+  let h = Math.ceil((region.y + region.h) * m) - y0
+  if (w <= 0 || h <= 0) return null
+  let scale = m
+  if (w * h > MAX_TILE_PIXELS) {
+    scale = m * Math.sqrt(MAX_TILE_PIXELS / (w * h))
+    x0 = Math.floor(region.x * scale)
+    y0 = Math.floor(region.y * scale)
+    w = Math.ceil((region.x + region.w) * scale) - x0
+    h = Math.ceil((region.y + region.h) * scale) - y0
+  }
+  const el = createCanvas(w, h)
+  const holder = new StaticCanvas(el, { width: w, height: h, renderOnAddRemove: false, enableRetinaScaling: false, skipOffscreen: false })
+  holder.setViewportTransform([scale, 0, 0, scale, -x0, -y0])
+  holder.add(obj) // painted by `clipPart`, once the object draws from its frame bitmap
+  return { holder, placed: { canvas: holder.getElement(), x: (x0 / scale) * m, y: (y0 / scale) * m, w: (w / scale) * m, h: (h / scale) * m } }
+}
+
+/** Puts a clip's object over a bitmap of its poster's size, which the clip's pictures are drawn into. */
+function clipPart(obj: FabricObject, holder: StaticCanvas, spec: Clip, source: ClipFrameSource): ClipPart {
+  const image = obj as FabricImage & { _originalElement?: CanvasImageSource }
+  // The poster as it came, not as Fabric filtered it: the look is drawn on every picture instead.
+  const element = image._originalElement ?? image.getElement()
+  const natural = image.getOriginalSize()
+  const frame = createCanvas(Math.max(1, Math.round(natural.width)), Math.max(1, Math.round(natural.height)))
+  const look = lookOf(asDory(obj).filterSpecs)
+  try {
+    drawWithLook(context2d(frame), element, 0, 0, frame.width, frame.height, look)
+  } catch {
+    // A poster that did not load: the frame stays empty until the clip's first picture.
+  }
+  image.filters = []
+  image.setElement(frame, { width: image.width, height: image.height })
+  image.dirty = true
+  holder.renderAll()
+  return { spec, source, holder, image, frame, look, drawn: -1 }
+}
+
+/** Shows the clip's picture of `tMs` in its tile; true when the tile changed. */
+function updateClip(layer: AnimatedLayer, tMs: number): boolean {
+  const part = layer.clip
+  if (!part) return false
+  part.source.want(clipTimeAt(part.spec, tMs), clipPlaysAt(part.spec, tMs))
+  const picture = part.source.frame()
+  if (!picture || part.source.version === part.drawn) return false
+  part.drawn = part.source.version
+  const ctx = context2d(part.frame)
+  ctx.clearRect(0, 0, part.frame.width, part.frame.height)
+  drawWithLook(ctx, picture, 0, 0, part.frame.width, part.frame.height, part.look)
+  part.image.dirty = true
+  part.holder.renderAll()
+  return true
 }
 
 function rotate(x: number, y: number, degrees: number): DevicePoint {
@@ -339,6 +435,17 @@ export async function createFrameRenderer(page: DocPage, size: PageDims, ctx: Lo
     deserializeObjects(docs, ctx),
     options.transparent ? Promise.resolve(null) : buildBackground(page.background, size.width, size.height, (s) => ctx.resolveSrc(s)),
   ])
+  const media = options.media ? sharedSources(options.media) : null
+  // Clips are played from their resolved addresses (a stored `/media/…` path may live on another origin).
+  const clipUrls = new Map<DocObject, string>()
+  if (options.media) {
+    await Promise.all(
+      docs.map(async (doc) => {
+        const clip = readClip(doc)
+        if (clip) clipUrls.set(doc, await ctx.resolveSrc(clip.src))
+      }),
+    )
+  }
   // Fabric counts a shape's default 1 px stroke width in its size even without a stroke, which would leave the first row
   // and column of the page half covered.
   background?.object.set({ strokeWidth: 0 })
@@ -361,7 +468,8 @@ export async function createFrameRenderer(page: DocPage, size: PageDims, ctx: Lo
   let first = true
   objects.forEach((obj, i) => {
     const doc = docs[i]
-    if (!isAnimated(doc)) {
+    const clip = options.media ? readClip(doc) : null
+    if (!isAnimated(doc) && !clip) {
       run.push(obj)
       return
     }
@@ -376,6 +484,18 @@ export async function createFrameRenderer(page: DocPage, size: PageDims, ctx: Lo
     for (const by of kinds) {
       const found = textUnitBoxes(obj, by, pad)
       if (found) boxes.set(by, found)
+    }
+    if (clip && media) {
+      const held = region.w > 0 && region.h > 0 ? holdTile(obj, region, m) : null
+      if (!held) {
+        obj.dispose()
+        return
+      }
+      const url = clipUrls.get(doc) ?? clip.src
+      const share = [url, clip.speed, clip.startMs, clip.trimStartMs, clip.trimEndMs, clip.loop].join('|')
+      const source = media({ url, speed: clip.speed, share }, () => options.onMediaFrame?.())
+      layers.push({ kind: 'animated', object: doc, box, tile: held.placed, units: new Map(), clip: clipPart(obj, held.holder, clip, source) })
+      return
     }
     const tile = region.w > 0 && region.h > 0 ? placeTile([obj], null, region, m) : null
     if (!tile) {
@@ -393,6 +513,8 @@ export async function createFrameRenderer(page: DocPage, size: PageDims, ctx: Lo
   const canvas = createCanvas(width, height)
   const surface = context2d(canvas)
   const animated = layers.filter((l): l is AnimatedLayer => l.kind === 'animated')
+  const clipLayers = animated.filter((l) => l.clip)
+  const parts = clipLayers.map((l) => l.clip as ClipPart)
   let last: Readonly<Sample>[] | null = null
   let disposed = false
 
@@ -402,10 +524,17 @@ export async function createFrameRenderer(page: DocPage, size: PageDims, ctx: Lo
     height,
     canvas,
     timing: pageTiming(page),
+    hasClips: parts.length > 0,
     render(tMs: number): HTMLCanvasElement {
       if (disposed) return canvas
-      const samples = animated.map((layer) => sampleObject(layer.object, tMs, size, layer.box))
-      if (last && samples.every((s, i) => sameSample(s, last![i]))) return canvas
+      let moved = false
+      for (const layer of clipLayers) moved = updateClip(layer, tMs) || moved
+      const samples = animated.map((layer) => {
+        const sample = sampleObject(layer.object, tMs, size, layer.box)
+        // A split part of a clip stands aside outside its own time, so the part before or after it shows.
+        return layer.clip && !clipShownAt(layer.clip.spec, tMs) ? { ...sample, visible: false } : sample
+      })
+      if (!moved && last && samples.every((s, i) => sameSample(s, last![i]))) return canvas
       last = samples
       surface.setTransform(1, 0, 0, 1, 0, 0)
       surface.globalAlpha = 1
@@ -417,9 +546,25 @@ export async function createFrameRenderer(page: DocPage, size: PageDims, ctx: Lo
       }
       return canvas
     },
+    async prepare(tMs: number): Promise<void> {
+      if (disposed || parts.length === 0) return
+      await Promise.all(parts.map((part) => part.source.ready(clipTimeAt(part.spec, tMs))))
+    },
+    setMediaClock(playing: boolean, rate: number): void {
+      for (const part of parts) part.source.setClock(playing, rate)
+    },
+    suspendMedia(): void {
+      for (const part of parts) part.source.suspend()
+    },
     dispose(): void {
       disposed = true
       last = null
+      for (const part of parts) {
+        part.source.dispose()
+        void part.holder.dispose()
+      }
+      parts.length = 0
+      clipLayers.length = 0
       layers.length = 0
       canvas.width = 1
       canvas.height = 1

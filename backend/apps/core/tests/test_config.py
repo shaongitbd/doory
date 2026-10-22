@@ -30,6 +30,7 @@ def test_config_is_public_and_has_the_documented_shape(api):
     assert set(body) == {
         "google_client_id",
         "oidc_button_label",
+        "oidc_button_icon",
         "features",
         "limits",
         "assets",

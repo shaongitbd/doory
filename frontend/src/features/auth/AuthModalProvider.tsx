@@ -27,6 +27,7 @@ const COPY: Record<AuthModalReason, { title: string; description: string }> = {
   'brand-kit': { title: 'Sign in to use brand kits', description: 'Save your colours, fonts and logos once and apply them to every design.' },
   'version-history': { title: 'Sign in to see version history', description: 'Accounts keep snapshots of your design so you can go back in time.' },
   comment: { title: 'Sign in to comment', description: 'Join the conversation on this design with a free account.' },
+  video: { title: 'Sign in to add videos', description: 'Upload your own clips or pick stock videos. Your design and images come along.' },
   generic: { title: 'Welcome to Doory', description: 'Log in or create a free account.' },
   'session-expired': { title: 'Your session ended', description: 'Sign in again to keep saving. What you changed is still on this page.' },
 }

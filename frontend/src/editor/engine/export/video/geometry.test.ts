@@ -83,3 +83,10 @@ describe('barColour', () => {
     expect(barColour({ background: { type: 'solid', color: 'not a colour' } })).toBe('#000000')
   })
 })
+
+describe('blurred bars', () => {
+  it('place the page as fitting does (the bars are drawn behind it)', () => {
+    const frame = { width: 1920, height: 1080 }
+    expect(placePage({ width: 1080, height: 1920 }, frame, 'blur')).toEqual(placePage({ width: 1080, height: 1920 }, frame, 'fit'))
+  })
+})

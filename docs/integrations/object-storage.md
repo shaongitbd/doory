@@ -37,5 +37,13 @@ Upload an image in the editor, then check that it appears in the bucket.
 
 - **Images don't load in the editor:** Doory links to files with plain, unsigned URLs, so the bucket (or a CDN
   in front of it) must allow public reads, and its CORS settings must allow `SITE_URL`.
+- **Video clips don't play, or the video export fails with a "tainted" error:** clips are streamed in pieces, so
+  the bucket's CORS rule must also allow the `Range` request header and expose `Content-Range`,
+  `Accept-Ranges` and `Content-Length`. For example, for S3:
+
+  ```json
+  [{"AllowedOrigins": ["https://doory.example.com"], "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["Range"], "ExposeHeaders": ["Content-Range", "Accept-Ranges", "Content-Length"]}]
+  ```
 - **Moving an existing site:** copy the contents of the `media` volume into the bucket before switching
   `USE_S3` on.

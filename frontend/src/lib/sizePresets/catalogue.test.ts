@@ -139,9 +139,21 @@ describe('finding presets', () => {
 })
 
 describe('the built-in catalogue', () => {
-  it('is the same as the one the server seeds (backend/data/size_presets.json)', () => {
-    const server = JSON.parse(readFileSync(resolve(__dirname, '../../../../backend/data/size_presets.json'), 'utf-8'))
-    expect(BUILTIN_PRESET_TREE).toEqual(server)
+  it('is part of the one the server seeds (backend/data/size_presets.json), row for row', () => {
+    const server = JSON.parse(readFileSync(resolve(__dirname, '../../../../backend/data/size_presets.json'), 'utf-8')) as PresetTree
+    // Every group and preset by slug, with the group path it sits in and its own fields (without its contents).
+    const rows = (groups: PresetTree['groups'], path: string[] = [], into = new Map<string, unknown>()) => {
+      for (const { children, presets, ...group } of groups) {
+        into.set(`group:${group.slug}`, { path, ...group })
+        for (const preset of presets ?? []) into.set(preset.slug, { path: [...path, group.slug], ...preset })
+        rows(children ?? [], [...path, group.slug], into)
+      }
+      return into
+    }
+    const ours = rows(BUILTIN_PRESET_TREE.groups)
+    const theirs = rows(server.groups)
+    for (const [slug, row] of ours) expect(theirs.get(slug), slug).toEqual(row)
+    expect(BUILTIN_PRESET_TREE.version).toBe(server.version)
   })
 
   it('builds without losing a preset', () => {

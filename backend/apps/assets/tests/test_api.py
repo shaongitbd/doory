@@ -39,7 +39,7 @@ class TestList:
         assert api.get(URL, {"kind": "image"}).json()["count"] == 1
 
     def test_invalid_kind_is_a_400(self, api):
-        res = api.get(URL, {"kind": "video"})
+        res = api.get(URL, {"kind": "movie"})
         assert res.status_code == 400 and res.json()["error"]["code"] == "validation_error"
 
     def test_search_by_name_case_insensitive(self, api):

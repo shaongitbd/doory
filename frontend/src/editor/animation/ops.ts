@@ -5,7 +5,7 @@
  * inside their ranges, directions the preset offers, and no empty `animation`.
  */
 import type { Anim, AnimDirection, AnimEasing, DoryDocument, DocPage, ObjectAnimation, PageTransition } from '@/types/document'
-import { DEFAULT_DURATION_SEC, pageDuration } from '../presenter/timing'
+import { pageSeconds } from '../presenter/timing'
 import { type AnimSlot, DELAY_RANGE, DURATION_RANGE, TRANSITION_RANGE, clampNumber, isDirection, normalizeAnim, normalizeObjectAnimation, pageTiming } from './model'
 import { type InOutPreset, type EmphasisPreset, emphasisPresets, inOutPresets, transitionPresets } from './presets'
 
@@ -31,8 +31,7 @@ function exitEasing(easing: AnimEasing): AnimEasing {
 
 /** When the page is done with its animations: the page has built up and its time has run. */
 export function pageEndMs(page: Pick<DocPage, 'objects' | 'durationSec'>): number {
-  const sec = pageDuration(page) ?? DEFAULT_DURATION_SEC
-  return pageTiming(page).introMs + sec * 1000
+  return pageTiming(page).introMs + pageSeconds(page) * 1000
 }
 
 /**

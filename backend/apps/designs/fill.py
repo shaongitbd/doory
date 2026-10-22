@@ -79,7 +79,7 @@ def _image_source(owner, value: Any) -> dict:
             pass
         asset = (
             Asset.objects.filter(owner=owner, name__iexact=text)
-            .exclude(kind=Asset.Kind.AUDIO)
+            .filter(kind__in=Asset.PICTURE_KINDS)
             .order_by("-created_at")
             .first()
         )

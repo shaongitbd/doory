@@ -101,6 +101,16 @@ sudo -u doory .venv/bin/playwright install chromium
 
 If you don't install it, set `SERVER_PDF_ENABLED=false` in `.env`. See [image-export.md](image-export.md).
 
+## Optional: video clips
+
+Video clips (uploads and stock videos) need ffmpeg:
+
+```bash
+sudo apt install ffmpeg
+```
+
+Without it, the server takes no video. See [video.md](video.md).
+
 ## Updating
 
 See [upgrading.md](upgrading.md).

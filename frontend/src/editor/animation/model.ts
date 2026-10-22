@@ -8,6 +8,7 @@
  */
 import type { Anim, AnimDirection, AnimEasing, AnimTextUnit, DocObject, DocPage, DoryDocument, ObjectAnimation, PageTransition } from '@/types/document'
 import { isEasing } from './easing'
+import { pageClipTiming } from '../clips/model'
 
 export type AnimSlot = 'enter' | 'exit' | 'emphasis'
 export const SLOTS: readonly AnimSlot[] = ['enter', 'exit', 'emphasis']
@@ -144,8 +145,10 @@ export interface PageTiming {
   introMs: number
   /** When the last animation that ends has finished (a looping emphasis never ends and is left out). */
   endMs: number
-  /** Some emphasis repeats for as long as the page is up. */
+  /** Some emphasis (or a video clip) repeats for as long as the page is up. */
   loops: boolean
+  /** Video clips on the page: they move the page too, until `endMs` (or for as long as it is up when one loops). */
+  clips: number
 }
 
 export function pageTiming(page: Pick<DocPage, 'objects'>): PageTiming {
@@ -161,7 +164,8 @@ export function pageTiming(page: Pick<DocPage, 'objects'>): PageTiming {
     if (span.slot === 'enter') introMs = Math.max(introMs, span.endMs)
     endMs = Math.max(endMs, span.endMs)
   }
-  return { spans, introMs, endMs, loops }
+  const clips = pageClipTiming(page)
+  return { spans, introMs, endMs: Math.max(endMs, clips.endMs), loops: loops || clips.loops, clips: clips.count }
 }
 
 /** True when anything on the page moves: an object animation of any kind. */

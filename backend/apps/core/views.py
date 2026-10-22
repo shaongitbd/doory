@@ -37,6 +37,7 @@ _CONFIG_SCHEMA = inline_serializer(
     {
         "google_client_id": serializers.CharField(),
         "oidc_button_label": serializers.CharField(),
+        "oidc_button_icon": serializers.CharField(),
         "features": inline_serializer(
             "AppConfigFeatures",
             {
@@ -177,6 +178,7 @@ def config(request):
         {
             "google_client_id": settings.GOOGLE_CLIENT_ID,
             "oidc_button_label": oidc.button_label(),
+            "oidc_button_icon": oidc.button_icon(),
             "features": {
                 "stock_photos": bool(configured_stock_providers()),
                 "server_pdf": settings.SERVER_PDF_ENABLED,

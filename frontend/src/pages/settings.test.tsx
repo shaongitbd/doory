@@ -237,7 +237,7 @@ describe('dashboard home and navigation', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Create a design' }))
     const menu = await screen.findByRole('menu', { name: 'Create a design' })
     expect(within(menu).getByRole('menuitem', { name: 'Presentation (16:9)' })).toBeInTheDocument()
-    await userEvent.click(within(menu).getByRole('menuitem', { name: 'More sizes…' }))
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'All sizes…' }))
     expect(await screen.findByRole('dialog', { name: 'Create a design' })).toBeInTheDocument()
   })
 

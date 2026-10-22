@@ -18,6 +18,7 @@ export const assetsApi = {
     if (options.tags?.length) form.append('tags', options.tags.join(','))
     return http.post<Asset>('/assets/', { form, signal: options.signal, onUploadProgress: options.onProgress })
   },
+  get: (id: string, signal?: AbortSignal) => http.get<Asset>(`/assets/${id}/`, { signal }),
   update: (id: string, input: { name?: string; tags?: string[] }) => http.patch<Asset>(`/assets/${id}/`, { json: input }),
   remove: (id: string) => http.delete<void>(`/assets/${id}/`),
   usage: (signal?: AbortSignal) => http.get<AssetUsage>('/assets/usage/', { signal }),

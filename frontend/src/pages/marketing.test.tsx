@@ -89,13 +89,12 @@ describe('landing page', () => {
     renderApp('/')
     await userEvent.click(await screen.findByRole('button', { name: 'Custom size…' }))
     const dialog = await screen.findByRole('dialog')
-    await userEvent.click(within(dialog).getByRole('tab', { name: 'Popular sizes' }))
     await userEvent.type(within(dialog).getByRole('searchbox'), 'poster')
     expect(within(dialog).getByRole('button', { name: /Poster \(18 × 24 in\)/ })).toBeInTheDocument()
     expect(within(dialog).queryByRole('button', { name: /Instagram Post/ })).not.toBeInTheDocument()
     await userEvent.clear(within(dialog).getByRole('searchbox'))
     await userEvent.type(within(dialog).getByRole('searchbox'), 'zzzz')
-    expect(within(dialog).getByText('No matching size')).toBeInTheDocument()
+    expect(within(dialog).getByText(/No size matches/)).toBeInTheDocument()
   })
 
   it('has landmarks, a skip link and links to the open-source repository', async () => {

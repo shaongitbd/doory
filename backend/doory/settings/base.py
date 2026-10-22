@@ -130,6 +130,20 @@ MAX_DESIGN_PAGES = 100
 BULK_FILL_MAX_ROWS = env.int("BULK_FILL_MAX_ROWS", default=100)  # rows per bulk fill (MCP and REST)
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
+# ---- Video clips (apps.assets.video). Uploads and stock clips are checked and made web-ready with the ffmpeg
+# and ffprobe commands; without them the server takes no video. ----
+VIDEO_ENABLED = env.bool("VIDEO_ENABLED", default=True)  # the Docker image sets it from INSTALL_FFMPEG
+FFMPEG_PATH = env("FFMPEG_PATH", default="ffmpeg")
+FFPROBE_PATH = env("FFPROBE_PATH", default="ffprobe")
+MAX_VIDEO_UPLOAD_BYTES = env.int("MAX_VIDEO_UPLOAD_BYTES", default=200 * 1024 * 1024)  # per clip, as uploaded
+MAX_VIDEO_DURATION_SECONDS = env.int("MAX_VIDEO_DURATION_SECONDS", default=600)  # the video export's limit
+VIDEO_MAX_CONCURRENCY = env.int("VIDEO_MAX_CONCURRENCY", default=2)  # ffmpeg runs per API process
+VIDEO_TRANSCODE_TIMEOUT_SECONDS = env.int("VIDEO_TRANSCODE_TIMEOUT_SECONDS", default=900)
+VIDEO_DOWNLOAD_DEADLINE_SECONDS = env.int("VIDEO_DOWNLOAD_DEADLINE_SECONDS", default=90)  # stock clips
+# Where a clip is converted (the upload, the converted copy and its stills live there until stored).
+# Empty: the system temporary directory.
+VIDEO_WORK_DIR = env("VIDEO_WORK_DIR", default="")
+
 # ---- Security headers (Permissions-Policy comes from apps.core.middleware) ----
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
@@ -171,11 +185,17 @@ OIDC_ISSUER = env("OIDC_ISSUER", default="")
 OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", default="")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", default="")
 OIDC_BUTTON_LABEL = env("OIDC_BUTTON_LABEL", default="Sign in with SSO")
+# Logo on the button, by name (e.g. "authentik"); the frontend has the icons. Empty or unknown: a key icon.
+OIDC_BUTTON_ICON = env("OIDC_BUTTON_ICON", default="")
 OIDC_SCOPES = env("OIDC_SCOPES", default="openid email profile")
 OIDC_TRUST_EMAIL = env.bool("OIDC_TRUST_EMAIL", default=False)
 UNSPLASH_ACCESS_KEY = env("UNSPLASH_ACCESS_KEY", default="")
 PEXELS_API_KEY = env("PEXELS_API_KEY", default="")
 PIXABAY_API_KEY = env("PIXABAY_API_KEY", default="")
+# Stock videos use keys of their own, so clip searches and photo searches don't share one quota; each falls
+# back to the photo key of the same provider.
+PEXELS_VIDEO_API_KEY = env("PEXELS_VIDEO_API_KEY", default="")
+PIXABAY_VIDEO_API_KEY = env("PIXABAY_VIDEO_API_KEY", default="")
 # Freesound (apps.assets.freesound): the Audio tool's Freesound tab is on when the key is set. Licences a
 # sound may have: cc0 (default), or cc0,by to add Creative Commons Attribution (the editor asks for credits).
 # Freesound's API terms cover non-commercial use; a commercial service needs an agreement with Freesound.
@@ -192,6 +212,8 @@ STOCK_DEFAULT_TAB = env("STOCK_DEFAULT_TAB", default="all")  # "all" or a provid
 STOCK_LANG_FROM_UI = env.bool("STOCK_LANG_FROM_UI", default=True)
 # photo, illustration, vector or all
 STOCK_PIXABAY_IMAGE_TYPE = env("STOCK_PIXABAY_IMAGE_TYPE", default="photo")
+# Stock videos (apps.assets.video_stock): on when the provider has a key and is listed here, in tab order.
+STOCK_VIDEO_PROVIDERS = env.list("STOCK_VIDEO_PROVIDERS", default=["pexels_video", "pixabay_video"])
 # Per provider: search cache time; calls allowed per API key, all users together ("100/m", "5000/h"; empty: no
 # cap of our own, Doory still pauses a provider when it answers 429 or reports its quota used up); safe search
 # (Unsplash: content_filter=high; Pixabay: safesearch). Unsplash keeps its previous unfiltered default.
@@ -200,8 +222,13 @@ _STOCK_DEFAULTS = {
     "pexels": (3600, True),
     "pixabay": (86400, True),
     "freesound": (86400, False),
+    "pexels_video": (3600, True),
+    "pixabay_video": (86400, True),  # Pixabay asks for results to be cached for 24 h
 }
-_STOCK_RATES = {"freesound": "60/m"}  # Freesound allows 60 calls a minute (and 2000 a day) per key
+_STOCK_RATES = {
+    "freesound": "60/m",  # Freesound allows 60 calls a minute (and 2000 a day) per key
+    "pexels_video": "200/h",  # Pexels' free key: 200 an hour (and 20,000 a month)
+}
 STOCK_PROVIDER_SETTINGS = {
     name: {
         "cache_seconds": env.int(f"STOCK_{name.upper()}_CACHE_SECONDS", default=cache_seconds),
@@ -233,6 +260,7 @@ REST_FRAMEWORK = {
         "oidc": "30/min",  # single sign-on: a sign-in takes one start and one callback
         "upload": "60/min",
         "stock": "60/min",
+        "video_upload": "20/min",  # clips uploaded or imported: each one runs ffmpeg
         "stock_preview": "300/min",  # listening to Freesound previews; searches keep the `stock` budget
         "bulk_fill": "120/min",  # rows created via bulk-fill (REST)
         "bulk_fill_images": "300/min",  # image URLs fetched by bulk-fill (REST and MCP)

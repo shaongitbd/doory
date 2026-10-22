@@ -62,6 +62,7 @@ Packages offering a choice of licences where Doory uses the permissive one:
 | `long` | 5.3.2 |  | Apache-2.0 | https://github.com/dcodeIO/long.js |
 | `lucide-react` | 1.52.0 | `^1.52.0` | ISC | https://github.com/lucide-icons/lucide |
 | `mp4-muxer` | 5.2.2 | `^5.2.2` | MIT | https://github.com/Vanilagy/mp4-muxer |
+| `mp4box` | 2.4.1 | `^2.4.1` | BSD-3-Clause | https://github.com/gpac/mp4box.js |
 | `onnxruntime-common` | 1.30.0 |  | MIT | https://github.com/Microsoft/onnxruntime |
 | `onnxruntime-web` | 1.30.0 | `^1.30.0` | MIT | https://github.com/Microsoft/onnxruntime |
 | `pako` | 2.2.0 |  | (MIT AND Zlib) | https://github.com/nodeca/pako |

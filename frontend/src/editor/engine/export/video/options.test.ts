@@ -43,4 +43,10 @@ describe('video options', () => {
     expect(isValidVideoOptions({ ...defaultVideoOptions('gif'), loops: 70_000 })).toBe(false)
     expect(isValidVideoOptions({ ...defaultVideoOptions('mp4'), pageSeconds: 0 })).toBe(false)
   })
+
+  it('takes blurred bars as a way to fit pages of another shape', () => {
+    expect(readVideoOptions({ format: 'mp4', fit: 'blur' }).fit).toBe('blur')
+    expect(isValidVideoOptions({ ...defaultVideoOptions('mp4'), fit: 'blur' })).toBe(true)
+    expect(readVideoOptions({ format: 'mp4', fit: 'stretch' }).fit).toBe('fit')
+  })
 })

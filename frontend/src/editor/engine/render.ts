@@ -49,6 +49,14 @@ export function renderableObjects(objects: readonly DocObject[]): DocObject[] {
 }
 
 /**
+ * What a still of the page shows: the page as it starts. The later parts of a split video clip only come in when it is
+ * their turn, so they are left out (the part before them shows).
+ */
+export function stillObjects(objects: readonly DocObject[]): DocObject[] {
+  return renderableObjects(objects).filter((o) => o.videoHideBefore !== true)
+}
+
+/**
  * A canvas that draws a page. With a `bleed` the canvas is the page grown by the bleed on every side; the page keeps its
  * coordinates, so the bleed lies at negative ones and callers show it with a viewBox (SVG) or `left`/`top` (bitmap).
  */
@@ -70,7 +78,7 @@ async function buildStaticCanvas(
     skipOffscreen: false,
   })
   const [objects, background] = await Promise.all([
-    deserializeObjects(renderableObjects(page.objects), ctx),
+    deserializeObjects(stillObjects(page.objects), ctx),
     transparent ? Promise.resolve(null) : buildBackground(page.background, frameWidth, frameHeight, (s) => ctx.resolveSrc(s)),
   ])
   installBackground(canvas, background, frameWidth, frameHeight)

@@ -15,6 +15,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import secrets
 import time
 from dataclasses import dataclass
@@ -43,6 +44,7 @@ MAX_ISSUER_LENGTH = 255  # OidcIdentity.issuer
 MAX_EMAIL_LENGTH = 254  # User.email
 SESSION_KEY = "oidc_flows"
 DEFAULT_BUTTON_LABEL = "Sign in with SSO"
+ICON_NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,39}")
 REQUIRED_SETTINGS = ("OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET")
 # Asymmetric algorithms only, and the key type each one needs.
 KEY_TYPES = {
@@ -104,6 +106,13 @@ def enabled() -> bool:
 
 def button_label() -> str:
     return settings.OIDC_BUTTON_LABEL.strip() or DEFAULT_BUTTON_LABEL
+
+
+def button_icon() -> str:
+    """The icon name for the button, or "" (the frontend then draws a key). Only the shape is checked here:
+    the frontend knows which icons exist and treats an unknown name like an empty one."""
+    name = settings.OIDC_BUTTON_ICON.strip().lower()
+    return name if ICON_NAME.fullmatch(name) else ""
 
 
 def redirect_uri() -> str:

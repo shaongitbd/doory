@@ -40,6 +40,7 @@ add a row to the matching section (see [CONTRIBUTING.md](../../CONTRIBUTING.md#d
 | `WEB_PORT` | `8080` | Port the site is published on |
 | `WEB_BIND` | `0.0.0.0` | Interface the port is published on. Use `127.0.0.1` when a reverse proxy on the same host sits in front |
 | `INSTALL_CHROMIUM` | `true` | Build a headless Chromium into the image, needed for [server-side export](image-export.md) (adds about 400 MB) |
+| `INSTALL_FFMPEG` | `true` | Build ffmpeg into the image, needed for [video clips](video.md) (adds about 250 MB) |
 | `INSTALL_IMAGE_OPTIMIZERS` | `true` | Build mozjpeg and oxipng into the image for the built-in [image optimizer](../integrations/image-optimization.md) (adds about 2 MB) |
 | `COMPOSE_PROFILES` | | Optional services to start: `mcp`, `redis`, or both (`mcp,redis`) |
 | `REALTIME_WORKERS` | `1` | Workers of the `realtime` service. Use more than 1 only together with Redis |
@@ -140,6 +141,22 @@ See [image-optimization.md](../integrations/image-optimization.md).
 | `IMAGE_OPTIMIZER_CUSTOM_URL` | | Address of an optimizer that follows the [custom contract](../integrations/image-optimization.md#custom-optimizer-contract) |
 | `IMAGE_OPTIMIZER_CUSTOM_KEY` | | Sent to the custom optimizer as `Authorization: Bearer …`. Empty: no header |
 
+## Video clips
+
+See [video.md](video.md).
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `VIDEO_ENABLED` | `true` | Take video clips (uploads and stock videos). Needs the ffmpeg and ffprobe commands; the Docker image sets it from `INSTALL_FFMPEG` |
+| `FFMPEG_PATH` | `ffmpeg` | The ffmpeg command, or a path to it |
+| `FFPROBE_PATH` | `ffprobe` | The ffprobe command, or a path to it |
+| `MAX_VIDEO_UPLOAD_BYTES` | `209715200` (200 MB) | Largest clip that can be uploaded or imported. Raise nginx's `client_max_body_size` for `/api/v1/assets/` with it |
+| `MAX_VIDEO_DURATION_SECONDS` | `600` | Longest clip, in seconds (the video export's own limit is 10 minutes) |
+| `VIDEO_MAX_CONCURRENCY` | `2` | Clips converted at the same time in each API process |
+| `VIDEO_TRANSCODE_TIMEOUT_SECONDS` | `900` | Time limit for converting one clip |
+| `VIDEO_DOWNLOAD_DEADLINE_SECONDS` | `90` | Time limit for downloading one stock clip |
+| `VIDEO_WORK_DIR` | system temp folder | Where each clip gets its own temporary folder while it is converted |
+
 ## Size presets
 
 See [content.md](content.md#size-presets).
@@ -175,6 +192,7 @@ See [google-sign-in.md](../integrations/google-sign-in.md).
 | `OIDC_CLIENT_ID` | | Client ID of a confidential client registered at the provider, with `SITE_URL/api/v1/auth/oidc/callback/` as its redirect URI |
 | `OIDC_CLIENT_SECRET` | | That client's secret |
 | `OIDC_BUTTON_LABEL` | `Sign in with SSO` | Text of the sign-in button, e.g. `Sign in with Authentik` |
+| `OIDC_BUTTON_ICON` | | Logo on the sign-in button, by name: the file name of an icon in [`frontend/src/assets/sso-icons/`](../../frontend/src/assets/sso-icons/) without `.svg`, e.g. `authentik`, `keycloak`, `authelia`, `pocket-id`, `okta`, `microsoft`, `google`. Empty or unknown: a key icon |
 | `OIDC_SCOPES` | `openid email profile` | Scopes to ask for. Must include `openid` |
 | `OIDC_TRUST_EMAIL` | `false` | Take the provider's word that it has verified an email address: a first sign-in then uses an existing account with the same address (never a staff account), and a new account starts with its address verified. Off, people connect their existing account from Settings, and a new account gets the usual verification email |
 
@@ -187,19 +205,22 @@ See [stock-media.md](../integrations/stock-media.md).
 | `UNSPLASH_ACCESS_KEY` | | API key for the `unsplash` provider |
 | `PEXELS_API_KEY` | | API key for the `pexels` provider |
 | `PIXABAY_API_KEY` | | API key for the `pixabay` provider |
+| `PEXELS_VIDEO_API_KEY` | `PEXELS_API_KEY` | API key for the `pexels_video` provider (stock videos), so clip searches have a quota of their own |
+| `PIXABAY_VIDEO_API_KEY` | `PIXABAY_API_KEY` | API key for the `pixabay_video` provider (stock videos) |
+| `STOCK_VIDEO_PROVIDERS` | `pexels_video,pixabay_video` | Video providers to offer, in tab order. A provider appears only when it has a key and the server [takes video](video.md) |
 | `STOCK_PROVIDERS` | `unsplash,pexels,pixabay` | Providers to offer, in tab order. A provider appears only when its key is set |
 | `STOCK_ALL_PROVIDERS` | all of them | Providers the "All" tab searches |
 | `STOCK_ALL_TIMEOUT_SECONDS` | `4` | How long the "All" tab waits for each provider |
 | `STOCK_DEFAULT_TAB` | `all` | Tab that opens first: `all` or a provider name |
 | `STOCK_LANG_FROM_UI` | `true` | Search in the interface language, where the provider supports it |
 | `STOCK_PIXABAY_IMAGE_TYPE` | `photo` | `photo`, `illustration`, `vector` or `all` |
-| `STOCK_<PROVIDER>_RATE` | `60/m` for freesound | Limit on calls per API key across all users, e.g. `5000/h` or `100/m`. Without it, a provider is paused only when it answers 429 |
-| `STOCK_<PROVIDER>_CACHE_SECONDS` | `3600` (`86400` for pixabay and freesound) | How long search results are cached |
-| `STOCK_<PROVIDER>_SAFESEARCH` | off for unsplash, on for pexels and pixabay | Ask the provider to filter out unsafe results |
+| `STOCK_<PROVIDER>_RATE` | `60/m` for freesound, `200/h` for pexels_video | Limit on calls per API key across all users, e.g. `5000/h` or `100/m`. Without it, a provider is paused only when it answers 429 |
+| `STOCK_<PROVIDER>_CACHE_SECONDS` | `3600` (`86400` for pixabay, pixabay_video and freesound) | How long search results are cached |
+| `STOCK_<PROVIDER>_SAFESEARCH` | off for unsplash, on for the others | Ask the provider to filter out unsafe results |
 | `FREESOUND_API_KEY` | | API key for the Freesound tab in the Audio tool |
 | `FREESOUND_LICENSES` | `cc0` | Licences to offer: `cc0`, or `cc0,by` to also allow CC BY (the editor then lists the credits to publish). Freesound's API terms cover non-commercial use; a commercial service needs an agreement with Freesound first |
 
-`<PROVIDER>` is the provider's name in capitals, e.g. `STOCK_PEXELS_RATE` or `STOCK_FREESOUND_RATE`. Limits and caching only work across
+`<PROVIDER>` is the provider's name in capitals, e.g. `STOCK_PEXELS_RATE`, `STOCK_PEXELS_VIDEO_RATE` or `STOCK_FREESOUND_RATE`. Limits and caching only work across
 workers when they share a cache (`CACHE_URL`).
 
 ## AI image providers

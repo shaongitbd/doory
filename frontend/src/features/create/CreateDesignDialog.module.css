@@ -1,105 +1,30 @@
-.groups {
+.chosen {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  max-height: 52dvh;
-  margin-top: var(--space-4);
-  padding-right: var(--space-2);
-  overflow-y: auto;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.chip {
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
-}
-
-.chip:hover {
-  border-color: var(--color-brand);
-}
-
-.chip[aria-pressed='true'] {
-  color: var(--color-brand-strong);
-  background: var(--color-brand-soft);
-  border-color: var(--color-brand);
-}
-
-.tag {
-  font-weight: 500;
-}
-
-.groupTitle {
-  margin-bottom: var(--space-3);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--color-text-muted);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  flex: 1;
   gap: var(--space-3);
-}
-
-.preset {
-  display: flex;
   align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-3);
-  text-align: left;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+  min-width: 0;
+  margin-right: auto;
 }
 
-.preset:hover {
-  border-color: var(--color-brand);
-  background: var(--color-brand-soft);
-  transform: translateY(-1px);
-}
-
-.icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-brand-soft);
-  color: var(--color-brand-strong);
-}
-
-.text {
+.chosen > span {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.label {
-  font-weight: 600;
+.chosen strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.size {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+.chosen small {
+  color: var(--color-text-subtle);
+}
+
+@media (max-width: 639px) {
+  .chosen > small {
+    display: none;
+  }
 }

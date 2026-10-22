@@ -51,6 +51,7 @@ import { cloneObjects } from '../docOps'
 import { pickFiles } from '../files'
 import { t } from '../../strings'
 import { reidTree } from './arrange'
+import { clipPropsFromAsset, isClip } from '../../clips/model'
 
 export type ShapeKind = 'rect' | 'rounded' | 'ellipse' | 'triangle' | 'polygon' | 'star' | 'diamond' | 'line' | 'arrow' | 'divider' | 'frame'
 
@@ -385,8 +386,12 @@ export class InsertApi {
     const view = this.engine.viewOf(pageId)
     const placeholder = view?.getById(id)
     if (!view || !placeholder) return
-    const url = await this.engine.assets.resolve(ref.url)
-    const img = await createImage({ src: ref.url, url, assetId: ref.id }, new Point(0, 0), { width: 1, height: 1 })
+    // A video clip fills the frame with its poster, and carries the clip.
+    const clip = ref.kind === 'video' && ref.video ? clipPropsFromAsset(ref) : null
+    const src = clip && ref.video ? ref.video.posterUrl : ref.url
+    const url = await this.engine.assets.resolve(src)
+    const img = await createImage({ src, url, assetId: ref.id }, new Point(0, 0), { width: 1, height: 1 })
+    if (clip) img.set(clip)
     const pd = asDory(placeholder)
     const sample = placeholder.type === 'image' ? pd.docSrc : undefined
     const slot = slotOf(placeholder, sample)
@@ -411,7 +416,7 @@ export class InsertApi {
     d.link = pd.link
     d.animation = pd.animation
     d.effects = pd.effects
-    if (pd.filterSpecs && pd.filterSpecs.length > 0) {
+    if (!clip && pd.filterSpecs && pd.filterSpecs.length > 0) {
       d.filterSpecs = pd.filterSpecs
       applyImageFilters(img, pd.filterSpecs)
     }
@@ -423,7 +428,7 @@ export class InsertApi {
     view.canvas.insertAt(Math.max(0, index), img)
     img.setCoords()
     view.selectObjects([img])
-    this.engine.commit(pageId, { label: t.history.addImage })
+    this.engine.commit(pageId, { label: clip ? t.clips.history.fill : t.history.addImage })
   }
 
   /** Replaces the selected image's source keeping its frame (size, position, mask, filters). */
@@ -436,7 +441,7 @@ export class InsertApi {
       if (d.id) await this.fillPlaceholderWith(this.engine.state.activePageId, d.id, ref)
       return
     }
-    if (obj.type !== 'image') return
+    if (obj.type !== 'image' || isClip(obj as unknown as Record<string, unknown>)) return
     const img = obj as FabricImage
     const frameW = img.getScaledWidth()
     const frameH = img.getScaledHeight()

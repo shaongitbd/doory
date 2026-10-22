@@ -14,6 +14,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
 
@@ -610,9 +611,18 @@ def _stream(response: Any, deadline: float) -> Iterator[bytes]:
         yield chunk
 
 
-def download_image(url: str, *, hosts: frozenset[str], max_bytes: int, accept: str = "image/*") -> bytes:
-    """Fetch `url` (https, allow-listed host on every redirect hop) with a byte cap and a deadline."""
-    deadline = time.monotonic() + DOWNLOAD_DEADLINE_SECONDS
+def _download(
+    url: str,
+    *,
+    hosts: frozenset[str],
+    max_bytes: int,
+    accept: str,
+    deadline_seconds: float,
+    write: Callable[[bytes], object],
+) -> int:
+    """Stream `url` (https, allow-listed host on every redirect hop) into `write` with a byte cap and a
+    deadline. Returns the number of bytes written."""
+    deadline = time.monotonic() + deadline_seconds
     current = check_https_host(url, hosts)
     for _ in range(MAX_REDIRECTS + 1):
         try:
@@ -637,15 +647,45 @@ def download_image(url: str, *, hosts: frozenset[str], max_bytes: int, accept: s
             declared = response.headers.get("Content-Length", "")
             if declared.isdigit() and int(declared) > max_bytes:
                 raise PhotoTooLarge("The photo is too large.")
-            buffer = bytearray()
+            written = 0
             try:
                 for chunk in _stream(response, deadline):
-                    buffer.extend(chunk)
-                    if len(buffer) > max_bytes:
+                    written += len(chunk)
+                    if written > max_bytes:
                         raise PhotoTooLarge("The photo is too large.")
+                    write(chunk)
             except requests.RequestException as exc:
                 raise ProviderError("The download was interrupted.") from exc
-            return bytes(buffer)
+            return written
         finally:
             response.close()
     raise ProviderError("Too many redirects.")
+
+
+def download_image(url: str, *, hosts: frozenset[str], max_bytes: int, accept: str = "image/*") -> bytes:
+    """Fetch `url` (https, allow-listed host on every redirect hop) with a byte cap and a deadline."""
+    buffer = bytearray()
+    _download(
+        url,
+        hosts=hosts,
+        max_bytes=max_bytes,
+        accept=accept,
+        deadline_seconds=DOWNLOAD_DEADLINE_SECONDS,
+        write=buffer.extend,
+    )
+    return bytes(buffer)
+
+
+def download_to_file(
+    url: str, target: Path, *, hosts: frozenset[str], max_bytes: int, deadline_seconds: float
+) -> int:
+    """Like `download_image`, but into a file (a clip can be hundreds of megabytes). Returns its size."""
+    with target.open("wb") as out:
+        return _download(
+            url,
+            hosts=hosts,
+            max_bytes=max_bytes,
+            accept="video/*",
+            deadline_seconds=deadline_seconds,
+            write=out.write,
+        )

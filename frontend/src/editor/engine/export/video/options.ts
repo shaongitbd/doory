@@ -8,8 +8,11 @@
 
 export type VideoFormat = 'mp4' | 'webm' | 'gif'
 export type VideoQuality = 'small' | 'balanced' | 'high'
-/** `fit` shows the whole page with bars where its shape differs from the frame; `fill` covers the frame and crops. */
-export type FitMode = 'fit' | 'fill'
+/**
+ * `fit` shows the whole page with bars where its shape differs from the frame, `blur` the same with the page itself,
+ * blurred, in the bars (a horizontal video on a vertical frame, say); `fill` covers the frame and crops.
+ */
+export type FitMode = 'fit' | 'fill' | 'blur'
 /** `design` is the size of the first page; a number is the length of the shorter side of the frame in px (720, 1080 ...). */
 export type Resolution = 'design' | 240 | 360 | 480 | 720 | 1080 | 2160
 
@@ -102,7 +105,7 @@ export function readVideoOptions(raw: unknown, fallbackFormat: VideoFormat = 'mp
     resolution: rules.resolutions.find((r) => r === raw.resolution) ?? base.resolution,
     fps: rules.fps.find((f) => f === raw.fps) ?? base.fps,
     quality: isQuality(raw.quality) ? raw.quality : base.quality,
-    fit: raw.fit === 'fill' ? 'fill' : 'fit',
+    fit: raw.fit === 'fill' || raw.fit === 'blur' ? raw.fit : 'fit',
     audio: typeof raw.audio === 'boolean' ? raw.audio : base.audio,
     loops: typeof loops === 'number' && Number.isInteger(loops) && loops >= 0 && loops <= MAX_LOOPS ? loops : base.loops,
     dither: typeof raw.dither === 'boolean' ? raw.dither : base.dither,
@@ -123,7 +126,7 @@ export function isValidVideoOptions(options: VideoOptions): boolean {
     rules.fps.includes(options.fps) &&
     rules.resolutions.includes(options.resolution) &&
     isQuality(options.quality) &&
-    (options.fit === 'fit' || options.fit === 'fill') &&
+    (options.fit === 'fit' || options.fit === 'fill' || options.fit === 'blur') &&
     Number.isInteger(options.loops) &&
     options.loops >= 0 &&
     options.loops <= MAX_LOOPS &&

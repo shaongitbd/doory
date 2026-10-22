@@ -71,7 +71,7 @@ export function VideoForm({ options, onChange, frame, hasSound, canEncodeSound, 
       {mixedShapes ? (
         <div className={styles.field}>
           <span className={styles.fieldLabel}>{p.fit}</span>
-          <Segmented className={styles.segments} label={p.fit} value={options.fit} onChange={(v: FitMode) => onChange({ fit: v })} options={(['fit', 'fill'] as const).map((m) => ({ value: m, label: p.fitOptions[m] }))} />
+          <Segmented className={styles.segments} label={p.fit} value={options.fit} onChange={(v: FitMode) => onChange({ fit: v })} options={(['fit', 'blur', 'fill'] as const).map((m) => ({ value: m, label: p.fitOptions[m] }))} />
           <p className={styles.hint}>{p.fitHint}</p>
         </div>
       ) : null}

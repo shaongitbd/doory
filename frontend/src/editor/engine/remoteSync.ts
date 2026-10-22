@@ -4,16 +4,17 @@
  * wait, and are merged with what the user did when they commit), and the three-way merge itself.
  */
 import type { DocObject, DocPage } from '@/types/document'
+import { CLIP_TIMING_PROPS } from '../clips/model'
 import { jsonEqual } from './json'
 
 /**
  * Properties a Fabric object can take in place. Anything else (text, sources, filters, effects, geometry that
  * Fabric derives from other properties) rebuilds the object.
  */
-export const IN_PLACE_PROPS: ReadonlySet<string> = new Set(['left', 'top', 'angle', 'scaleX', 'scaleY', 'flipX', 'flipY', 'skewX', 'skewY', 'opacity', 'animation'])
+export const IN_PLACE_PROPS: ReadonlySet<string> = new Set(['left', 'top', 'angle', 'scaleX', 'scaleY', 'flipX', 'flipY', 'skewX', 'skewY', 'opacity', 'animation', ...CLIP_TIMING_PROPS])
 
 /** Properties that are only data on the object (nothing is drawn from them): setting them to nothing removes them. */
-const DATA_PROPS: ReadonlySet<string> = new Set(['animation'])
+const DATA_PROPS: ReadonlySet<string> = new Set(['animation', ...CLIP_TIMING_PROPS])
 
 export function changedKeys(a: DocObject, b: DocObject): string[] {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)])

@@ -10,6 +10,7 @@ import { useEditor, useEditorState, useEditorStateShallow } from '../context'
 import { useLatest } from '../hooks/useLatest'
 import { type FrameRenderer, createFrameRenderer } from '../animation/frameRenderer'
 import { playbackOf, usePlaybackValue } from '../animation/playback'
+import { elementSources } from '../clips/elementSource'
 import { previewLengthMs, previewMultiplier } from '../animation/timelineMath'
 import { getPageSize } from '../engine/pageSizes'
 import { t } from '../strings'
@@ -55,13 +56,21 @@ function Preview({ scrollRef }: PreviewProps) {
     if (!page || !frame) return
     let alive = true
     setStatus('loading')
-    createFrameRenderer(page, size, editor.loadContext, { multiplier })
+    createFrameRenderer(page, size, editor.loadContext, {
+      multiplier,
+      media: elementSources,
+      // A clip's seek landed while the playhead stood still: show its new picture.
+      onMediaFrame: () => {
+        if (!playback.state.playing) rendererRef.current?.render(playback.state.timeMs)
+      },
+    })
       .then((renderer) => {
         if (!alive) {
           renderer.dispose()
           return
         }
         rendererRef.current = renderer
+        renderer.setMediaClock(playback.state.playing, playback.state.speed)
         frame.replaceChildren(renderer.canvas)
         renderer.canvas.setAttribute('aria-hidden', 'true')
         renderer.render(playback.state.timeMs)
@@ -82,6 +91,7 @@ function Preview({ scrollRef }: PreviewProps) {
   useEffect(
     () =>
       playback.subscribe(() => {
+        rendererRef.current?.setMediaClock(playback.state.playing, playback.state.speed)
         rendererRef.current?.render(playback.state.timeMs)
       }),
     [playback],
@@ -153,6 +163,8 @@ function Preview({ scrollRef }: PreviewProps) {
         return
       }
       if (e.key === 'Enter' && inControls) return
+      // S splits the selected video clip at the playhead: what the preview is for.
+      if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey) return
       if (e.key.length === 1 || e.key.startsWith('Arrow') || e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Enter' || e.ctrlKey || e.metaKey) e.preventDefault()
     }
     document.addEventListener('keydown', onKey, true)
