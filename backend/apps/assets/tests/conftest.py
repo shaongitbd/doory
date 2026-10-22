@@ -14,6 +14,12 @@ def _clean_cache():
     cache.clear()
 
 
+@pytest.fixture(autouse=True)
+def _private_video_work_dir(settings, tmp_path):
+    """Clips are worked on (and old work folders swept) in the test's own folder, never the system's."""
+    settings.VIDEO_WORK_DIR = str(tmp_path)
+
+
 @pytest.fixture
 def user(db):
     return User.objects.create_user(email="alice@example.com", password=PASSWORD)
