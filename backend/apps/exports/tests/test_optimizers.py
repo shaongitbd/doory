@@ -437,6 +437,12 @@ def test_kraken_keeps_a_png_lossless_and_its_metadata_when_asked(keys, remote):
     [
         ({"success": False, "message": "Unknown API Key"}, "answered 200: Unknown API Key"),
         ({"success": True, "kraked_url": "http://dl.kraken.io/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://169.254.169.254/latest/meta-data/"}, "no download address"),
+        ({"success": True, "kraked_url": "https://10.0.0.7:8443/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://dl.kraken.io.example.com/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://evilkraken.io/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://dl.kraken.io:8443/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://user@dl.kraken.io/a.png"}, "no download address"),
     ],
 )
 def test_kraken_failures_leave_the_file_with_a_note(keys, remote, answer, warned):
