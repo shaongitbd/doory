@@ -111,7 +111,7 @@ export function ImageSection() {
           <Crop size={18} aria-hidden="true" />
         </ToolButton>
       )}
-      {isUpscaleSupported() ? (
+      {isUpscaleSupported() && editor.style.canUpscale() ? (
         <ToolButton label={t.toolbar.upscale} featured testId="ed-upscale" onClick={() => editor.openDialog('upscale')}>
           {I.upscale}
           <span className={ed.toolText}>{t.toolbar.upscale}</span>

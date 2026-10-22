@@ -461,13 +461,22 @@ export class StyleApi {
   }
 
   /**
+   * Whether the selected picture can be upscaled: a raster picture, not an SVG (the worker cannot
+   * decode one, and a vector has no pixels to add). Video clips are never among `images()`.
+   */
+  canUpscale(): boolean {
+    const img = this.images()[0]
+    return img !== undefined && !isSvgSource(asDory(img).docSrc ?? img.getSrc())
+  }
+
+  /**
    * Increases the resolution of the whole selected photo with the pure-code upscaler and swaps the
-   * result in, keeping the frame and the visible crop. Resolves `false` when cancelled or when the
-   * selection moved while it ran.
+   * result in, keeping the frame and the visible crop. Resolves `false` when cancelled, when the
+   * selection moved while it ran, or when the selection is an SVG or a video clip.
    */
   async upscale(options: { scale: number; method?: UpscaleMethod; detail?: number }, onProgress?: UpscaleProgress, signal?: AbortSignal): Promise<boolean> {
     const img = this.images()[0]
-    if (!img || this.engine.readOnly || asDory(img).locked || signal?.aborted) return false
+    if (!img || !this.canUpscale() || this.engine.readOnly || asDory(img).locked || signal?.aborted) return false
     const source = this.selectedImageSource()
     if (!source) return false
     const stale = (): boolean => signal?.aborted === true || this.images()[0] !== img
