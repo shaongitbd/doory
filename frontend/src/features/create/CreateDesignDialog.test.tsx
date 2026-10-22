@@ -150,6 +150,9 @@ describe('Create a design dialog', () => {
     expect(names()).toEqual(['Card', 'Platform A Square post'])
     await userEvent.click(screen.getAllByRole('button', { name: 'Remove from your sizes' })[0])
     expect(names()).toEqual(['Platform A Square post'])
+    // With none left, it says how to add one.
+    await userEvent.click(screen.getByRole('button', { name: 'Remove from your sizes' }))
+    expect(screen.getByText(/choose the star in the corner of its card/)).toBeInTheDocument()
     localStorage.removeItem('doory.sizeChoices')
   })
 

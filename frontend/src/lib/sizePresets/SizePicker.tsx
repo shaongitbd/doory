@@ -155,7 +155,13 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
             {entry === CUSTOM && !searching ? (
               custom
             ) : shown.length === 0 ? (
-              <p className={styles.empty}>{searching ? 'No size matches. Try another word, or enter a custom size.' : 'No size of this shape here.'}</p>
+              <p className={styles.empty}>
+                {searching
+                  ? 'No size matches. Try another word, or enter a custom size.'
+                  : entry === MINE && mine.length === 0
+                    ? 'No sizes here yet. To keep a size here, choose the star in the corner of its card.'
+                    : 'No size of this shape here.'}
+              </p>
             ) : (
               shown.map((block) => (
                 <div key={block.key} className={styles.block}>
