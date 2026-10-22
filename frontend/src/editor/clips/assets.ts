@@ -56,16 +56,18 @@ export function useVideoInfo(service: VideoService | null | undefined): VideoInf
 export async function whenProcessed(service: VideoService, ref: AssetRef, signal?: AbortSignal, intervalMs = POLL_MS): Promise<AssetRef> {
   let current = ref
   while (current.video?.status === 'processing') {
+    // Checked on every round: the signal may have gone while the server was being asked.
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, intervalMs)
-      signal?.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer)
-          reject(new DOMException('Aborted', 'AbortError'))
-        },
-        { once: true },
-      )
+      const onAbort = (): void => {
+        clearTimeout(timer)
+        reject(new DOMException('Aborted', 'AbortError'))
+      }
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort)
+        resolve()
+      }, intervalMs)
+      signal?.addEventListener('abort', onAbort, { once: true })
     })
     current = await service.get(ref.id)
   }
