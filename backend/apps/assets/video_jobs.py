@@ -2,8 +2,8 @@
 
 A web-ready clip (see `video.VideoInfo.web_ready`) is rewrapped, given its stills and stored within the
 request: a second or two. Anything else is registered at once with `status=processing`, holding its source
-size against the owner's quota, and converted by a small pool of threads in this process
-(`VIDEO_MAX_CONCURRENCY`). The editor polls the asset until it turns `ready` or `failed`.
+size against the owner's quota (a clip that fails stops counting), and converted by a small pool of threads
+in this process (`VIDEO_MAX_CONCURRENCY`). The editor polls the asset until it turns `ready` or `failed`.
 
 There is no job queue to survive a restart: a conversion that dies with its process is noticed by its age
 (`fail_stale`, called when the owner lists or opens their uploads, and by `manage.py sweep_video_jobs`) and
@@ -207,8 +207,9 @@ def submit(asset_id, source: Path, info: video.VideoInfo) -> None:
 
 
 def _fail(asset_id, message: str) -> None:
+    # A failed clip keeps no files, so it no longer counts against the quota.
     Asset.objects.filter(pk=asset_id, status=Asset.Status.PROCESSING).update(
-        status=Asset.Status.FAILED, error=message[:255], updated_at=timezone.now()
+        status=Asset.Status.FAILED, error=message[:255], size=0, updated_at=timezone.now()
     )
 
 
@@ -238,5 +239,5 @@ def fail_stale(queryset=None) -> int:
     rows = Asset.objects.all() if queryset is None else queryset
     cutoff = timezone.now() - timedelta(seconds=limit)
     return rows.filter(status=Asset.Status.PROCESSING, updated_at__lt=cutoff).update(
-        status=Asset.Status.FAILED, error=INTERRUPTED, updated_at=timezone.now()
+        status=Asset.Status.FAILED, error=INTERRUPTED, size=0, updated_at=timezone.now()
     )

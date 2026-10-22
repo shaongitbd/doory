@@ -14,6 +14,7 @@ from apps.assets.models import Asset
 from apps.assets.services import looks_like_media
 
 from .audio_helpers import webm_bytes
+from .test_video_probe import info as described_clip
 from .video_helpers import clip, needs_ffmpeg
 
 URL = "/api/v1/assets/"
@@ -159,13 +160,37 @@ class TestConvertedClips:
         assert not Asset.objects.exists()
 
 
+def processing(owner, **fields) -> Asset:
+    return Asset.objects.create(owner=owner, kind="video", mime="video/mp4", status="processing", **fields)
+
+
+@pytest.mark.django_db
+class TestFailed:
+    def test_a_failed_conversion_stops_counting_against_the_quota(self, api, user, tmp_path, monkeypatch):
+        asset = processing(user, size=5000)
+
+        def broken(source, info):
+            raise video.VideoError("The video could not be converted.")
+
+        monkeypatch.setattr(video_jobs, "convert", broken)
+        monkeypatch.setattr(video_jobs.connections, "close_all", lambda: None)
+        workdir = tmp_path / "doory-video-x"
+        workdir.mkdir()
+        video_jobs.run(asset.pk, workdir / "source", described_clip(codec_name="hevc"))
+        asset.refresh_from_db()
+        assert (asset.status, asset.size, asset.error) == ("failed", 0, "The video could not be converted.")
+        assert api.get(f"{URL}usage/").json()["used_bytes"] == 0
+        assert not workdir.exists()
+
+
 @pytest.mark.django_db
 class TestStale:
     def test_an_interrupted_conversion_turns_failed_when_looked_at(self, api, user):
-        asset = Asset.objects.create(owner=user, kind="video", mime="video/mp4", status="processing")
+        asset = processing(user, size=5000)
         Asset.objects.filter(pk=asset.pk).update(updated_at=timezone.now() - timedelta(hours=2))
         body = api.get(f"{URL}{asset.pk}/").json()
         assert body["status"] == "failed" and body["error"] == video_jobs.INTERRUPTED
+        assert Asset.objects.get(pk=asset.pk).size == 0  # no longer held against the quota
 
     def test_a_recent_one_keeps_processing(self, api, user):
         asset = Asset.objects.create(owner=user, kind="video", mime="video/mp4", status="processing")
