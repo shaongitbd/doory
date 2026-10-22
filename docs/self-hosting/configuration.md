@@ -171,7 +171,7 @@ See [google-sign-in.md](../integrations/google-sign-in.md).
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| `OIDC_ISSUER` | | Issuer URL of your identity provider, e.g. `https://auth.example.com/application/o/doory/`. Sign-in is on when this, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are all set |
+| `OIDC_ISSUER` | | Issuer URL of your identity provider, e.g. `https://auth.example.com/application/o/doory/`. Sign-in is on when this, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are all set and `SITE_URL` is an `https://` address (`http://` works only with `DJANGO_DEBUG` on). `manage.py check` says what keeps it off |
 | `OIDC_CLIENT_ID` | | Client ID of a confidential client registered at the provider, with `SITE_URL/api/v1/auth/oidc/callback/` as its redirect URI |
 | `OIDC_CLIENT_SECRET` | | That client's secret |
 | `OIDC_BUTTON_LABEL` | `Sign in with SSO` | Text of the sign-in button, e.g. `Sign in with Authentik` |
