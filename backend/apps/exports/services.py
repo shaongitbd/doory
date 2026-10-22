@@ -390,16 +390,34 @@ def _late(deadline: float | None) -> bool:
     return deadline is not None and time.monotonic() >= deadline
 
 
-def _convert(png: bytes, encoding: Encoding, *, deadline: float | None = None) -> Converted:
+def _needs_pixels(encoding: Encoding) -> bool:
+    return encoding.format != "png" or bool(encoding.png_colors)  # a PNG as drawn is not decoded at all
+
+
+def _rgba(source: Image.Image) -> tuple[Image.Image, dict]:
+    """The pixels of an opened PNG as RGBA, and the metadata it carried (which goes in only on request,
+    `_metadata`)."""
+    image, info = source.convert("RGBA"), dict(source.info)
+    image.info = {}
+    return image, info
+
+
+def _convert(
+    png: bytes,
+    encoding: Encoding,
+    *,
+    deadline: float | None = None,
+    pixels: tuple[Image.Image, dict] | None = None,
+) -> Converted:
     """PNG as drawn (or with fewer colours); JPG flattened on white (no alpha); WebP and AVIF with alpha only
     for a transparent export. `auto` makes every format that fits (no AVIF above `AVIF_FAST_PIXELS`) and
     keeps the smallest file. Past
-    `deadline`, a `max_bytes` search and `auto` stop with the files made so far."""
-    image, info = None, {}
-    if encoding.format != "png" or encoding.png_colors:  # a PNG as drawn is not decoded at all
+    `deadline`, a `max_bytes` search and `auto` stop with the files made so far. `pixels`: `png` decoded
+    already (`_rgba`)."""
+    image, info = pixels or (None, {})
+    if image is None and _needs_pixels(encoding):
         with Image.open(io.BytesIO(png)) as source:
-            image, info = source.convert("RGBA"), dict(source.info)
-        image.info = {}  # metadata goes in only on request (`_metadata`)
+            image, info = _rgba(source)
     if encoding.format != AUTO:
         return _convert_to(png, image, info, encoding, deadline)
     large = image.width * image.height > AVIF_FAST_PIXELS
@@ -824,8 +842,9 @@ def optimize_image(
     )
     optimizer = optimizers.choose(optimize)
     unreadable = InvalidExport("invalid_image", "The file is not a readable PNG image.")
+    broken = (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError, SyntaxError)
     try:
-        with Image.open(io.BytesIO(png)) as image:
+        with Image.open(io.BytesIO(png)) as image:  # its header only: the pixels are decoded in the slot
             if image.format != "PNG":
                 raise InvalidExport("invalid_image", "Send the image as a PNG.")
             width, height = image.size
@@ -835,13 +854,15 @@ def optimize_image(
                     f"{width} x {height} px is more than this server converts "
                     f"({settings.EXPORT_IMAGE_MAX_PIXELS} pixels).",
                 )
-            image.load()  # a truncated or broken file fails here, not halfway through an optimizer
-    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError, SyntaxError) as exc:
+    except broken as exc:
         raise unreadable from exc
     with render_slot(owner):
         try:
-            converted = _convert(png, encoding, deadline=deadline)
-        except (OSError, ValueError) as exc:
+            with Image.open(io.BytesIO(png)) as image:
+                image.load()  # decoded once: a truncated or broken file fails here, not in an optimizer
+                pixels = _rgba(image) if _needs_pixels(encoding) else None
+            converted = _convert(png, encoding, deadline=deadline, pixels=pixels)
+        except broken as exc:
             raise unreadable from exc
         converted = _optimized(
             converted, optimizer, encoding, source=png, width=width, height=height, deadline=deadline

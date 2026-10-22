@@ -5,10 +5,11 @@ import json
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.exports import optimizers
+from apps.exports import optimizers, services
+from apps.exports.exceptions import ExportBusy
 from apps.exports.renderer import render_slot
 
 from .helpers import FakeOptimizer
@@ -143,3 +144,22 @@ def test_a_busy_account_gets_a_busy_answer(client, user, optimizer):
     with render_slot(user.pk):
         response = client.post(URL, {"file": upload(drawn())})
     assert response.status_code == 503 and response.json()["error"]["code"] == "export_busy"
+
+
+@pytest.mark.parametrize("fmt", ["png", "webp"])
+def test_the_png_is_decoded_once_while_holding_the_render_slot(monkeypatch, fmt):
+    decodes = []
+    load = PngImagePlugin.PngImageFile.load
+
+    def watched(image):
+        if image.tile:  # pixels still to decode
+            try:
+                with render_slot("me"):
+                    decodes.append("outside the slot")
+            except ExportBusy:
+                decodes.append("in the slot")
+        return load(image)
+
+    monkeypatch.setattr(PngImagePlugin.PngImageFile, "load", watched)
+    result = services.optimize_image(drawn(), format=fmt, optimize=False, owner="me")
+    assert result.format == fmt and decodes == ["in the slot"]
