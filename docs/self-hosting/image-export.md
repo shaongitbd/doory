@@ -61,8 +61,12 @@ The REST endpoint (a JSON body) and the MCP tool `export_design` take the same o
 | `resolution`, `fps`, `fit`, `sound`, `loop`, `dither`, `page_seconds` | | Video only: see [Video](#video) |
 
 Each page is drawn on its own, one after another, so a ZIP of many pages takes as long as that many exports.
-Each page after the first counts once more against the `export` rate (30 a minute per user), and over MCP
-against `MCP_CALLS_PER_MINUTE` too. `EXPORT_IMAGE_MAX_PAGES` limits the pages one export may draw. Over MCP,
+The whole export, drawing, converting and optimizing every page, must be done within
+`EXPORT_IMAGE_TIMEOUT_SECONDS` (100 s): each page's render gets at most `EXPORT_TIMEOUT_SECONDS` (30 s) of what
+is left, a `max_bytes` search and `auto` keep the best file made by then, an optimizer that runs out of time
+leaves its file unoptimized, and a page that can't start in time stops the export with `export_timeout` (504).
+The options are checked for every page before anything is drawn. Each page after the first counts once more
+against the `export` rate (30 a minute per user), and over MCP against `MCP_CALLS_PER_MINUTE` too. `EXPORT_IMAGE_MAX_PAGES` limits the pages one export may draw. Over MCP,
 AVIF images, SVG files, PDFs and ZIPs are always sent as a download link, because clients can't show them
 inline.
 
@@ -146,8 +150,9 @@ images are deleted each time a new one is stored. On a quiet site, `manage.py pu
 - **Chromium crashes in Docker:** the services set `shm_size: 512m`; keep it. For the `mcp` service, raise
   `MCP_MEM_LIMIT` if it runs out of memory.
 - **Exports time out:** raise `EXPORT_TIMEOUT_SECONDS`, or lower `EXPORT_MAX_CONCURRENCY` on small servers.
-  Exports of several pages run in one request: keep `EXPORT_IMAGE_MAX_PAGES` times the time of one export under
-  the web server's worker timeout (120 s in the Docker image).
+  Exports of several pages run in one request and stop after `EXPORT_IMAGE_TIMEOUT_SECONDS`: export fewer pages
+  at once, or a smaller size. Keep `EXPORT_IMAGE_TIMEOUT_SECONDS` under the web server's worker timeout (120 s
+  in the Docker image).
 - **Image export returns blank pages or 404s:** `EXPORT_RENDER_PAGE_URL` must point to the *built* frontend, at an
   address the API container can reach.
 - **SVG and PDF fail with 503 while images work:** the frontend is older than the API; deploy both from the same

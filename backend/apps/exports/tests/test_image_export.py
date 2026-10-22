@@ -2,6 +2,8 @@
 
 import io
 import json
+import time
+from types import SimpleNamespace
 
 import pytest
 from django.core.files.base import ContentFile
@@ -10,7 +12,13 @@ from PIL import Image
 from apps.accounts.models import User
 from apps.designs.tests.helpers import make_design, make_doc
 from apps.exports import optimizers, services
-from apps.exports.exceptions import ExportBusy, ImageExportDisabled, InvalidExport, PayloadTooLarge
+from apps.exports.exceptions import (
+    ExportBusy,
+    ExportTimeout,
+    ImageExportDisabled,
+    InvalidExport,
+    PayloadTooLarge,
+)
 from apps.exports.filenames import slug
 from apps.exports.renderer import RenderResult, render_slot
 from apps.fonts.models import FontFamily, FontVariant
@@ -42,8 +50,10 @@ def renders(monkeypatch) -> list[dict]:
     """Replace the browser with a stub that records the payload and answers with `drawn_png()`."""
     calls: list[dict] = []
 
-    def fake_render_image(payload, *, render_url):
-        calls.append({"payload": json.loads(json.dumps(payload)), "render_url": render_url})
+    def fake_render_image(payload, *, render_url, timeout=None):
+        calls.append(
+            {"payload": json.loads(json.dumps(payload)), "render_url": render_url, "timeout": timeout}
+        )
         page = payload["document"]["pages"][payload["page"]]
         return RenderResult(
             data=drawn_png(),
@@ -229,9 +239,7 @@ def test_quality_changes_the_lossy_formats(design, renders, monkeypatch):
     monkeypatch.setattr(
         services,
         "render_image",
-        lambda payload, render_url: RenderResult(
-            data=out.getvalue(), mime="image/png", width=200, height=100
-        ),
+        lambda payload, **kwargs: RenderResult(data=out.getvalue(), mime="image/png", width=200, height=100),
     )
     for fmt in ("jpg", "webp"):
         low = services.export_image(design, format=fmt, quality=10).data
@@ -253,7 +261,7 @@ def drawing(monkeypatch, png: bytes, width=200, height=100) -> None:
     monkeypatch.setattr(
         services,
         "render_image",
-        lambda payload, render_url: RenderResult(data=png, mime="image/png", width=width, height=height),
+        lambda payload, **kwargs: RenderResult(data=png, mime="image/png", width=width, height=height),
     )
 
 
@@ -522,7 +530,7 @@ def test_warnings_of_several_pages_name_the_page(user, monkeypatch):
     monkeypatch.setattr(
         services,
         "render_image",
-        lambda payload, render_url: RenderResult(
+        lambda payload, **kwargs: RenderResult(
             data=drawn_png(), mime="image/png", placeholders=1, page_index=payload["page"]
         ),
     )
@@ -566,6 +574,85 @@ def test_a_design_too_large_to_draw_is_refused_before_the_extra_pages_are_charge
     assert charged == [] and renders == []
 
 
+@pytest.fixture
+def clock(monkeypatch) -> SimpleNamespace:
+    """The services' `time.monotonic()`, moved on by hand."""
+    now = SimpleNamespace(value=1000.0)
+    monkeypatch.setattr(services, "time", SimpleNamespace(monotonic=lambda: now.value))
+    return now
+
+
+def test_the_pages_of_one_export_share_one_deadline(user, monkeypatch, settings, clock):
+    settings.EXPORT_IMAGE_TIMEOUT_SECONDS = 10
+    settings.EXPORT_TIMEOUT_SECONDS = 30
+    timeouts = []
+
+    def slow(payload, *, render_url, timeout):
+        timeouts.append(timeout)
+        clock.value += 6
+        return RenderResult(data=drawn_png(), mime="image/png", page_index=payload["page"])
+
+    monkeypatch.setattr(services, "render_image", slow)
+    with pytest.raises(ExportTimeout) as raised:
+        services.export_images(make_design(user, document=make_doc(pages=3)), pages="all")
+    assert timeouts == [10, 4]  # the second page gets what is left; the third is not drawn
+    assert "took longer than 10 s" in str(raised.value.detail)
+
+
+def test_a_render_cut_short_by_the_deadline_says_so(design, monkeypatch, settings, clock):
+    settings.EXPORT_IMAGE_TIMEOUT_SECONDS = 100
+
+    def stuck(payload, *, render_url, timeout):
+        clock.value += timeout + 3
+        raise ExportTimeout
+
+    monkeypatch.setattr(services, "render_image", stuck)
+    with pytest.raises(ExportTimeout) as raised:
+        services.export_image(design)  # 33 s: its own time limit, not the export's
+    assert "took longer than" not in str(raised.value.detail)
+    with pytest.raises(ExportTimeout) as raised:
+        services.export_image(design, deadline=clock.value + 5)
+    assert "took longer than 100 s" in str(raised.value.detail)
+
+
+def test_a_max_bytes_search_stops_at_the_deadline(clock):
+    encoded = []
+
+    def encode(quality):
+        encoded.append(quality)
+        clock.value += 1
+        return b"x" * 1000
+
+    data, quality = services._fit(encode, 90, 10, b"x" * 2000, clock.value + 2)
+    assert encoded == [45, 22] and (len(data), quality) == (1000, 45)
+
+
+def test_auto_keeps_the_files_made_by_the_deadline(design, renders, monkeypatch, clock):
+    convert_to = services._convert_to
+
+    def slow(*args):
+        clock.value += 5
+        return convert_to(*args)
+
+    monkeypatch.setattr(services, "_convert_to", slow)
+    result = services.export_image(design, format="auto", deadline=clock.value + 3)
+    assert list(result.options_used["compared"]) == ["png"]
+
+
+def test_the_optimizer_stops_at_the_export_deadline(design, renders, optimizer, monkeypatch):
+    seen = []
+    monkeypatch.setattr(optimizer, "shrink", lambda job, deadline: seen.append(deadline) or job.data)
+    soon = time.monotonic() + 5
+    services.export_image(design, optimize=True, deadline=soon)
+    assert seen == [soon]
+    job = optimizers.Job(drawn_png(), "png", 40, 20)
+    late = optimizers.optimize(optimizer, job, deadline=time.monotonic() - 1)
+    assert late.data == job.data and late.warnings == (
+        "Fake could not optimize the file (It took too long.); it is not optimized.",
+    )
+    assert len(seen) == 1
+
+
 def test_bad_pages_are_refused_before_anything_is_drawn(design, renders):
     with pytest.raises(InvalidExport):
         services.export_images(design, pages=[0, 7])
@@ -576,7 +663,7 @@ def test_stand_ins_and_missing_fonts_are_warnings_not_errors(design, monkeypatch
     monkeypatch.setattr(
         services,
         "render_image",
-        lambda payload, render_url: RenderResult(
+        lambda payload, **kwargs: RenderResult(
             data=drawn_png(), mime="image/png", placeholders=2, missing_fonts=("Gone Sans",)
         ),
     )

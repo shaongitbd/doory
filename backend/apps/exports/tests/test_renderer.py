@@ -291,6 +291,9 @@ def test_the_image_worker_gets_the_render_page_and_the_payload_from_a_file(use_w
     assert "http://allowed.test:8000" in seen["allowed_origins"]
     assert seen["path_prefixes"] == ["/media/", "/static/"]
     assert "html_path" not in seen and "pdf_path" not in seen
+    assert seen["timeout_s"] == 30
+    renderer.render_image({"document": {}, "page": 0}, render_url=RENDER_URL, timeout=7.5)
+    assert json.loads((tmp_path / "seen.json").read_text())["timeout_s"] == 7.5
 
 
 @pytest.mark.parametrize("code", ["invalid_document", "page_not_found", "invalid_options"])

@@ -16,6 +16,7 @@ import json
 import logging
 import math
 import re
+import time
 import zipfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
@@ -36,6 +37,7 @@ from . import optimizers
 from .exceptions import (
     ExportDisabled,
     ExportFailed,
+    ExportTimeout,
     ExportUnavailable,
     ImageExportDisabled,
     InvalidExport,
@@ -367,23 +369,50 @@ def font_manifest(page: dict | Sequence[dict], owner) -> list[dict[str, Any]]:
     return json.loads(json.dumps(FontFamilySerializer([*uploaded, *catalogue], many=True).data))
 
 
-def _convert(png: bytes, encoding: Encoding) -> Converted:
+def _deadline() -> float:
+    """When an image export (all its pages) or a conversion must be done (`time.monotonic()`)."""
+    return time.monotonic() + settings.EXPORT_IMAGE_TIMEOUT_SECONDS
+
+
+def _time_left(deadline: float) -> float:
+    """Seconds until `deadline`; ExportTimeout once it has passed."""
+    left = deadline - time.monotonic()
+    if left <= 0:
+        raise ExportTimeout(
+            f"The export took longer than {settings.EXPORT_IMAGE_TIMEOUT_SECONDS} s and was stopped. Export "
+            "fewer pages at once, or a smaller size."
+        )
+    return left
+
+
+def _late(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() >= deadline
+
+
+def _convert(png: bytes, encoding: Encoding, *, deadline: float | None = None) -> Converted:
     """PNG as drawn (or with fewer colours); JPG flattened on white (no alpha); WebP and AVIF with alpha only
-    for a transparent export. `auto` makes every format that fits and keeps the smallest file."""
+    for a transparent export. `auto` makes every format that fits and keeps the smallest file. Past
+    `deadline`, a `max_bytes` search and `auto` stop with the files made so far."""
     image, info = None, {}
     if encoding.format != "png" or encoding.png_colors:  # a PNG as drawn is not decoded at all
         with Image.open(io.BytesIO(png)) as source:
             image, info = source.convert("RGBA"), dict(source.info)
         image.info = {}  # metadata goes in only on request (`_metadata`)
     if encoding.format != AUTO:
-        return _convert_to(png, image, info, encoding)
+        return _convert_to(png, image, info, encoding, deadline)
     formats = [fmt for fmt in image_formats() if not (fmt == "jpg" and encoding.transparent)]
-    tried = [_convert_to(png, image, info, replace(encoding, format=fmt)) for fmt in formats]
+    tried: list[Converted] = []
+    for fmt in formats:
+        if tried and _late(deadline):
+            break
+        tried.append(_convert_to(png, image, info, replace(encoding, format=fmt), deadline))
     best = min(tried, key=lambda converted: len(converted.data))
     return replace(best, options=best.options | {"compared": {c.format: len(c.data) for c in tried}})
 
 
-def _convert_to(png: bytes, image: Image.Image | None, info: dict, encoding: Encoding) -> Converted:
+def _convert_to(
+    png: bytes, image: Image.Image | None, info: dict, encoding: Encoding, deadline: float | None = None
+) -> Converted:
     fmt = encoding.format
     if fmt == "png":
         return _to_png(png, image, info, encoding)
@@ -410,7 +439,7 @@ def _convert_to(png: bytes, image: Image.Image | None, info: dict, encoding: Enc
     data, quality = encode(encoding.quality), encoding.quality
     warnings: tuple[str, ...] = ()
     if encoding.max_bytes is not None and len(data) > encoding.max_bytes:
-        data, quality = _fit(encode, encoding.quality, encoding.max_bytes, data)
+        data, quality = _fit(encode, encoding.quality, encoding.max_bytes, data, deadline)
         if len(data) > encoding.max_bytes:
             warnings = (
                 f"Even at quality {quality} the {fmt.upper()} is {len(data)} bytes, more than max_bytes "
@@ -419,12 +448,14 @@ def _convert_to(png: bytes, image: Image.Image | None, info: dict, encoding: Enc
     return Converted(data, fmt, options | {"quality": quality}, warnings)
 
 
-def _fit(encode, quality: int, max_bytes: int, first: bytes) -> tuple[bytes, int]:
+def _fit(
+    encode, quality: int, max_bytes: int, first: bytes, deadline: float | None = None
+) -> tuple[bytes, int]:
     """The highest quality below `quality` whose file is at most `max_bytes` (a binary search, at most seven
-    encodes), else the smallest file tried."""
+    encodes, none after `deadline`), else the smallest file tried."""
     fitting, smallest = None, (first, quality)
     low, high = 1, quality - 1
-    while low <= high:
+    while low <= high and not _late(deadline):
         middle = (low + high) // 2
         data = encode(middle)
         if len(data) <= max_bytes:
@@ -444,9 +475,11 @@ def _optimized(
     source: bytes,
     width: int,
     height: int,
+    deadline: float | None = None,
 ) -> Converted:
-    """`converted` made smaller by `optimizer` (None: as it is). The options say which optimizer ran and how
-    large the file was before; a `max_bytes` warning goes when the optimized file fits after all."""
+    """`converted` made smaller by `optimizer` (None: as it is), stopped at `deadline`. The options say which
+    optimizer ran and how large the file was before; a `max_bytes` warning goes when the optimized file fits
+    after all."""
     if optimizer is None:
         return converted
     result = optimizers.optimize(
@@ -462,6 +495,7 @@ def _optimized(
             progressive=encoding.progressive,
             source=source,
         ),
+        deadline=deadline,
     )
     fits = encoding.max_bytes is not None and len(result.data) <= encoding.max_bytes
     return Converted(
@@ -624,6 +658,7 @@ def export_image(
     srgb: bool = True,
     progressive: bool = False,
     optimize: bool | str = False,
+    deadline: float | None = None,
 ) -> ImageResult:
     """Draw one page of `design` (its live editor state when it is open, else the saved document) as PNG, JPG,
     WebP or AVIF, or `auto`: the smallest of those. `page` is an index or a page id (default: the first page);
@@ -633,8 +668,12 @@ def export_image(
     original); with `max_bytes`, JPG, WebP and AVIF are made at the highest quality up to `quality` that fits.
     `png_colors` (2-256) makes a palette PNG when that is smaller. `strip_metadata` and `srgb` leave the drawn
     PNG's metadata and colour profile out; `progressive` is for JPG. `optimize` makes the file smaller
-    afterwards: True (the server's default optimizer) or an optimizer's id (`apps.exports.optimizers`). Raises
-    `InvalidExport`, `PayloadTooLarge` and the `Export*` exceptions."""
+    afterwards: True (the server's default optimizer) or an optimizer's id (`apps.exports.optimizers`).
+
+    Drawing, converting and optimizing are done by `deadline` (`time.monotonic()`; default: in
+    `EXPORT_IMAGE_TIMEOUT_SECONDS`), else ExportTimeout. Raises `InvalidExport`, `PayloadTooLarge` and the
+    `Export*` exceptions."""
+    deadline = _deadline() if deadline is None else deadline
     encoding, optimizer, scale = _image_options(
         format=format,
         quality=quality,
@@ -661,15 +700,29 @@ def export_image(
         "fonts": font_manifest(page_obj, design.owner),
     }
     with render_slot(design.owner_id):
-        result = render_image(payload, render_url=settings.EXPORT_RENDER_PAGE_URL)
+        try:
+            result = render_image(
+                payload,
+                render_url=settings.EXPORT_RENDER_PAGE_URL,
+                timeout=min(settings.EXPORT_TIMEOUT_SECONDS, _time_left(deadline)),
+            )
+        except ExportTimeout:
+            _time_left(deadline)  # when the whole export ran out of time, say so
+            raise
         # Converting (AVIF, a `max_bytes` search) and optimizing may take as long as drawing: keep the slot.
         try:
-            converted = _convert(result.data, encoding)
+            converted = _convert(result.data, encoding, deadline=deadline)
         except (OSError, ValueError) as exc:
             logger.error("Image export: the render page sent an unreadable PNG (%s)", exc)
             raise ExportFailed from exc
         converted = _optimized(
-            converted, optimizer, encoding, source=result.data, width=result.width, height=result.height
+            converted,
+            optimizer,
+            encoding,
+            source=result.data,
+            width=result.width,
+            height=result.height,
+            deadline=deadline,
         )
     warnings = _drawing_warnings(result.placeholders, result.missing_fonts)
     warnings.extend(converted.warnings)
@@ -749,7 +802,9 @@ def optimize_image(
     """Convert a PNG the browser drew as `export_image` converts the PNG the server drew (same options), then
     optimize it. For browser downloads: AVIF, WebP where the browser can't make it, and the optimizers. The
     image must be a PNG of at most `EXPORT_IMAGE_MAX_PIXELS` (Pillow's decompression-bomb limit stays on);
-    one conversion holds a render slot of `owner`. Raises `InvalidExport` and `ExportBusy`."""
+    one conversion holds a render slot of `owner`, and stops searching (`max_bytes`, `auto`) and optimizing
+    after `EXPORT_IMAGE_TIMEOUT_SECONDS`. Raises `InvalidExport` and `ExportBusy`."""
+    deadline = _deadline()
     encoding = _encoding(
         format,
         quality,
@@ -778,10 +833,12 @@ def optimize_image(
         raise unreadable from exc
     with render_slot(owner):
         try:
-            converted = _convert(png, encoding)
+            converted = _convert(png, encoding, deadline=deadline)
         except (OSError, ValueError) as exc:
             raise unreadable from exc
-        converted = _optimized(converted, optimizer, encoding, source=png, width=width, height=height)
+        converted = _optimized(
+            converted, optimizer, encoding, source=png, width=width, height=height, deadline=deadline
+        )
     options = converted.options
     logger.info(
         "Image optimize: %s %dx%d, %d byte(s) in, %d out, optimizer=%s",
@@ -860,7 +917,8 @@ def export_images(
     for every page, and before anything is drawn, `charge` is called with the number of pages after the first
     (to count them against a rate limit), so a request that is refused costs no more than one. The
     files are named by `filenames.page_filename` in `filename_style` (default `EXPORT_FILENAME_STYLE`), the
-    ZIP after the design's title.
+    ZIP after the design's title. All pages are done within one `EXPORT_IMAGE_TIMEOUT_SECONDS`, else
+    ExportTimeout.
 
     The formats svg, pdf and pdf-print go to `export_document` with `bleed_mm` and `crop_marks` (which
     images leave out); the image options are not used for them. `cmyk` is refused for every format. The
@@ -901,7 +959,8 @@ def export_images(
     if charge is not None and len(indexes) > 1:
         charge(len(indexes) - 1)
     style = filename_style or settings.EXPORT_FILENAME_STYLE
-    images = tuple(export_image(design, page=index, **options) for index in indexes)
+    deadline = _deadline()  # one for all pages: the request must end before the web server gives up on it
+    images = tuple(export_image(design, page=index, deadline=deadline, **options) for index in indexes)
     return _bundle(design, images, style=style, unix=unix)
 
 

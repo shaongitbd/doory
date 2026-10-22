@@ -289,11 +289,12 @@ def _check_render_url(render_url: str) -> None:
         raise ExportUnavailable
 
 
-def render_image(payload: dict, *, render_url: str) -> RenderResult:
+def render_image(payload: dict, *, render_url: str, timeout: float | None = None) -> RenderResult:
     """Draw one design page as a PNG on the frontend's headless render page at `render_url`.
 
-    `payload` is the render page's input (`document`, `page`, `multiplier`, `transparent`, `fonts`). Raises
-    the `Export*` API exceptions, and `InvalidExport` with the page's code when it refuses the input."""
+    `payload` is the render page's input (`document`, `page`, `multiplier`, `transparent`, `fonts`). `timeout`
+    replaces `EXPORT_TIMEOUT_SECONDS`. Raises the `Export*` API exceptions, and `InvalidExport` with the
+    page's code when it refuses the input."""
     _check_render_url(render_url)
 
     def prepare(workdir: Path) -> tuple[dict, Path]:
@@ -307,7 +308,7 @@ def render_image(payload: dict, *, render_url: str) -> RenderResult:
         }
         return spec, png_path
 
-    return _run_worker(prepare, "image/png", "Image export")
+    return _run_worker(prepare, "image/png", "Image export", timeout=timeout)
 
 
 def render_pages(payload: dict, *, render_url: str, timeout: float | None = None) -> PagesResult:

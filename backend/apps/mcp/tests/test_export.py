@@ -49,7 +49,7 @@ def _image_export_on(settings):
 def renders(monkeypatch) -> list[dict]:
     calls: list[dict] = []
 
-    def fake_export_image(design, **options):
+    def fake_export_image(design, *, deadline, **options):
         calls.append({"design": design.pk, **options})
         index = options["page"]
         fmt = "webp" if options["format"] == "auto" else options["format"]

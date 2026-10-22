@@ -44,7 +44,7 @@ def _image_export_on(settings):
 def renders(monkeypatch) -> list[dict]:
     calls: list[dict] = []
 
-    def fake_export_image(design, **options):
+    def fake_export_image(design, *, deadline, **options):
         calls.append(options)
         index = options["page"] if isinstance(options["page"], int) else 0
         ext = {"jpeg": "jpg", "auto": "webp"}.get(options["format"], options["format"])

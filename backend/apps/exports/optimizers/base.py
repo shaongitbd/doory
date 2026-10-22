@@ -111,8 +111,9 @@ def same_image(data: bytes, job: Job) -> bool:
         return False
 
 
-def optimize(optimizer: Optimizer, job: Job) -> OptimizeResult:
-    """`job.data` made smaller by `optimizer`, or as it was (see the module docstring)."""
+def optimize(optimizer: Optimizer, job: Job, *, deadline: float | None = None) -> OptimizeResult:
+    """`job.data` made smaller by `optimizer`, or as it was (see the module docstring). It gets
+    `IMAGE_OPTIMIZER_TIMEOUT`, or less when `deadline` (`time.monotonic()`: the whole export's) is sooner."""
     kept = OptimizeResult(job.data, job.format, job.width, job.height, len(job.data), optimizer.id)
 
     def note(message: str) -> OptimizeResult:
@@ -128,8 +129,11 @@ def optimize(optimizer: Optimizer, job: Job) -> OptimizeResult:
             "doesn't take on this server; it is not optimized."
         )
     started = time.monotonic()
+    until = started + settings.IMAGE_OPTIMIZER_TIMEOUT
+    until = until if deadline is None else min(until, deadline)
     try:
-        data = optimizer.shrink(job, started + settings.IMAGE_OPTIMIZER_TIMEOUT)
+        left(until)
+        data = optimizer.shrink(job, until)
     except OptimizerError as exc:
         logger.warning("Image optimizer %s failed: %s", optimizer.id, exc.message)
         return note(f"{optimizer.name} could not optimize the file ({exc.message}); it is not optimized.")

@@ -108,6 +108,7 @@ See [image-export.md](image-export.md).
 | `EXPORT_IMAGE_MAX_PIXELS` | `40000000` | Largest image, as width × height after scaling |
 | `EXPORT_IMAGE_MAX_DOCUMENT_BYTES` | `5242880` | Largest design document the export will draw |
 | `EXPORT_IMAGE_MAX_PAGES` | `10` | Most pages one image, SVG or PDF export draws (several images or SVGs come back as a ZIP). Each image page is a render of its own in the same request |
+| `EXPORT_IMAGE_TIMEOUT_SECONDS` | `100` | Time limit for a whole image export: drawing, converting and optimizing all its pages. An export that runs out of time stops with `export_timeout`. Also limits converting one PNG at `POST /api/v1/exports/optimize/`. Keep it under the web server's worker timeout (120 s in the Docker image) |
 | `SERVER_VIDEO_EXPORT_ENABLED` | `false` | Make MP4, WebM and GIF videos of saved designs on the server (REST API and `export_design`). Also needs `SERVER_IMAGE_EXPORT_ENABLED`. One video keeps a browser busy for up to `EXPORT_VIDEO_TIMEOUT_SECONDS` |
 | `EXPORT_VIDEO_TIMEOUT_SECONDS` | `300` | Time limit for making one video. Keep your proxy's read timeout for the export endpoint and `/mcp` above it (the bundled nginx waits 330 s) |
 | `EXPORT_VIDEO_MAX_SECONDS` | `120` | Longest video or GIF the server makes |
