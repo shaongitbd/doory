@@ -1,5 +1,43 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { type Demuxed, DecoderSource, keyIndexAtOrBefore } from './clipDecoder'
+import { type Demuxed, DecoderSource, demux, keyIndexAtOrBefore } from './clipDecoder'
+
+/** A stand-in for mp4box: `mp4.onAppend` plays what the demuxer would report for a chunk of the file. */
+interface FakeMp4File {
+  onReady?: (info: unknown) => void
+  onSamples?: (id: number, user: unknown, samples: unknown[]) => void
+  onError?: (module: string, message: string) => void
+}
+const mp4 = vi.hoisted(() => ({ onAppend: null as ((file: FakeMp4File) => void) | null }))
+vi.mock('mp4box', () => ({
+  createFile: () => {
+    const file: FakeMp4File & Record<string, unknown> = {
+      getTrackById: () => ({}),
+      setExtractionOptions: () => undefined,
+      start: () => undefined,
+      flush: () => undefined,
+      releaseUsedSamples: () => undefined,
+      appendBuffer: () => mp4.onAppend?.(file),
+    }
+    return file
+  },
+  MP4BoxBuffer: { fromArrayBuffer: (buffer: ArrayBuffer) => buffer },
+  DataStream: class {},
+  Endianness: { BIG_ENDIAN: 0 },
+}))
+
+/** A download of `chunks` chunks; `cancel` says whether it was stopped. */
+function download(chunks: number) {
+  let left = chunks
+  const reader = {
+    read: vi.fn(async () => (left-- > 0 ? { done: false, value: new Uint8Array(8) } : { done: true, value: undefined })),
+    cancel: vi.fn(async () => undefined),
+  }
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({ ok: true, body: { getReader: () => reader } })),
+  )
+  return reader
+}
 
 /** A sample every 100 ms of source, a key sample every second. */
 function demuxed(seconds = 3): Demuxed {
@@ -26,7 +64,7 @@ class FakeDecoder {
   decoded: number[] = []
   resets = 0
   private listeners: (() => void)[] = []
-  constructor(private readonly init: { output(frame: unknown): void; error(e: Error): void }) {
+  constructor(readonly init: { output(frame: unknown): void; error(e: Error): void }) {
     FakeDecoder.instances.push(this)
   }
   static isConfigSupported = vi.fn(async () => ({ supported: true }))
@@ -83,6 +121,21 @@ describe('finding where to decode from', () => {
   })
 })
 
+describe('demuxing a clip', () => {
+  afterEach(() => {
+    mp4.onAppend = null
+    vi.unstubAllGlobals()
+  })
+
+  it('stops the download when the file cannot be read', async () => {
+    const reader = download(5)
+    mp4.onAppend = (file) => file.onError?.('isofile', 'bad box')
+    await expect(demux('/media/c.mp4')).rejects.toThrow('bad box')
+    expect(reader.read).toHaveBeenCalledOnce()
+    expect(reader.cancel).toHaveBeenCalled()
+  })
+})
+
 describe('the exporter’s clip source', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -130,6 +183,42 @@ describe('the exporter’s clip source', () => {
     expect(shownAt(src)).toBe(40_000)
     await src.ready(5000)
     expect(shownAt(src)).toBe(940_000)
+  })
+
+  it('says the decoder failed even when the picture asked for is already shown', async () => {
+    const { src } = source()
+    await src.ready(0)
+    FakeDecoder.instances[0].init.error(new Error('broken'))
+    await expect(src.ready(0)).rejects.toThrow('broken')
+  })
+
+  it('stops loading when it is let go of meanwhile, and makes nothing for it', async () => {
+    vi.stubGlobal('VideoDecoder', FakeDecoder)
+    vi.stubGlobal('EncodedVideoChunk', FakeChunk)
+    FakeDecoder.instances = []
+    let finish: (data: Demuxed) => void = () => undefined
+    const loader = vi.fn((_url: string, _signal?: AbortSignal) => new Promise<Demuxed>((resolve) => (finish = resolve)))
+    const src = new DecoderSource({ url: '/media/c.mp4', speed: 1 }, () => undefined, loader)
+    const ready = src.ready(0)
+    src.dispose()
+    expect(loader.mock.calls[0][1]?.aborted).toBe(true)
+    finish(demuxed())
+    await ready
+    expect(FakeDecoder.instances).toHaveLength(0)
+    expect(src.frame()).toBeNull()
+  })
+
+  it('makes no stand-in player when the stopped download fails', async () => {
+    vi.stubGlobal('VideoDecoder', FakeDecoder)
+    vi.stubGlobal('EncodedVideoChunk', FakeChunk)
+    let fail: (error: Error) => void = () => undefined
+    const loader = vi.fn(() => new Promise<Demuxed>((_resolve, reject) => (fail = reject)))
+    const src = new DecoderSource({ url: '/media/gone.mp4', speed: 1 }, () => undefined, loader)
+    const ready = src.ready(0)
+    src.dispose()
+    fail(new DOMException('Aborted', 'AbortError'))
+    await ready
+    expect(document.querySelector('#doory-clip-sources video[src$="gone.mp4"]')).toBeNull()
   })
 
   it('closes every picture it lets go of', async () => {
