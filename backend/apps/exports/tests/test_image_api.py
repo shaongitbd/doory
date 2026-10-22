@@ -10,7 +10,7 @@ from apps.designs.tests.helpers import make_design, make_doc
 from apps.exports import optimizers, services, views
 from apps.exports.exceptions import ExportBusy, InvalidExport
 from apps.exports.services import IMAGE_FORMATS, ImageResult
-from apps.exports.throttling import ExportRateThrottle
+from apps.exports.throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 
 from .helpers import FakeOptimizer
 
@@ -260,6 +260,34 @@ def test_a_refused_export_of_several_pages_costs_one_export(client, user, render
     assert response.status_code == 400 and response.json()["error"]["code"] == "optimizer_unavailable"
     assert client.post(url(design), {"pages": [1]}, format="json").status_code == 200
     assert client.post(url(design), {"pages": [1]}, format="json").status_code == 429
+
+
+@pytest.fixture
+def offsite(settings, monkeypatch) -> FakeOptimizer:
+    """An optimizer that sends the image away, as TinyPNG does, next to the built-in one."""
+    settings.IMAGE_OPTIMIZERS = ["builtin", "tinypng"]
+    fake = FakeOptimizer("tinypng", "TinyPNG")
+    fake.sends_offsite = True
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "tinypng", fake)
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "builtin", FakeOptimizer())
+    monkeypatch.setattr(OffsiteOptimizeRateThrottle, "THROTTLE_RATES", {"optimize_offsite": "3/min"})
+    return fake
+
+
+def test_each_page_sent_to_an_offsite_optimizer_counts_against_its_own_rate(client, user, renders, offsite):
+    design = make_design(user, document=make_doc(pages=3))
+    for _ in range(2):  # the built-in optimizer runs here: not counted
+        assert (
+            client.post(url(design), {"pages": "all", "optimize": "builtin"}, format="json").status_code
+            == 200
+        )
+    assert (
+        client.post(url(design), {"pages": [1, 2], "optimize": "tinypng"}, format="json").status_code == 200
+    )
+    drawn = len(renders)
+    response = client.post(url(design), {"pages": [1, 2], "optimize": "tinypng"}, format="json")
+    assert response.status_code == 429 and len(renders) == drawn
+    assert client.post(url(design), {"optimize": "builtin"}, format="json").status_code == 200
 
 
 def test_too_many_pages_are_refused_before_anything_is_drawn(client, user, renders, settings):

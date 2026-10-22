@@ -823,12 +823,15 @@ def optimize_image(
     progressive: bool = False,
     optimize: bool | str = True,
     owner: object = None,
+    charge_offsite: Callable[[int], None] | None = None,
 ) -> OptimizedImage:
     """Convert a PNG the browser drew as `export_image` converts the PNG the server drew (same options), then
     optimize it. For browser downloads: AVIF, WebP where the browser can't make it, and the optimizers. The
     image must be a PNG of at most `EXPORT_IMAGE_MAX_PIXELS` (Pillow's decompression-bomb limit stays on);
     one conversion holds a render slot of `owner`, and stops searching (`max_bytes`, `auto`) and optimizing
-    after `EXPORT_IMAGE_TIMEOUT_SECONDS`. Raises `InvalidExport` and `ExportBusy`."""
+    after `EXPORT_IMAGE_TIMEOUT_SECONDS`. When the optimizer sends images off this server, `charge_offsite`
+    is called with 1 once the image is checked (to count it against a rate limit). Raises `InvalidExport`
+    and `ExportBusy`."""
     deadline = _deadline()
     encoding = _encoding(
         format,
@@ -856,6 +859,7 @@ def optimize_image(
                 )
     except broken as exc:
         raise unreadable from exc
+    _charge_offsite(charge_offsite, optimizer, 1)
     with render_slot(owner):
         try:
             with Image.open(io.BytesIO(png)) as image:
@@ -897,6 +901,13 @@ def optimize_image(
     )
 
 
+def _charge_offsite(
+    charge_offsite: Callable[[int], None] | None, optimizer: optimizers.Optimizer | None, files: int
+) -> None:
+    if charge_offsite is not None and optimizer is not None and optimizer.sends_offsite:
+        charge_offsite(files)
+
+
 def pick_pages(design, pages: str | Sequence[int | str | None] | None) -> list[int]:
     """The 0-based indexes of `pages` in the design as it is now: "all", or indexes and page ids as
     `export_image` takes them (None: the first page). Repeats are dropped; more than `EXPORT_IMAGE_MAX_PAGES`
@@ -935,6 +946,7 @@ def export_images(
     filename_style: str | None = None,
     unix: int | None = None,
     charge: Callable[[int], None] | None = None,
+    charge_offsite: Callable[[int], None] | None = None,
     bleed_mm: float = 0,
     crop_marks: bool = False,
     cmyk: bool = False,
@@ -943,7 +955,9 @@ def export_images(
     """Draw `pages` (see `pick_pages`) of `design` with `export_image` and its `options`, one render at a
     time, and pack them into a ZIP; a single page comes back as its own file. Once the options are checked
     for every page, and before anything is drawn, `charge` is called with the number of pages after the first
-    (to count them against a rate limit), so a request that is refused costs no more than one. The
+    (to count them against a rate limit), so a request that is refused costs no more than one; when the
+    optimizer (`optimize`) sends images off this server, `charge_offsite` is called with the number of pages
+    before that. The
     files are named by `filenames.page_filename` in `filename_style` (default `EXPORT_FILENAME_STYLE`), the
     ZIP after the design's title. All pages are done within one `EXPORT_IMAGE_TIMEOUT_SECONDS`, else
     ExportTimeout.
@@ -979,11 +993,12 @@ def export_images(
             charge=charge,
         )
     # What can be checked without drawing is checked for every page before the pages are charged.
-    _, _, scale = _image_options(**options)
+    _, optimizer, scale = _image_options(**options)
     document = _image_document(design)
     indexes = _page_indexes(document, pages)
     for index in indexes:
         _page_scale(document, document["pages"][index], scale, options.get("size"))
+    _charge_offsite(charge_offsite, optimizer, len(indexes))
     if charge is not None and len(indexes) > 1:
         charge(len(indexes) - 1)
     style = filename_style or settings.EXPORT_FILENAME_STYLE

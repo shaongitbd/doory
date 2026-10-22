@@ -42,7 +42,7 @@ from .services import (
     optimize_image,
     page_index,
 )
-from .throttling import ExportRateThrottle
+from .throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 
 MULTIPART_OVERHEAD_BYTES = 2 * 1024 * 1024
 
@@ -118,6 +118,12 @@ def _charge_pages(user, extra: int) -> None:
         charge(ExportRateThrottle(), user)
 
 
+def _charge_offsite(user, files: int) -> None:
+    """Each image sent to an optimizer off this server counts against the `optimize_offsite` rate."""
+    for _ in range(files):
+        charge(OffsiteOptimizeRateThrottle(), user)
+
+
 class ImageExportView(APIView):
     """Render pages of a saved design as PNG, JPG, WebP, AVIF or SVG on the server, as the editor draws them
     (several pages come back as one ZIP), as one PDF of pictures (`pdf`) or vector pages (`pdf-print`), or as
@@ -161,6 +167,7 @@ class ImageExportView(APIView):
             filename_style=style,
             unix=unix_now() if stamp else None,
             charge=lambda extra: _charge_pages(request.user, extra),
+            charge_offsite=lambda files: _charge_offsite(request.user, files),
             format=data["format"],
             quality=data["quality"],
             scale=data["scale"],
@@ -232,7 +239,12 @@ class ImageOptimizeView(APIView):
         body = ImageOptimizeSerializer(data=fields)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        result = optimize_image(file.read(), owner=request.user.pk, **data)
+        result = optimize_image(
+            file.read(),
+            owner=request.user.pk,
+            charge_offsite=lambda files: _charge_offsite(request.user, files),
+            **data,
+        )
         response = HttpResponse(result.data, content_type=result.mime)
         response["X-Doory-Format"] = result.format
         response["X-Doory-Width"] = str(result.width)

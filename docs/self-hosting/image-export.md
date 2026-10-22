@@ -66,9 +66,11 @@ The whole export, drawing, converting and optimizing every page, must be done wi
 is left, a `max_bytes` search and `auto` keep the best file made by then, an optimizer that runs out of time
 leaves its file unoptimized, and a page that can't start in time stops the export with `export_timeout` (504).
 The options are checked for every page before anything is drawn. Each page after the first counts once more
-against the `export` rate (30 a minute per user), and over MCP against `MCP_CALLS_PER_MINUTE` too. `EXPORT_IMAGE_MAX_PAGES` limits the pages one export may draw. Over MCP,
-AVIF images, SVG files, PDFs and ZIPs are always sent as a download link, because clients can't show them
-inline.
+against the `export` rate (30 a minute per user), and over MCP against `MCP_CALLS_PER_MINUTE` too. With an
+optimizer that sends the image off the server (TinyPNG, Kraken.io or the custom one), every page also counts
+against the `optimize_offsite` rate (10 a minute per user). `EXPORT_IMAGE_MAX_PAGES` limits the pages one
+export may draw. Over MCP, AVIF images, SVG files, PDFs and ZIPs are always sent as a download link, because
+clients can't show them inline.
 
 ## SVG and PDF
 

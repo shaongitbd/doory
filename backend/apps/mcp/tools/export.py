@@ -16,7 +16,7 @@ from apps.designs.doc.ops import PageRef
 from apps.exports.delivery import store_image
 from apps.exports.filenames import FILE_NAMES, unix_now
 from apps.exports.services import VIDEO_FORMATS, ImageBundle, ImageResult, export_images, page_index
-from apps.exports.throttling import ExportRateThrottle
+from apps.exports.throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 
 from ..registry import charge_call, throttle, tool
 from .designs import DesignId, _design, editor_url
@@ -29,6 +29,12 @@ def _charge_pages(extra: int) -> None:
     for _ in range(extra):
         charge_call()
         throttle(ExportRateThrottle())
+
+
+def _charge_offsite(files: int) -> None:
+    """Each image sent to an optimizer off this server uses the `optimize_offsite` rate, as over REST."""
+    for _ in range(files):
+        throttle(OffsiteOptimizeRateThrottle())
 
 
 def _page_info(image: ImageResult, filename: str) -> dict[str, Any]:
@@ -229,6 +235,7 @@ def export_design(
         filename_style=FILE_NAMES.get(file_names or ""),
         unix=unix_now() if settings.EXPORT_FILENAME_TIMESTAMP else None,
         charge=_charge_pages,
+        charge_offsite=_charge_offsite,
         format=format,
         quality=quality,
         scale=scale,

@@ -11,6 +11,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from apps.exports import optimizers, services
 from apps.exports.exceptions import ExportBusy
 from apps.exports.renderer import render_slot
+from apps.exports.throttling import OffsiteOptimizeRateThrottle
 
 from .helpers import FakeOptimizer
 
@@ -138,6 +139,18 @@ def test_the_optimize_rate_limit_applies(client, monkeypatch, optimizer):
     monkeypatch.setitem(ScopedRateThrottle.THROTTLE_RATES, "optimize", "1/min")
     assert client.post(URL, {"file": upload(drawn())}).status_code == 200
     assert client.post(URL, {"file": upload(drawn())}).status_code == 429
+
+
+def test_an_offsite_optimizer_has_its_own_lower_rate(client, monkeypatch, settings, optimizer):
+    settings.IMAGE_OPTIMIZERS = ["builtin", "kraken"]
+    kraken = FakeOptimizer("kraken", "Kraken.io")
+    kraken.sends_offsite = True
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "kraken", kraken)
+    monkeypatch.setattr(OffsiteOptimizeRateThrottle, "THROTTLE_RATES", {"optimize_offsite": "1/min"})
+    assert client.post(URL, {"file": upload(drawn()), "optimize": "kraken"}).status_code == 200
+    assert client.post(URL, {"file": upload(drawn()), "optimize": "kraken"}).status_code == 429
+    assert len(kraken.jobs) == 1
+    assert client.post(URL, {"file": upload(drawn()), "optimize": "builtin"}).status_code == 200
 
 
 def test_a_busy_account_gets_a_busy_answer(client, user, optimizer):

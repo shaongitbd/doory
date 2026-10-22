@@ -19,7 +19,7 @@ from apps.exports.exceptions import ExportBusy, InvalidExport
 from apps.exports.renderer import VideoResult as RenderedVideo
 from apps.exports.services import IMAGE_FORMATS, ImageResult
 from apps.exports.tests.helpers import FakeOptimizer
-from apps.exports.throttling import ExportRateThrottle
+from apps.exports.throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 from apps.mcp.tools import export
 
 from .test_http import call
@@ -228,6 +228,18 @@ def test_each_extra_page_uses_the_export_rate(as_caller, user, renders, monkeypa
     design = make_design(user, document=make_doc(pages=3))
     with pytest.raises(ToolError, match="Too many requests"):
         export.export_design(str(design.pk), pages="all")
+    assert renders == []
+
+
+def test_pages_sent_to_an_offsite_optimizer_use_its_rate(as_caller, user, renders, monkeypatch, settings):
+    settings.IMAGE_OPTIMIZERS = ["custom"]
+    custom = FakeOptimizer("custom", "Ours")
+    custom.sends_offsite = True
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "custom", custom)
+    monkeypatch.setattr(OffsiteOptimizeRateThrottle, "THROTTLE_RATES", {"optimize_offsite": "2/min"})
+    design = make_design(user, document=make_doc(pages=3))
+    with pytest.raises(ToolError, match="Too many requests"):
+        export.export_design(str(design.pk), pages="all", optimize="custom")
     assert renders == []
 
 

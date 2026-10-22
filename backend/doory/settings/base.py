@@ -237,6 +237,7 @@ REST_FRAMEWORK = {
         "bulk_fill_images": "300/min",  # image URLs fetched by bulk-fill (REST and MCP)
         "export": "30/min",  # server-side image renders (REST and MCP)
         "optimize": "60/min",  # images the browser drew, converted and optimized (POST /exports/optimize/)
+        "optimize_offsite": "10/min",  # images sent to an optimizer off this server (REST and MCP)
         "ai": "30/min",  # calls to AI image providers (REST and MCP)
     },
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
