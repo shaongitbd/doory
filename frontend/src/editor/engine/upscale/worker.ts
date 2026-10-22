@@ -5,6 +5,7 @@
 import { upscaleImageData } from './core'
 import { decodeImage, encodeResult } from './image'
 import type { UpscaleWorkerReply, UpscaleWorkerRequest } from './protocol'
+import { UpscaleError } from './types'
 
 interface WorkerScope {
   postMessage(message: UpscaleWorkerReply): void
@@ -29,7 +30,9 @@ async function run(request: Extract<UpscaleWorkerRequest, { type: 'run' }>): Pro
     scope.postMessage({ type: 'progress', id, percent: 100 })
     scope.postMessage({ type: 'done', id, result: encoded })
   } catch (error) {
-    scope.postMessage({ type: 'failed', id, message: error instanceof Error ? error.message : 'Upscaling failed.' })
+    // A browser error ("Array buffer allocation failed", a canvas that could not be made) means nothing to
+    // the person; the editor shows its own message for it.
+    scope.postMessage({ type: 'failed', id, message: error instanceof UpscaleError ? error.message : undefined })
   }
 }
 

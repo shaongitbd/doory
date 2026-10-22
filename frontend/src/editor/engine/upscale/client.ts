@@ -1,4 +1,5 @@
 import type { UpscaleWorkerReply, UpscaleWorkerRequest } from './protocol'
+import { t } from '../../strings'
 import { UpscaleError, type UpscaleRequestOptions } from './types'
 
 export type UpscaleProgress = (percent: number) => void
@@ -41,10 +42,11 @@ export function upscaleImage(image: Blob, options: UpscaleRequestOptions, onProg
         return
       }
       if (reply.type === 'done') finish(() => resolve(reply.result))
-      else finish(() => reject(new UpscaleError(reply.message)))
+      else finish(() => reject(new UpscaleError(reply.message || t.errors.upscale)))
     }
-    worker.onerror = (event) => finish(() => reject(new UpscaleError(event.message || 'Upscaling failed.')))
-    worker.onmessageerror = () => finish(() => reject(new UpscaleError('Upscaling failed.')))
+    // An uncaught error in the worker (out of memory, most often) has a browser's wording: say it plainly.
+    worker.onerror = () => finish(() => reject(new UpscaleError(t.errors.upscale)))
+    worker.onmessageerror = () => finish(() => reject(new UpscaleError(t.errors.upscale)))
 
     const request: UpscaleWorkerRequest = { type: 'run', id: 1, image, options }
     worker.postMessage(request)

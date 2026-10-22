@@ -6,4 +6,5 @@ export type UpscaleWorkerRequest = { type: 'run'; id: number; image: Blob; optio
 export type UpscaleWorkerReply =
   | { type: 'progress'; id: number; percent: number }
   | { type: 'done'; id: number; result: Blob }
-  | { type: 'failed'; id: number; message: string }
+  /** `message` is set only for an `UpscaleError`, whose text is meant for people; anything else is reported generically. */
+  | { type: 'failed'; id: number; message?: string }
