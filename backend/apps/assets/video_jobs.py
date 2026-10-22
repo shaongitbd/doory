@@ -7,7 +7,7 @@ in this process (`VIDEO_MAX_CONCURRENCY`). The editor polls the asset until it t
 
 There is no job queue to survive a restart: a conversion that dies with its process is noticed by its age
 (`fail_stale`, called when the owner lists or opens their uploads, and by `manage.py sweep_video_jobs`) and
-marked failed, so the upload never spins forever.
+marked failed, so the upload never spins forever. Its work directory is removed then too, or by the sweep.
 """
 
 from __future__ import annotations
@@ -276,11 +276,19 @@ def run(asset_id, source: Path, info: video.VideoInfo) -> None:
         connections.close_all()  # this thread's own connections
 
 
+def stale_after_seconds() -> int:
+    """How long a conversion can possibly run: after that its process has died."""
+    return settings.VIDEO_TRANSCODE_TIMEOUT_SECONDS + video.STILLS_TIMEOUT_SECONDS * 2 + STALE_GRACE_SECONDS
+
+
 def fail_stale(queryset=None) -> int:
-    """Mark conversions that outlived any possible run (their process died) as failed."""
-    limit = settings.VIDEO_TRANSCODE_TIMEOUT_SECONDS + video.STILLS_TIMEOUT_SECONDS * 2 + STALE_GRACE_SECONDS
+    """Mark conversions that outlived any possible run (their process died) as failed. When there were any,
+    also remove the work directories that such processes left behind."""
     rows = Asset.objects.all() if queryset is None else queryset
-    cutoff = timezone.now() - timedelta(seconds=limit)
-    return rows.filter(status=Asset.Status.PROCESSING, updated_at__lt=cutoff).update(
+    cutoff = timezone.now() - timedelta(seconds=stale_after_seconds())
+    count = rows.filter(status=Asset.Status.PROCESSING, updated_at__lt=cutoff).update(
         status=Asset.Status.FAILED, error=INTERRUPTED, size=0, updated_at=timezone.now()
     )
+    if count:
+        video.remove_old_work_dirs(stale_after_seconds())
+    return count

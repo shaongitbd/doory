@@ -70,6 +70,10 @@ If you store media in S3-compatible storage, the bucket's CORS settings must als
 - **A clip stays "processing", then fails with "The conversion was interrupted":** the API process stopped
   while it was converting (a restart or a deployment). Upload the clip again. `python manage.py
   sweep_video_jobs` marks such clips failed straight away. Otherwise they are marked when someone opens them.
+  The sweep also removes the temporary folders such conversions leave in `VIDEO_WORK_DIR`, so it's worth
+  running every hour (see [Scheduled tasks](README.md#scheduled-tasks)). An ffmpeg left running by a killed
+  API process finishes its clip, and stops itself at the latest after `VIDEO_TRANSCODE_TIMEOUT_SECONDS` of CPU
+  time for each core.
 - **"The server is busy converting other videos":** every conversion slot stayed busy for 20 seconds. Raise
   `VIDEO_MAX_CONCURRENCY` if the server has spare CPU.
 - **Uploads of large clips fail with 413 before they start:** nginx's `client_max_body_size` is lower than the

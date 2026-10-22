@@ -1,6 +1,8 @@
 """Uploading clips: the real ffprobe and ffmpeg (skipped without them), the conversion in the background."""
 
 import io
+import os
+import time
 from datetime import timedelta
 from pathlib import Path
 
@@ -238,12 +240,17 @@ class TestQueued:
 
 @pytest.mark.django_db
 class TestStale:
-    def test_an_interrupted_conversion_turns_failed_when_looked_at(self, api, user):
+    def test_an_interrupted_conversion_turns_failed_when_looked_at(self, api, user, settings, tmp_path):
+        settings.VIDEO_WORK_DIR = str(tmp_path)
         asset = processing(user, size=5000)
         Asset.objects.filter(pk=asset.pk).update(updated_at=timezone.now() - timedelta(hours=2))
+        left = tmp_path / "doory-video-left"
+        left.mkdir()
+        os.utime(left, (time.time() - 7200, time.time() - 7200))
         body = api.get(f"{URL}{asset.pk}/").json()
         assert body["status"] == "failed" and body["error"] == video_jobs.INTERRUPTED
         assert Asset.objects.get(pk=asset.pk).size == 0  # no longer held against the quota
+        assert not left.exists()  # its process left its work folder behind
 
     def test_a_recent_one_keeps_processing(self, api, user):
         asset = Asset.objects.create(owner=user, kind="video", mime="video/mp4", status="processing")
@@ -256,6 +263,32 @@ class TestStale:
         Asset.objects.filter(pk=asset.pk).update(updated_at=timezone.now() - timedelta(hours=2))
         call_command("sweep_video_jobs")
         assert Asset.objects.get(pk=asset.pk).status == "failed"
+
+    def test_the_sweep_removes_the_work_folders_a_killed_process_left(self, settings, tmp_path):
+        from django.core.management import call_command
+
+        settings.VIDEO_WORK_DIR = str(tmp_path)
+        old = time.time() - video_jobs.stale_after_seconds() - 60
+
+        def made(name: str, *, folder_age: float, file_age: float | None = None) -> Path:
+            path = tmp_path / name
+            if file_age is None:
+                path.write_bytes(b"x")
+            else:
+                path.mkdir()
+                (path / "source").write_bytes(b"x")
+                os.utime(path / "source", (file_age, file_age))
+            os.utime(path, (folder_age, folder_age))
+            return path
+
+        left = made("doory-video-left", folder_age=old, file_age=old)
+        working = made("doory-video-working", folder_age=old, file_age=time.time())  # ffmpeg still writes
+        new = made("doory-video-new", folder_age=time.time(), file_age=time.time())
+        other = made("someone-else", folder_age=old, file_age=old)
+        a_file = made("doory-video-file", folder_age=old)
+        call_command("sweep_video_jobs", stdout=io.StringIO())
+        assert not left.exists()
+        assert all(path.exists() for path in (working, new, other, a_file))
 
 
 @pytest.mark.django_db

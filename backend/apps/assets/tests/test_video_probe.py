@@ -149,12 +149,14 @@ class TestPlans:
         args = video.transcode_args(video.Path("in"), video.Path("out.mp4"), clip)
         assert args[args.index("-g") + 1] == "60" and "+faststart" in args and "libx264" in args
 
-    def test_a_conversion_is_bounded_in_length_size_and_threads(self, settings):
+    def test_a_conversion_is_bounded_in_length_size_threads_and_cpu_time(self, settings, monkeypatch):
         settings.MAX_VIDEO_DURATION_SECONDS, settings.MAX_VIDEO_UPLOAD_BYTES = 300, 1000
-        settings.VIDEO_FFMPEG_THREADS = 3
+        settings.VIDEO_FFMPEG_THREADS, settings.VIDEO_TRANSCODE_TIMEOUT_SECONDS = 3, 100
+        monkeypatch.setattr(video.os, "cpu_count", lambda: 8)
         args = video.transcode_args(video.Path("in"), video.Path("out.mp4"), info(codec_name="hevc"))
-        bounds = args[args.index("+faststart") + 1 :]
-        assert bounds == ["-t", "300", "-fs", "2000", "-threads", "3", "-filter_threads", "3", "out.mp4"]
+        bounds = " ".join(args[args.index("+faststart") + 1 : -1])
+        assert bounds == "-t 300 -fs 2000 -threads 3 -filter_threads 3 -timelimit 800"
+        assert args[-1] == "out.mp4"
 
     def test_a_conversion_cut_short_by_the_size_cap_is_refused(self, settings, tmp_path, monkeypatch):
         settings.MAX_VIDEO_UPLOAD_BYTES = 10
