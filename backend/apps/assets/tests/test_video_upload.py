@@ -239,6 +239,52 @@ class TestQueued:
 
 
 @pytest.mark.django_db
+class TestPerPersonLimit:
+    @pytest.fixture(autouse=True)
+    def _converting(self, settings, tmp_path, monkeypatch):
+        """Uploads that need converting: ffprobe and the background conversion are faked."""
+        settings.VIDEO_WORK_DIR = str(tmp_path)
+        settings.VIDEO_MAX_PROCESSING_PER_USER = 2
+        monkeypatch.setattr(video, "available", lambda: True)
+        monkeypatch.setattr(video, "probe", lambda path: described_clip(codec_name="hevc"))
+        monkeypatch.setattr(video_jobs, "submit", lambda *args: None)
+
+    def upload(self, api):
+        return post(api, b"\x1a\x45\xdf\xa3" + b"\x00" * 100, "phone.webm")
+
+    def test_one_more_than_the_limit_is_refused(self, api, user, tmp_path):
+        assert [self.upload(api).status_code for _ in range(2)] == [202, 202]
+        res = self.upload(api)
+        assert res.status_code == 429 and res.json()["error"]["code"] == "too_many_conversions"
+        assert Asset.objects.count() == 2
+        assert len(list(tmp_path.iterdir())) == 2  # the refused upload's work folder is gone
+
+    def test_others_are_not_held_up(self, api, user, other_api):
+        for _ in range(2):
+            self.upload(api)
+        assert self.upload(other_api).status_code == 202
+
+    def test_a_conversion_whose_process_died_does_not_count(self, api, user):
+        dead = processing(user)
+        Asset.objects.filter(pk=dead.pk).update(updated_at=timezone.now() - timedelta(hours=2))
+        processing(user)
+        assert self.upload(api).status_code == 202
+        assert Asset.objects.get(pk=dead.pk).status == "failed"
+
+    def test_no_limit(self, api, settings):
+        settings.VIDEO_MAX_PROCESSING_PER_USER = 0
+        assert {self.upload(api).status_code for _ in range(3)} == {202}
+
+    def test_one_ffmpeg_place_is_kept_for_rewrapping(self, settings, monkeypatch):
+        monkeypatch.setattr(video_jobs, "_pool", None)
+        settings.VIDEO_MAX_CONCURRENCY = 3
+        assert video_jobs._executor()._max_workers == 2
+        monkeypatch.setattr(video_jobs, "_pool", None)
+        settings.VIDEO_MAX_CONCURRENCY = 1
+        assert video_jobs._executor()._max_workers == 1
+
+
+@pytest.mark.django_db
 class TestStale:
     def test_an_interrupted_conversion_turns_failed_when_looked_at(self, api, user, settings, tmp_path):
         settings.VIDEO_WORK_DIR = str(tmp_path)

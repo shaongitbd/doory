@@ -3,7 +3,9 @@
 A web-ready clip (see `video.VideoInfo.web_ready`) is rewrapped, given its stills and stored within the
 request: a second or two. Anything else is registered at once with `status=processing`, holding its source
 size against the owner's quota (a clip that fails stops counting), and converted by a small pool of threads
-in this process (`VIDEO_MAX_CONCURRENCY`). The editor polls the asset until it turns `ready` or `failed`.
+in this process (`VIDEO_MAX_CONCURRENCY`, less one kept for rewrapping). One person has at most
+`VIDEO_MAX_PROCESSING_PER_USER` clips converting at once. The editor polls the asset until it turns `ready` or
+`failed`.
 
 There is no job queue to survive a restart: a conversion that dies with its process is noticed by its age
 (`fail_stale`, called when the owner lists or opens their uploads, and by `manage.py sweep_video_jobs`) and
@@ -29,7 +31,7 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from . import video
-from .exceptions import InvalidFile, QuotaExceeded, ServerBusy
+from .exceptions import InvalidFile, QuotaExceeded, ServerBusy, TooManyConversions
 from .models import Asset
 from .storage import delete_files
 
@@ -160,10 +162,17 @@ def store(asset: Asset, converted: Converted, *, new: bool, same: dict | None = 
 
 
 def reserve(asset: Asset, same: dict | None = None) -> Asset:
-    """Register a clip that still has to be converted, holding its source size against the quota."""
+    """Register a clip that still has to be converted, holding its source size against the quota. An owner
+    has at most `VIDEO_MAX_PROCESSING_PER_USER` clips converting at once (0: no limit)."""
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=asset.owner_id)
         _claim(asset, same)
+        limit = settings.VIDEO_MAX_PROCESSING_PER_USER
+        if limit > 0:
+            converting = Asset.objects.filter(owner=asset.owner_id, status=Asset.Status.PROCESSING)
+            fail_stale(converting)  # a conversion whose process died doesn't hold a place
+            if converting.count() >= limit:
+                raise TooManyConversions()
         used = Asset.objects.filter(owner=asset.owner_id).aggregate(total=Sum("size"))["total"] or 0
         if used + asset.size > settings.USER_STORAGE_QUOTA_BYTES:
             raise QuotaExceeded()
@@ -213,7 +222,7 @@ def create_video_asset(
             with video.slot():
                 converted = convert(source, info)
         except video.VideoBusy as exc:
-            raise ServerBusy() from exc
+            raise ServerBusy(str(exc)) from exc
         except video.VideoError as exc:
             raise InvalidFile(str(exc)) from exc
         return store(asset, converted, new=True, same=same)
@@ -228,10 +237,12 @@ _pool: ThreadPoolExecutor | None = None
 
 
 def _executor() -> ThreadPoolExecutor:
+    """The background conversions' threads: one fewer than the ffmpeg slots (but at least one), so a clip that
+    only needs rewrapping, within its request, never waits behind conversions that take minutes."""
     global _pool
     with _pool_lock:
         if _pool is None:
-            workers = max(1, int(settings.VIDEO_MAX_CONCURRENCY))
+            workers = max(1, int(settings.VIDEO_MAX_CONCURRENCY) - 1)
             _pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="video-convert")
         return _pool
 

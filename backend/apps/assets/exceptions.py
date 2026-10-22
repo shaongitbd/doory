@@ -56,6 +56,14 @@ class ServerBusy(APIException):
     wait = 5  # becomes the Retry-After header
 
 
+class TooManyConversions(APIException):
+    """429 without Retry-After: the person has as many clips converting as allowed; one must finish first."""
+
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    default_code = "too_many_conversions"
+    default_detail = "You have several videos converting already. Wait for one to finish, then try again."
+
+
 class VideoUnavailable(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_code = "video_unavailable"

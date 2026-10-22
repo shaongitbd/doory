@@ -37,20 +37,28 @@ See [Video clips in configuration.md](configuration.md#video-clips). The ones yo
 ```ini
 MAX_VIDEO_UPLOAD_BYTES=209715200      # 200 MB per clip
 MAX_VIDEO_DURATION_SECONDS=600        # 10 minutes, the video export's own limit
-VIDEO_MAX_CONCURRENCY=2               # conversions at once in each API process
+VIDEO_MAX_CONCURRENCY=2               # clips worked on at once in each API process
 VIDEO_FFMPEG_THREADS=2                # threads one conversion's encoder uses
+VIDEO_MAX_PROCESSING_PER_USER=3       # clips one person can have converting at once
 ```
 
 Uploads go through nginx, which limits request bodies. The configurations in this repository allow 210 MB for
 `/api/v1/assets/` and 30 MB elsewhere. If you raise `MAX_VIDEO_UPLOAD_BYTES`, raise `client_max_body_size` in
 the `location = /api/v1/assets/` block too.
 
-Converting is CPU-heavy. Each API process converts at most `VIDEO_MAX_CONCURRENCY` clips at a time, and more
-wait their turn. The limit is per process: the whole server converts up to `VIDEO_MAX_CONCURRENCY` times the
-number of API workers at once (`WEB_CONCURRENCY` with Docker, `--workers` in `doory-api.service` without, 3 by
-default). Each conversion's encoder uses `VIDEO_FFMPEG_THREADS` threads and decoding the source takes a little
-more, so plan for about workers times `VIDEO_MAX_CONCURRENCY` times `VIDEO_FFMPEG_THREADS` busy cores at the
-peak. On a small server, keep `VIDEO_MAX_CONCURRENCY` at 1 or 2.
+Converting is CPU-heavy. Each API process runs ffmpeg on at most `VIDEO_MAX_CONCURRENCY` clips at a time.
+When that is 2 or more, one of those places is kept for clips that only need rewrapping, so an upload from a
+phone never waits behind a conversion that takes minutes: the process converts at most
+`VIDEO_MAX_CONCURRENCY` minus one clips at once, and more wait their turn. The limit is per process: the whole
+server works on up to `VIDEO_MAX_CONCURRENCY` times the number of API workers at once (`WEB_CONCURRENCY` with
+Docker, `--workers` in `doory-api.service` without, 3 by default). Each conversion's encoder uses
+`VIDEO_FFMPEG_THREADS` threads and decoding the source takes a little more, so plan for about workers times
+`VIDEO_MAX_CONCURRENCY` times `VIDEO_FFMPEG_THREADS` busy cores at the peak. On a small server, keep
+`VIDEO_MAX_CONCURRENCY` at 1 or 2.
+
+One person can have at most `VIDEO_MAX_PROCESSING_PER_USER` clips converting at once. Another upload or stock
+video that needs converting is refused (429, `too_many_conversions`) until one of them is done. Clips that
+only need rewrapping don't count.
 
 A conversion never writes more than `MAX_VIDEO_DURATION_SECONDS` of video or a file larger than twice
 `MAX_VIDEO_UPLOAD_BYTES`, whatever the source claims. A clip that would be larger is refused.
@@ -74,8 +82,11 @@ If you store media in S3-compatible storage, the bucket's CORS settings must als
   running every hour (see [Scheduled tasks](README.md#scheduled-tasks)). An ffmpeg left running by a killed
   API process finishes its clip, and stops itself at the latest after `VIDEO_TRANSCODE_TIMEOUT_SECONDS` of CPU
   time for each core.
-- **"The server is busy converting other videos":** every conversion slot stayed busy for 20 seconds. Raise
-  `VIDEO_MAX_CONCURRENCY` if the server has spare CPU.
+- **"The server is busy converting other videos":** every ffmpeg place stayed busy for 20 seconds, which
+  can only happen to a clip that needs no conversion when `VIDEO_MAX_CONCURRENCY` is 1 or many such clips
+  arrive at once. Raise `VIDEO_MAX_CONCURRENCY` if the server has spare CPU.
+- **"You have several videos converting already":** the person has `VIDEO_MAX_PROCESSING_PER_USER` clips
+  converting. They can upload more once one is ready.
 - **Uploads of large clips fail with 413 before they start:** nginx's `client_max_body_size` is lower than the
   clip (see above).
 - **HDR clips look flat:** the ffmpeg build has no `zscale` filter (zimg), so HDR is converted without tone

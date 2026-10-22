@@ -138,6 +138,7 @@ FFPROBE_PATH = env("FFPROBE_PATH", default="ffprobe")
 MAX_VIDEO_UPLOAD_BYTES = env.int("MAX_VIDEO_UPLOAD_BYTES", default=200 * 1024 * 1024)  # per clip, as uploaded
 MAX_VIDEO_DURATION_SECONDS = env.int("MAX_VIDEO_DURATION_SECONDS", default=600)  # the video export's limit
 VIDEO_MAX_CONCURRENCY = env.int("VIDEO_MAX_CONCURRENCY", default=2)  # ffmpeg runs per API process
+VIDEO_MAX_PROCESSING_PER_USER = env.int("VIDEO_MAX_PROCESSING_PER_USER", default=3)  # conversions per person
 VIDEO_TRANSCODE_TIMEOUT_SECONDS = env.int("VIDEO_TRANSCODE_TIMEOUT_SECONDS", default=900)
 VIDEO_FFMPEG_THREADS = env.int("VIDEO_FFMPEG_THREADS", default=2)  # encoder threads of one conversion
 VIDEO_DOWNLOAD_DEADLINE_SECONDS = env.int("VIDEO_DOWNLOAD_DEADLINE_SECONDS", default=90)  # stock clips
