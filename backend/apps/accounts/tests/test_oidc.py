@@ -347,20 +347,32 @@ def test_an_unreachable_provider_is_reported_without_details(client):
 def test_a_new_user_is_created_signed_in_and_sent_to_next(client, provider):
     assert location(sign_in(client, provider)) == f"{SITE}{NEXT}"
     user = User.objects.get()
-    assert (user.email, user.display_name, user.is_email_verified) == (
-        "ada@example.com",
-        "Ada Lovelace",
-        True,
-    )
+    assert (user.email, user.display_name) == ("ada@example.com", "Ada Lovelace")
     assert not user.has_usable_password()
     assert OidcIdentity.objects.filter(user=user, issuer=ISSUER, subject="sub-1").exists()
     me = client.get(ME).json()["user"]
     assert me["email"] == "ada@example.com" and me["oidc_linked"] is True
+
+
+def test_without_trusting_email_a_new_account_proves_its_address_by_email(client, provider):
+    sign_in(client, provider)  # the provider says the address is verified, but that isn't trusted
+    assert User.objects.get().is_email_verified is False
+    assert len(mail.outbox) == 1 and mail.outbox[0].to == ["ada@example.com"]
+
+
+def test_trusting_email_takes_the_providers_word_for_a_new_account(client, provider, settings):
+    settings.OIDC_TRUST_EMAIL = True
+    sign_in(client, provider)
+    assert User.objects.get().is_email_verified is True
     assert mail.outbox == []
 
 
-def test_an_unverified_email_makes_an_unverified_account_and_sends_the_check(client, provider):
+@pytest.mark.parametrize("trust", [False, True])
+def test_an_unverified_email_makes_an_unverified_account_and_sends_the_check(
+    client, provider, settings, trust
+):
     """Authentik, for one, sends email_verified=false unless told otherwise."""
+    settings.OIDC_TRUST_EMAIL = trust
     provider.claims = {"email_verified": False}
     sign_in(client, provider)
     assert User.objects.get().is_email_verified is False

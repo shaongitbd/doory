@@ -176,7 +176,7 @@ See [google-sign-in.md](../integrations/google-sign-in.md).
 | `OIDC_CLIENT_SECRET` | | That client's secret |
 | `OIDC_BUTTON_LABEL` | `Sign in with SSO` | Text of the sign-in button, e.g. `Sign in with Authentik` |
 | `OIDC_SCOPES` | `openid email profile` | Scopes to ask for. Must include `openid` |
-| `OIDC_TRUST_EMAIL` | `false` | Let a first sign-in use an existing account with the same email address, when the provider says it has verified it. Never applies to staff accounts. Off, people connect their existing account from Settings |
+| `OIDC_TRUST_EMAIL` | `false` | Take the provider's word that it has verified an email address: a first sign-in then uses an existing account with the same address (never a staff account), and a new account starts with its address verified. Off, people connect their existing account from Settings, and a new account gets the usual verification email |
 
 ## Stock media
 

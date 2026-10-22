@@ -147,11 +147,13 @@ def _oidc_find_link_or_create(claims: OidcClaims) -> tuple[User, bool]:
         OidcIdentity.objects.create(user=user, issuer=claims.issuer, subject=claims.subject)
         return user, False
 
+    # The provider's word for the address counts only with OIDC_TRUST_EMAIL; otherwise the usual
+    # verification email proves it.
     user = User.objects.create_user(
         claims.email,
         None,
         display_name=clean_display_name(claims.name)[:80],
-        is_email_verified=claims.email_verified,
+        is_email_verified=claims.email_verified and settings.OIDC_TRUST_EMAIL,
     )
     OidcIdentity.objects.create(user=user, issuer=claims.issuer, subject=claims.subject)
     return user, True

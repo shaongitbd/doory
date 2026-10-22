@@ -165,8 +165,8 @@ EMAIL_SEND_ASYNC = env.bool("EMAIL_SEND_ASYNC", default=True)  # send off the re
 GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", default="")
 # OpenID Connect sign-in (apps.accounts.oidc): on when the issuer, client ID and client secret are all set.
 # A setting that is wrong turns it off and `manage.py check` says why. OIDC_TRUST_EMAIL lets a first OIDC
-# sign-in take over an existing account with the same (provider-verified) address; off, existing users
-# connect their account from Settings instead.
+# sign-in take over an existing account with the same (provider-verified) address, and a new account start
+# verified; off, existing users connect their account from Settings and new ones get the verification email.
 OIDC_ISSUER = env("OIDC_ISSUER", default="")
 OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", default="")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", default="")
