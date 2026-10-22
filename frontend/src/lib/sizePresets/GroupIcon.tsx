@@ -33,25 +33,28 @@ import { createElement } from 'react'
 import type { PresetGroup } from './catalogue'
 import styles from './SizePicker.module.css'
 
-/** The Lucide names a group's `icon` may use, plus the ones below. Platforms get an icon for their kind, not a logo. */
-const NAMED: Readonly<Record<string, LucideIcon>> = {
-  badge: Badge,
-  'book-open': BookOpen,
-  briefcase: Briefcase,
-  camera: Camera,
-  'credit-card': CreditCard,
-  ellipsis: Ellipsis,
-  'file-text': FileText,
-  globe: Globe,
-  mail: Mail,
-  megaphone: Megaphone,
-  monitor: Monitor,
-  presentation: Presentation,
-  printer: Printer,
-  'share-2': Share2,
-  'shopping-bag': ShoppingBag,
-  smartphone: Smartphone,
-}
+/**
+ * The Lucide names a group's `icon` may use, plus the ones below. Platforms get an icon for their kind, not a logo.
+ * A Map, so a name like `constructor` finds nothing instead of a property every object has.
+ */
+const NAMED: ReadonlyMap<string, LucideIcon> = new Map([
+  ['badge', Badge],
+  ['book-open', BookOpen],
+  ['briefcase', Briefcase],
+  ['camera', Camera],
+  ['credit-card', CreditCard],
+  ['ellipsis', Ellipsis],
+  ['file-text', FileText],
+  ['globe', Globe],
+  ['mail', Mail],
+  ['megaphone', Megaphone],
+  ['monitor', Monitor],
+  ['presentation', Presentation],
+  ['printer', Printer],
+  ['share-2', Share2],
+  ['shopping-bag', ShoppingBag],
+  ['smartphone', Smartphone],
+])
 
 const KINDS: [LucideIcon, string[]][] = [
   [Camera, ['instagram', 'flickr', 'pinterest', 'snapchat', 'photo-labels']],
@@ -80,5 +83,5 @@ const BY_SLUG = new Map(KINDS.flatMap(([icon, slugs]) => slugs.map((slug) => [sl
 /** The icon of a picker entry. */
 export function GroupIcon({ group }: { group: PresetGroup }) {
   // The icon components are module-level constants, so picking one per render is safe.
-  return createElement(BY_SLUG.get(group.slug) ?? NAMED[group.icon] ?? Share2, { className: styles.groupIcon, size: 18, 'aria-hidden': true })
+  return createElement(BY_SLUG.get(group.slug) ?? NAMED.get(group.icon) ?? Share2, { className: styles.groupIcon, size: 18, 'aria-hidden': true })
 }
