@@ -22,7 +22,9 @@ The clip and these files count against the person's storage quota (`USER_STORAGE
 
 ## Requirements
 
-- **Docker:** `INSTALL_FFMPEG=true` (the default) builds ffmpeg into the `api` image, which adds about 250 MB.
+- **Docker:** `INSTALL_FFMPEG=true` (the default) builds ffmpeg into the image, which adds about 250 MB. The
+  `api`, `realtime` and `mcp` services are built from the same Dockerfile, so all three images have it; only
+  `api` converts clips.
 - **Without Docker:** install the `ffmpeg` package (it includes `ffprobe`):
 
   ```bash
