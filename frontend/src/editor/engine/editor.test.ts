@@ -31,6 +31,9 @@ async function setup(opts: { mode?: 'guest' | 'account' | 'shared-view'; pages?:
 
 const objectsOf = (engine: EditorEngine, i = 0) => engine.state.doc.pages[i].objects
 
+/** Lets a pending canvas render run while the test's mocks are still in place (a disposed canvas still draws it). */
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
 describe('EditorEngine', () => {
   beforeEach(() => {
     // Thumbnail encoding resolves via timers in jsdom; make it immediate so fake timers can drive autosave.
@@ -618,6 +621,7 @@ describe('EditorEngine', () => {
     expect(img.getScaledHeight()).toBeCloseTo(600)
     expect(img.getBoundingRect().left).toBeCloseTo(0)
     expect(img.getBoundingRect().top).toBeCloseTo(0)
+    await nextFrame()
     engine.dispose()
     restore()
   })
