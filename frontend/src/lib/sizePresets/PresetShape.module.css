@@ -1,0 +1,6 @@
+.shape {
+  display: block;
+  background: var(--color-brand-soft);
+  border: 1.5px solid var(--color-text);
+  border-radius: 3px;
+}

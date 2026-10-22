@@ -275,14 +275,7 @@
   height: 58px;
 }
 
-.shape {
-  display: block;
-  background: var(--color-brand-soft);
-  border: 1.5px solid var(--color-text);
-  border-radius: 3px;
-}
-
-.card[aria-pressed='true'] .shape {
+.card[aria-pressed='true'] .thumb > span {
   border-color: var(--color-brand);
 }
 

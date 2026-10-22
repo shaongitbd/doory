@@ -16,6 +16,7 @@ import {
   type PickerBlock,
   type ShapeFilter,
 } from './picker'
+import { PresetShape } from './PresetShape'
 import { useSizePresets } from './store'
 import styles from './SizePicker.module.css'
 
@@ -37,12 +38,6 @@ export interface SizePickerProps {
   startWithCustom?: boolean
   /** Told when the custom size opens or closes, so the dialog can leave its own button to the form. */
   onCustomChange?(open: boolean): void
-}
-
-/** The page's shape, drawn to scale inside a fixed box. */
-export function PresetShape({ preset, size = 52 }: { preset: Pick<SizePreset, 'width' | 'height'>; size?: number }) {
-  const k = size / Math.max(preset.width, preset.height)
-  return <span className={styles.shape} style={{ width: Math.max(6, Math.round(preset.width * k)), height: Math.max(6, Math.round(preset.height * k)) }} aria-hidden="true" />
 }
 
 /**
