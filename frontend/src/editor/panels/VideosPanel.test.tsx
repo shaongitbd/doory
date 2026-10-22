@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createBlankDocument } from '@/lib/document'
-import type { AssetRef, EditorServices, VideoService } from '@/types/adapter'
+import type { AssetRef, EditorServices, VideoService, VideoUploadOptions } from '@/types/adapter'
 import type { StockVideo, StockVideoPage, VideoInfo } from '@/types/api'
 import { setupEditor } from '../animation/testing'
 import { EditorProvider } from '../EditorProvider'
@@ -61,14 +61,20 @@ async function open(service: VideoService | null) {
   const { engine } = await setupEditor({ doc: createBlankDocument(1080, 1920) })
   ;(engine.adapter.services as EditorServices).video = service
   const fromAsset = vi.spyOn(engine.videos, 'fromAsset').mockResolvedValue()
-  await act(async () => {
-    render(
-      <EditorProvider engine={engine} portalRoot={document.body}>
-        <VideosPanel close={() => undefined} />
-      </EditorProvider>,
-    )
-  })
-  return { engine, fromAsset }
+  /** Opens the tool (again); returns how to close it. */
+  const mount = async (): Promise<() => void> => {
+    let unmount: () => void = () => undefined
+    await act(async () => {
+      ;({ unmount } = render(
+        <EditorProvider engine={engine} portalRoot={document.body}>
+          <VideosPanel close={() => undefined} />
+        </EditorProvider>,
+      ))
+    })
+    return unmount
+  }
+  const close = await mount()
+  return { engine, fromAsset, close, mount }
 }
 
 describe('Videos tool', () => {
@@ -115,6 +121,32 @@ describe('Videos tool', () => {
     })
     await waitFor(() => expect(service.upload).toHaveBeenCalledWith(file, expect.objectContaining({ onProgress: expect.any(Function) })))
     await waitFor(() => expect(opened.fromAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'beachmov' })))
+  })
+
+  it('keeps an upload going when the tool closes, and shows it again when the tool opens', async () => {
+    let progress: (fraction: number) => void = () => undefined
+    let finish: (ref: AssetRef) => void = () => undefined
+    const upload = vi.fn((_file: File, options?: VideoUploadOptions) => {
+      progress = options?.onProgress ?? progress
+      return new Promise<AssetRef>((resolve) => {
+        finish = resolve
+      })
+    })
+    const service = fakeService({ upload, list: vi.fn(async () => ({ count: 0, next: null, previous: null, results: [] })) })
+    const opened = await open(service)
+    engine = opened.engine
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('video-file-input'), { target: { files: [new File(['x'], 'beach.mov', { type: 'video/quicktime' })] } })
+    })
+    await waitFor(() => expect(upload).toHaveBeenCalled())
+    expect(upload.mock.calls[0][1]?.signal).toBeUndefined()
+    act(() => progress(0.4))
+    opened.close()
+    await opened.mount()
+    expect(screen.getByText(t.clips.uploads.uploading('beach.mov', 40))).toBeInTheDocument()
+    await act(async () => finish(clipRef('beachmov')))
+    await waitFor(() => expect(opened.fromAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'beachmov' })))
+    expect(screen.queryByText(t.clips.uploads.uploading('beach.mov', 40))).toBeNull()
   })
 
   it('refuses a file that is not a video, or too large, without sending it', async () => {
