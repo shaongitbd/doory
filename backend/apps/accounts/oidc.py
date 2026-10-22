@@ -51,9 +51,11 @@ KEY_TYPES = {
     "EdDSA": "OKP",
 }
 
-# Codes the frontend knows. Anything else the user sees is one of these.
+# The codes this module raises: whatever goes wrong here reaches the user as one of these. Signing in or
+# connecting an account (apps.accounts.services) adds its own: account_disabled, oidc_no_email,
+# oidc_account_exists, oidc_email_unverified, oidc_identity_in_use and oidc_account_mismatch.
 UNAVAILABLE = "oidc_unavailable"  # off, or the provider can't be reached / answered nonsense
-FAILED = "oidc_failed"  # the answer did not verify
+FAILED = "oidc_failed"  # the answer did not verify (services: or signing in kept racing another)
 CANCELLED = "oidc_cancelled"  # the user (or the provider) said no
 EXPIRED = "oidc_expired"  # unknown, used or stale `state`: start again
 
