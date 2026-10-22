@@ -700,6 +700,17 @@ describe('Download dialog: pictures', () => {
     expect(api).toHaveTextContent('/api/v1/designs/design-9/export/image/')
   })
 
+  it('shows no API call while the page range is not one', async () => {
+    ;({ engine } = setup({ doc: story(), id: 'design-9' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: t.dialog.downloadApi }))
+    await more()
+    await userEvent.click(within(dialog()).getByRole('radio', { name: t.dialog.downloadRange }))
+    expect(screen.queryByTestId('download-api')).toBeNull()
+    await userEvent.type(within(dialog()).getByRole('textbox', { name: t.dialog.downloadRange }), '1')
+    expect(screen.getByTestId('download-api')).toHaveTextContent('"page": 1')
+    expect(screen.getByTestId('download-api')).not.toHaveTextContent('"pages": []')
+  })
+
   it('shows the API call for the PDFs with their print options, and for SVG', async () => {
     ;({ engine } = setup({ doc: story(), id: 'design-9' }))
     await pick(/Print-quality PDF/)

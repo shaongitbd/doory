@@ -472,7 +472,7 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
           </MoreSettings>
         </div>
 
-        {apiOpen && apiCallable && format ? (
+        {apiOpen && apiCallable && format && !rangeInvalid ? (
           <ApiPreview
             text={describeCall(
               { designId: editor.designId, formatId: format.id, options: effective, pages: scope === 'all' ? 'all' : chosenPages.map((p) => p.index + 1), fileNames: nameStyle },
