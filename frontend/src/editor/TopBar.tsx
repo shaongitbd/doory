@@ -166,7 +166,7 @@ function ShareMenu({ onPresent }: { onPresent: () => void }) {
   const usable = (id: string): boolean => formats.some((f) => f.id === id && (!f.available || f.available(editor)))
   const preset = open ? designPreset(editor) : null
   const suggested = preset ? suggestionFor(editor, preset) : null
-  const last = open ? loadLastExport() : null
+  const last = open ? loadLastExport(editor) : null
   const tile = (id: keyof typeof t.topbar.formatHint): MenuItem[] => {
     if (!usable(id)) return []
     const options = id === 'png' ? { ...DEFAULT_EXPORT_OPTIONS, transparent: true } : DEFAULT_EXPORT_OPTIONS

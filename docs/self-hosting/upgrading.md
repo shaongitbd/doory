@@ -65,8 +65,8 @@ Changes that need you to do something, newest first. Changes that need nothing a
 
 - New settings `SERVER_VIDEO_EXPORT_ENABLED` (off) and `EXPORT_VIDEO_*`; see
   [image-export.md](image-export.md#video).
-- **Without Docker:** `deploy/nginx.conf` waits 330 s (was 120 s) for the image export endpoint and for `/mcp`.
-  Copy it again, keeping your own edits; a proxy of your own needs the same for video export.
+- **Without Docker:** `deploy/nginx.conf` waits 330 s for the image export endpoint (was 120 s) and for `/mcp`
+  (was 300 s). Copy it again, keeping your own edits; a proxy of your own needs the same for video export.
 
 ### 2026-10-21: image optimizers
 

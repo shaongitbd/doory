@@ -181,8 +181,8 @@ EMAIL_SEND_ASYNC = env.bool("EMAIL_SEND_ASYNC", default=True)  # send off the re
 GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", default="")
 # OpenID Connect sign-in (apps.accounts.oidc): on when the issuer, client ID and client secret are all set.
 # A setting that is wrong turns it off and `manage.py check` says why. OIDC_TRUST_EMAIL lets a first OIDC
-# sign-in take over an existing account with the same (provider-verified) address; off, existing users
-# connect their account from Settings instead.
+# sign-in take over an existing account with the same (provider-verified) address, and a new account start
+# verified; off, existing users connect their account from Settings and new ones get the verification email.
 OIDC_ISSUER = env("OIDC_ISSUER", default="")
 OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", default="")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", default="")
@@ -259,6 +259,7 @@ REST_FRAMEWORK = {
         "anon": "240/min",
         "user": "1200/min",
         "auth": "20/min",  # login / register / password reset
+        "oidc": "30/min",  # single sign-on: a sign-in takes one start and one callback
         "upload": "60/min",
         "stock": "60/min",
         "video_upload": "20/min",  # clips uploaded or imported: each one runs ffmpeg
@@ -267,6 +268,7 @@ REST_FRAMEWORK = {
         "bulk_fill_images": "300/min",  # image URLs fetched by bulk-fill (REST and MCP)
         "export": "30/min",  # server-side image renders (REST and MCP)
         "optimize": "60/min",  # images the browser drew, converted and optimized (POST /exports/optimize/)
+        "optimize_offsite": "10/min",  # images sent to an optimizer off this server (REST and MCP)
         "ai": "30/min",  # calls to AI image providers (REST and MCP)
     },
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
@@ -357,8 +359,11 @@ EXPORT_RENDER_PAGE_URL = env(
 EXPORT_IMAGE_MAX_PIXELS = env.int("EXPORT_IMAGE_MAX_PIXELS", default=40_000_000)  # output width x height
 EXPORT_IMAGE_MAX_DOCUMENT_BYTES = env.int("EXPORT_IMAGE_MAX_DOCUMENT_BYTES", default=5 * 1024 * 1024)
 # Pages one export may draw (`pages`, sent back as a ZIP). Each page is a render of its own, and the whole
-# export is one request: keep pages x EXPORT_TIMEOUT_SECONDS under the web server's worker timeout.
+# export is one request.
 EXPORT_IMAGE_MAX_PAGES = env.int("EXPORT_IMAGE_MAX_PAGES", default=10)
+# Time limit for a whole image export: drawing, converting and optimizing all its pages (and for converting
+# one PNG at /exports/optimize/). Keep it under the web server's worker timeout (120 s in the Docker image).
+EXPORT_IMAGE_TIMEOUT_SECONDS = env.int("EXPORT_IMAGE_TIMEOUT_SECONDS", default=100)
 # Server-side MP4, WebM and GIF of saved designs (apps.exports.services.export_video), on the same render page
 # with the editor's video pipeline. Off by default: one video keeps a browser busy for minutes. It also needs
 # SERVER_IMAGE_EXPORT_ENABLED. The deadline covers the whole file; the bundled nginx waits 330 s for it.

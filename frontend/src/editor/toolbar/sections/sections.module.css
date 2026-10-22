@@ -10,6 +10,15 @@
   gap: 4px;
 }
 
+/* One labelled action under a button grid, as wide as the grid. */
+.wideTool {
+  display: grid;
+}
+.wideTool button {
+  width: 100%;
+  gap: 6px;
+}
+
 .maskGrid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

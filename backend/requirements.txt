@@ -12,6 +12,7 @@ Pillow>=11.2
 gunicorn>=23
 psycopg2-binary>=2.9.13
 google-auth>=2.62.0
+PyJWT[crypto]>=2.10.1  # apps.accounts.oidc: ID tokens signed with RSA, EC or EdDSA keys
 requests>=2.32
 urllib3>=2.6,<3  # apps.assets.remote talks to it directly (pinned addresses); 2.6 bounds decompression (CVE-2025-66471)
 certifi>=2024.2.2

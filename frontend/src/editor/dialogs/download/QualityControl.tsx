@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { type CSSProperties, useState } from 'react'
 import { QUALITY_PRESETS, type QualityPreset } from '../../engine/export/registry'
 import { t } from '../../strings'
 import sliderStyles from '../../ui/Slider.module.css'
@@ -24,6 +24,12 @@ export function QualityControl({ value, preset, onChange, maxBytes, onMaxBytes, 
   const pct = ((value - MIN) / (100 - MIN)) * 100
   const capMb = maxBytes ? Math.round((maxBytes / MB) * 100) / 100 : 1
   const set = (raw: number): void => onChange(Math.min(100, Math.max(MIN, Math.round(raw) || MIN)))
+  // The number as typed: an empty or half-typed field changes nothing until it is a quality (or loses focus).
+  const [typed, setTyped] = useState<string | null>(null)
+  const number = (text: string): number | null => {
+    const n = Number(text)
+    return text.trim() !== '' && Number.isFinite(n) ? n : null
+  }
   return (
     <section className={styles.section}>
       <h3 className={styles.label}>
@@ -32,7 +38,24 @@ export function QualityControl({ value, preset, onChange, maxBytes, onMaxBytes, 
       </h3>
       <div className={styles.qualityRow}>
         <input type="range" className={sliderStyles.range} min={MIN} max={100} value={value} aria-label={t.dialog.downloadQuality} style={{ '--pct': `${pct}%` } as CSSProperties} onChange={(e) => set(Number(e.target.value))} />
-        <input type="number" className={styles.number} min={MIN} max={100} value={value} aria-label={t.dialog.downloadQualityValue} onChange={(e) => set(Number(e.target.value))} />
+        <input
+          type="number"
+          className={styles.number}
+          min={MIN}
+          max={100}
+          value={typed ?? value}
+          aria-label={t.dialog.downloadQualityValue}
+          onChange={(e) => {
+            setTyped(e.target.value)
+            const n = number(e.target.value)
+            if (n !== null && n >= MIN && n <= 100) set(n)
+          }}
+          onBlur={() => {
+            const n = typed === null ? null : number(typed)
+            if (n !== null) set(n)
+            setTyped(null)
+          }}
+        />
       </div>
       <div className={styles.stops}>
         {(Object.keys(QUALITY_PRESETS) as QualityPreset[]).map((id) => (

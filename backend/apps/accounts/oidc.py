@@ -4,7 +4,8 @@
 returns the provider's authorization URL; the provider sends the browser back to `/auth/oidc/callback/`,
 where `take_flow()` and `complete()` check the answer, redeem the code and verify the ID token. Provider
 documents (discovery, keys, token and userinfo responses) are fetched with timeouts, no redirects and a
-size cap. The ID token must be signed with an asymmetric algorithm by a public key from the provider's JWKS.
+size cap, never from a link-local or cloud metadata address. The ID token must be signed with an asymmetric
+algorithm by a public key from the provider's JWKS.
 
 Errors raise `OidcError`: its `code` is all the user sees (the frontend turns it into a message); the
 provider's own words only go to the log.
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import ipaddress
 import json
 import re
 import secrets
@@ -28,6 +30,8 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+
+from apps.assets import remote
 
 CALLBACK_PATH = "/api/v1/auth/oidc/callback/"
 USER_AGENT = "Doory-oidc/1.0"
@@ -53,9 +57,11 @@ KEY_TYPES = {
     "EdDSA": "OKP",
 }
 
-# Codes the frontend knows. Anything else the user sees is one of these.
+# The codes this module raises: whatever goes wrong here reaches the user as one of these. Signing in or
+# connecting an account (apps.accounts.services) adds its own: account_disabled, oidc_no_email,
+# oidc_account_exists, oidc_email_unverified, oidc_identity_in_use and oidc_account_mismatch.
 UNAVAILABLE = "oidc_unavailable"  # off, or the provider can't be reached / answered nonsense
-FAILED = "oidc_failed"  # the answer did not verify
+FAILED = "oidc_failed"  # the answer did not verify (services: or signing in kept racing another)
 CANCELLED = "oidc_cancelled"  # the user (or the provider) said no
 EXPIRED = "oidc_expired"  # unknown, used or stale `state`: start again
 
@@ -134,9 +140,43 @@ def _allowed_url(url: object, *, query: bool) -> bool:
 
 # --- provider documents -----------------------------------------------------------------------------------
 
+# Cloud metadata services outside the link-local ranges (Alibaba Cloud; AWS over IPv6).
+METADATA_ADDRESSES = frozenset(
+    {ipaddress.ip_address("100.100.100.200"), ipaddress.ip_address("fd00:ec2::254")}
+)
+
 
 def _host(url: str) -> str:
     return urlparse(url).hostname or "?"
+
+
+def _resolve(host: str) -> list[str]:
+    return remote.resolve_within(remote.resolve, host, CONNECT_TIMEOUT)
+
+
+def _never_fetched(address: str) -> bool:
+    """Addresses a provider document never comes from. A self-hosted provider may well sit on a private
+    network, so those are allowed; link-local and metadata addresses (where a cloud server's credentials are)
+    are not."""
+    ip = ipaddress.ip_address(address.split("%", 1)[0])
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return ip.is_link_local or ip.is_unspecified or ip.is_multicast or ip in METADATA_ADDRESSES
+
+
+def _check_address(method: str, url: str) -> None:
+    """OidcError(UNAVAILABLE) when the host of `url` is, or resolves to, an address documents never come from.
+    The discovery document names most of the URLs, so they are checked like the issuer's."""
+    host = _host(url).strip("[]")
+    try:
+        addresses = [str(ipaddress.ip_address(host.split("%", 1)[0]))]
+    except ValueError:
+        try:
+            addresses = _resolve(host)
+        except remote.RemoteImageError:
+            raise OidcError(UNAVAILABLE, f"{method} {host}: the host name cannot be found.") from None
+    if any(_never_fetched(address) for address in addresses):
+        raise OidcError(UNAVAILABLE, f"{method} {host} resolves to an address that is not allowed.")
 
 
 def _quote(value: object, limit: int = 200) -> str:
@@ -149,6 +189,7 @@ def _fetch_json(method: str, url: str, *, code: str = UNAVAILABLE, **kwargs: Any
     when it can't be reached. No redirects, nothing read past the size cap or the deadline."""
     headers = {"Accept": "application/json", "User-Agent": USER_AGENT, **kwargs.pop("headers", {})}
     deadline = time.monotonic() + MAX_SECONDS
+    _check_address(method, url)
     try:
         response = requests.request(
             method,

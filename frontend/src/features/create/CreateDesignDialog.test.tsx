@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { buildCatalogue, setSizePresetsForTests, type SizePresetCatalogue } from '@/lib/sizePresets'
@@ -107,6 +108,38 @@ describe('Create a design dialog', () => {
     localStorage.removeItem('doory.sizeChoices')
   })
 
+  it('shows every entry of a folded section on a phone, where sections have no titles to unfold them', () => {
+    setSizeChoicesForTests({ collapsed: ['social'] })
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(max-width: 639px)', addEventListener: () => undefined, removeEventListener: () => undefined }))
+    try {
+      renderWithProviders(<CreateDesignDialog open onClose={() => undefined} />)
+      expect(within(list()).getByRole('button', { name: /Platform A/ })).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+      setSizeChoicesForTests()
+    }
+  })
+
+  it('opens again with nothing chosen', async () => {
+    function Host() {
+      const [open, setOpen] = useState(true)
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open
+          </button>
+          <CreateDesignDialog open={open} onClose={() => setOpen(false)} />
+        </>
+      )
+    }
+    renderWithProviders(<Host />)
+    await userEvent.click(screen.getByRole('button', { name: /Card\s*85 × 55 mm/ }))
+    expect(screen.getByRole('button', { name: 'Create design' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Open' }))
+    expect(await screen.findByRole('button', { name: 'Create design' })).toBeDisabled()
+  })
+
   it('pins a size to your sizes and shows recent ones', async () => {
     setSizeChoicesForTests({ recent: ['example-square'] })
     renderWithProviders(<CreateDesignDialog open onClose={() => undefined} />)
@@ -117,6 +150,20 @@ describe('Create a design dialog', () => {
     expect(names()).toEqual(['Card', 'Platform A Square post'])
     await userEvent.click(screen.getAllByRole('button', { name: 'Remove from your sizes' })[0])
     expect(names()).toEqual(['Platform A Square post'])
+    // With none left, it says how to add one.
+    await userEvent.click(screen.getByRole('button', { name: 'Remove from your sizes' }))
+    expect(screen.getByText(/choose the star in the corner of its card/)).toBeInTheDocument()
+    localStorage.removeItem('doory.sizeChoices')
+  })
+
+  it('says so when your sizes are full', async () => {
+    setSizeChoicesForTests({ pinned: ['card', ...Array.from({ length: 23 }, (_, n) => `gone-${n}`)] })
+    renderWithProviders(<CreateDesignDialog open onClose={() => undefined} />)
+    await userEvent.click(within(list()).getByRole('button', { name: /Platform A/ }))
+    await userEvent.click(screen.getAllByRole('button', { name: 'Add to your sizes' })[0])
+    expect(screen.getByRole('status')).toHaveTextContent('Your sizes hold up to 24. Remove one to add another.')
+    expect(screen.queryAllByRole('button', { name: 'Remove from your sizes' })).toHaveLength(0)
+    setSizeChoicesForTests()
     localStorage.removeItem('doory.sizeChoices')
   })
 

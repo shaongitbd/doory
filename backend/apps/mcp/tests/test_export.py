@@ -14,11 +14,12 @@ from mcp_types import ImageContent, TextContent
 from rest_framework.test import APIClient
 
 from apps.designs.tests.helpers import make_design, make_doc
-from apps.exports import delivery, services
+from apps.exports import delivery, optimizers, services
 from apps.exports.exceptions import ExportBusy, InvalidExport
 from apps.exports.renderer import VideoResult as RenderedVideo
 from apps.exports.services import IMAGE_FORMATS, ImageResult
-from apps.exports.throttling import ExportRateThrottle
+from apps.exports.tests.helpers import FakeOptimizer
+from apps.exports.throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 from apps.mcp.tools import export
 
 from .test_http import call
@@ -38,11 +39,17 @@ DEFAULTS = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _image_export_on(settings):
+    """The options are checked (server switch included) before `export_image`, which is faked below."""
+    settings.SERVER_IMAGE_EXPORT_ENABLED = True
+
+
 @pytest.fixture
 def renders(monkeypatch) -> list[dict]:
     calls: list[dict] = []
 
-    def fake_export_image(design, **options):
+    def fake_export_image(design, *, deadline, **options):
         calls.append({"design": design.pk, **options})
         index = options["page"]
         fmt = "webp" if options["format"] == "auto" else options["format"]
@@ -122,7 +129,9 @@ def test_pages_are_numbered_from_one_or_named_by_id(as_caller, design, renders):
         export.export_design(str(design.pk), page=0)
 
 
-def test_the_new_options_are_passed_on(as_caller, design, renders):
+def test_the_new_options_are_passed_on(as_caller, design, renders, settings, monkeypatch):
+    settings.IMAGE_OPTIMIZERS = ["builtin", "kraken"]
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "kraken", FakeOptimizer("kraken"))
     export.export_design(
         str(design.pk),
         format="auto",
@@ -219,6 +228,18 @@ def test_each_extra_page_uses_the_export_rate(as_caller, user, renders, monkeypa
     design = make_design(user, document=make_doc(pages=3))
     with pytest.raises(ToolError, match="Too many requests"):
         export.export_design(str(design.pk), pages="all")
+    assert renders == []
+
+
+def test_pages_sent_to_an_offsite_optimizer_use_its_rate(as_caller, user, renders, monkeypatch, settings):
+    settings.IMAGE_OPTIMIZERS = ["custom"]
+    custom = FakeOptimizer("custom", "Ours")
+    custom.sends_offsite = True
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "custom", custom)
+    monkeypatch.setattr(OffsiteOptimizeRateThrottle, "THROTTLE_RATES", {"optimize_offsite": "2/min"})
+    design = make_design(user, document=make_doc(pages=3))
+    with pytest.raises(ToolError, match="Too many requests"):
+        export.export_design(str(design.pk), pages="all", optimize="custom")
     assert renders == []
 
 
@@ -453,8 +474,10 @@ def videos(monkeypatch, settings) -> list[dict]:
     def fake_render_video(payload, **kwargs):
         calls.append(payload)
         pages = payload["document"]["pages"]
+        data = b"\x00\x00\x00\x18ftypisom-video"
         return RenderedVideo(
-            data=b"\x00\x00\x00\x18ftypisom-video",
+            file=io.BytesIO(data),
+            size=len(data),
             mime=services.VIDEO_FORMATS[payload["format"]],
             width=480,
             height=240,
@@ -490,6 +513,7 @@ def test_a_video_of_all_pages_is_a_link_with_what_it_holds(as_caller, design, vi
     )
     assert info["pages"] == [1, 2] and info["options"]["resolution"] == "design"
     assert info["warnings"][0].startswith("The sound is Opus") and "always sent as a link" in info["note"]
+    assert info["bytes"] == len(b"\x00\x00\x00\x18ftypisom-video")
     response = APIClient().get(info["url"].removeprefix("http://localhost:5173"))
     assert response["Content-Type"] == "video/mp4"
     assert b"".join(response.streaming_content) == b"\x00\x00\x00\x18ftypisom-video"

@@ -109,6 +109,7 @@ See [image-export.md](image-export.md).
 | `EXPORT_IMAGE_MAX_PIXELS` | `40000000` | Largest image, as width × height after scaling |
 | `EXPORT_IMAGE_MAX_DOCUMENT_BYTES` | `5242880` | Largest design document the export will draw |
 | `EXPORT_IMAGE_MAX_PAGES` | `10` | Most pages one image, SVG or PDF export draws (several images or SVGs come back as a ZIP). Each image page is a render of its own in the same request |
+| `EXPORT_IMAGE_TIMEOUT_SECONDS` | `100` | Time limit for a whole image export: drawing, converting and optimizing all its pages. An export that runs out of time stops with `export_timeout`. Also limits converting one PNG at `POST /api/v1/exports/optimize/`. Keep it under the web server's worker timeout (120 s in the Docker image) |
 | `SERVER_VIDEO_EXPORT_ENABLED` | `false` | Make MP4, WebM and GIF videos of saved designs on the server (REST API and `export_design`). Also needs `SERVER_IMAGE_EXPORT_ENABLED`. One video keeps a browser busy for up to `EXPORT_VIDEO_TIMEOUT_SECONDS` |
 | `EXPORT_VIDEO_TIMEOUT_SECONDS` | `300` | Time limit for making one video. Keep your proxy's read timeout for the export endpoint and `/mcp` above it (the bundled nginx waits 330 s) |
 | `EXPORT_VIDEO_MAX_SECONDS` | `120` | Longest video or GIF the server makes |
@@ -139,7 +140,7 @@ See [image-optimization.md](../integrations/image-optimization.md).
 | `KRAKEN_API_SECRET` | | Kraken.io API secret |
 | `IMAGE_OPTIMIZER_CUSTOM_NAME` | `Custom` | The name people see for the custom optimizer |
 | `IMAGE_OPTIMIZER_CUSTOM_URL` | | Address of an optimizer that follows the [custom contract](../integrations/image-optimization.md#custom-optimizer-contract) |
-| `IMAGE_OPTIMIZER_CUSTOM_KEY` | | Sent to the custom optimizer as `Authorization: Bearer …`. Empty: no header |
+| `IMAGE_OPTIMIZER_CUSTOM_KEY` | | Sent to the custom optimizer as `Authorization: Bearer …`. Empty: no header. Use an `https://` address with a key: `manage.py check` warns about a key sent over plain `http://` |
 
 ## Video clips
 
@@ -190,13 +191,13 @@ See [google-sign-in.md](../integrations/google-sign-in.md).
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
-| `OIDC_ISSUER` | | Issuer URL of your identity provider, e.g. `https://auth.example.com/application/o/doory/`. Sign-in is on when this, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are all set |
+| `OIDC_ISSUER` | | Issuer URL of your identity provider, e.g. `https://auth.example.com/application/o/doory/`. Sign-in is on when this, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are all set and `SITE_URL` is an `https://` address (`http://` works only with `DJANGO_DEBUG` on). `manage.py check` says what keeps it off |
 | `OIDC_CLIENT_ID` | | Client ID of a confidential client registered at the provider, with `SITE_URL/api/v1/auth/oidc/callback/` as its redirect URI |
 | `OIDC_CLIENT_SECRET` | | That client's secret |
 | `OIDC_BUTTON_LABEL` | `Sign in with SSO` | Text of the sign-in button, e.g. `Sign in with Authentik` |
 | `OIDC_BUTTON_ICON` | | Logo on the sign-in button, by name: the file name of an icon in [`frontend/src/assets/sso-icons/`](../../frontend/src/assets/sso-icons/) without `.svg`, e.g. `authentik`, `keycloak`, `authelia`, `pocket-id`, `okta`, `microsoft`, `google`. Empty or unknown: a key icon |
 | `OIDC_SCOPES` | `openid email profile` | Scopes to ask for. Must include `openid` |
-| `OIDC_TRUST_EMAIL` | `false` | Let a first sign-in use an existing account with the same email address, when the provider says it has verified it. Never applies to staff accounts. Off, people connect their existing account from Settings |
+| `OIDC_TRUST_EMAIL` | `false` | Take the provider's word that it has verified an email address: a first sign-in then uses an existing account with the same address (never a staff account), and a new account starts with its address verified. Off, people connect their existing account from Settings, and a new account gets the usual verification email |
 
 ## Stock media
 

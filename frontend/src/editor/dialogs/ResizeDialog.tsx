@@ -58,7 +58,8 @@ export function ResizeDialog({ props }: { props?: Record<string, unknown> }) {
   const range = canvasSideRange(unit)
   const show = (px: number): number => Number(pxToUnit(px, unit).toFixed(dec))
   const next = { width: Math.round(w), height: Math.round(h) }
-  const unchanged = scope === 'all' ? pageSizes(doc).every((size) => sameSize(size, next)) : sameSize(current, next)
+  const isUnchanged = (to: { width: number; height: number }): boolean => (scope === 'all' ? pageSizes(doc).every((size) => sameSize(size, to)) : sameSize(current, to))
+  const unchanged = isUnchanged(next)
 
   // With the ratio locked the other side follows, but it cannot leave the canvas limits either.
   const withinLimits = (px: number): number => Math.min(CANVAS_SIDE_PX.max, Math.max(CANVAS_SIDE_PX.min, px))
@@ -102,6 +103,8 @@ export function ResizeDialog({ props }: { props?: Record<string, unknown> }) {
               setH(preset.height)
             }}
             onConfirm={(preset) => {
+              // Like the Resize button, which stays disabled for the size the pages already have.
+              if (isUnchanged({ width: Math.round(preset.width), height: Math.round(preset.height) })) return
               editor.pages.resize(preset.width, preset.height, mode, { scope, pageId })
               editor.closeDialog()
             }}

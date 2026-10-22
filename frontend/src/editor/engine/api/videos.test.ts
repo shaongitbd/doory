@@ -71,6 +71,23 @@ describe('video clip commands', () => {
     expect(readClip(stored())?.trimEndMs).toBe(8000)
   })
 
+  it('writes only the settings it was given, and what clamping moves because of them', () => {
+    expect(engine.videos.update('clip', { volume: 0.5 })).toBe(true)
+    const after = stored()
+    expect(after.videoVolume).toBe(0.5)
+    // The clip never had these: a co-editor's change to them is not overwritten by defaults.
+    for (const key of ['videoFadeInMs', 'videoFadeOutMs', 'videoSpeed', 'videoStartMs', 'videoLoop', 'videoMuted']) expect(after).not.toHaveProperty(key)
+    // A trim end before the start swaps the two: both are written.
+    engine.videos.update('clip', { trimStartMs: 3000 })
+    engine.videos.update('clip', { trimEndMs: 1000 })
+    expect([stored().videoTrimStartMs, stored().videoTrimEndMs]).toEqual([1000, 3000])
+    // Too short a trim moves the end along.
+    engine.videos.update('clip', { trimStartMs: 2950 })
+    expect([stored().videoTrimStartMs, stored().videoTrimEndMs]).toEqual([2950, 3050])
+    expect(stored()).not.toHaveProperty('videoFadeInMs')
+    expect(engine.videos.update('clip', { volume: 0.5 })).toBe(false)
+  })
+
   it('does nothing to plain pictures', () => {
     expect(engine.videos.update('pic', { muted: true })).toBe(false)
     expect(engine.videos.get('pic')).toBeNull()
@@ -85,6 +102,18 @@ describe('video clip commands', () => {
     await engine.undo()
     expect(readTracks(engine.getDocument())).toHaveLength(0)
     expect(stored().videoMuted).not.toBe(true)
+  })
+
+  it('cannot detach the sound of a clip that plays faster or slower (a track would drift from it)', async () => {
+    const { commands, isCommandEnabled } = await import('../../commands')
+    await import('../../builtins/commands')
+    const detach = commands.get('video.detachAudio')!
+    engine.select(['clip'])
+    expect(isCommandEnabled(detach, { editor: engine, state: engine.state })).toBe(true)
+    engine.videos.update('clip', { speed: 2 })
+    expect(isCommandEnabled(detach, { editor: engine, state: engine.state })).toBe(false)
+    expect(engine.videos.detachAudio('clip')).toBe(false)
+    expect(readTracks(engine.getDocument())).toHaveLength(0)
   })
 
   it('cannot detach the sound of a silent clip', async () => {
@@ -106,6 +135,16 @@ describe('video clip commands', () => {
     expect([clip.left, clip.top]).toEqual([400, 300])
   })
 
+  it('sets a cropped clip as the background with the whole video, not the crop window moved to the corner', async () => {
+    engine.dispose()
+    ;({ engine } = await setupEditor({ objects: [clipObject({ cropX: 40, cropY: 20, width: 80, height: 45 })] }))
+    expect(engine.videos.setAsBackground('clip')).toBe(true)
+    const clip = stored()
+    expect([clip.cropX, clip.cropY, clip.width, clip.height]).toEqual([0, 0, 160, 90])
+    expect(Number(clip.scaleX) * 160).toBeGreaterThanOrEqual(800)
+    expect(Number(clip.scaleY) * 90).toBeGreaterThanOrEqual(600)
+  })
+
   it('adds a blurred background behind everything, which follows the clip', async () => {
     expect(engine.videos.blurredBackground('clip')).toBe(true)
     const objects = engine.getDocument().pages[0].objects
@@ -122,6 +161,27 @@ describe('video clip commands', () => {
     engine.videos.update('clip', { trimStartMs: 2000, speed: 2, volume: 0.3 })
     const followed = engine.getDocument().pages[0].objects[0]
     expect(readClip(followed)).toMatchObject({ trimStartMs: 2000, speed: 2, volume: 1, muted: true })
+  })
+
+  it('deletes a clip with its blurred background, in one step', async () => {
+    engine.videos.blurredBackground('clip')
+    await settle()
+    engine.select(['clip'])
+    engine.arrange.delete()
+    expect(engine.getDocument().pages[0].objects.filter((o) => o.videoSrc)).toHaveLength(0)
+    await engine.undo()
+    expect(engine.getDocument().pages[0].objects.filter((o) => o.videoSrc)).toHaveLength(2)
+  })
+
+  it('pastes a clip with its blurred background, the pasted background following the pasted clip', async () => {
+    engine.videos.blurredBackground('clip')
+    const [backdrop, clip] = engine.getDocument().pages[0].objects
+    await engine.insert.objects([backdrop, clip], 'Paste', { offset: 20 })
+    const objects = engine.getDocument().pages[0].objects
+    const pastedClip = objects.find((o) => o.videoSrc && !o.videoBackdropOf && o.id !== 'clip')!
+    const pastedBackdrop = objects.find((o) => o.videoBackdropOf && o.id !== backdrop.id)!
+    expect(pastedBackdrop.videoBackdropOf).toBe(pastedClip.id)
+    expect(objects.find((o) => o.id === backdrop.id)?.videoBackdropOf).toBe('clip')
   })
 
   it('splits a clip at the playhead into two that play one after the other', async () => {
@@ -154,6 +214,20 @@ describe('video clip commands', () => {
     expect(backdrops.map((o) => [o.videoTrimStartMs ?? 0, o.videoTrimEndMs]).sort()).toEqual([[0, 4000], [4000, 8000]])
   })
 
+  it('cuts and replaces the clip when its blurred background is chosen, never the background alone', async () => {
+    engine.videos.blurredBackground('clip')
+    await settle()
+    const backdropId = engine.getDocument().pages[0].objects[0].id
+    expect(engine.videos.startReplace(backdropId)).toBe(true)
+    expect(engine.videos.replacing).toBe('clip')
+    engine.videos.cancelReplace()
+    const second = engine.videos.split(backdropId, 4000)!
+    const objects = engine.getDocument().pages[0].objects
+    expect(objects.find((o) => o.id === second)).not.toHaveProperty('videoBackdropOf')
+    expect(objects.filter((o) => o.videoBackdropOf).map((o) => o.videoBackdropOf).sort()).toEqual(['clip', second].sort())
+    expect(readClip(objects.find((o) => o.id === 'clip')!)?.trimEndMs).toBe(4000)
+  })
+
   it('replaces the video of a clip, keeping its frame and settings, through the Videos tool', async () => {
     engine.videos.update('clip', { volume: 0.4, trimStartMs: 1000 })
     const before = engine.getDocument().pages[0].objects.find((o) => o.id === 'clip')!
@@ -177,6 +251,18 @@ describe('video clip commands', () => {
     expect(after.videoAudioSrc).toBeUndefined()
     expect(Number(after.scaleX) * Number(after.width)).toBeCloseTo(Number(before.scaleX) * Number(before.width), 0)
     expect(engine.getDocument().pages[0].objects.filter((o) => o.videoSrc)).toHaveLength(1)
+  })
+
+  it('stops waiting for a replacement when the Videos tool closes without a pick', () => {
+    engine.select(['clip'])
+    expect(engine.videos.startReplace()).toBe(true)
+    engine.patchUi({ grid: true })
+    expect(engine.videos.replacing).toBe('clip')
+    engine.patchUi({ panelId: null })
+    expect(engine.videos.replacing).toBeNull()
+    // Closed for good: opening the tool again only adds videos.
+    engine.patchUi({ panelId: 'videos' })
+    expect(engine.videos.replacing).toBeNull()
   })
 
   it('keeps picture tools away from clips', async () => {

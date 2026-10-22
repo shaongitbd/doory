@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { DocPage } from '@/types/document'
 import type { EditorEngine } from '../../engine/editor'
 import { pageMultiplier } from '../../engine/export/formats'
@@ -42,10 +42,30 @@ export interface PreviewState {
   failed: boolean
 }
 
+export interface Preview extends PreviewState {
+  /** The chosen optimizer when it sends the page to an outside service: its file is only previewed when asked. */
+  offsite: string | null
+  /** The preview shows that optimizer's file for the current settings. */
+  asked: boolean
+  /** Asks the server once for the current settings (an outside optimizer). */
+  ask: () => void
+}
+
+interface Drawn {
+  canvas: HTMLCanvasElement
+  png: Blob
+  factor: number
+}
+
 const EMPTY: PreviewState = { original: null, after: null, sizes: {}, bytesBefore: null, approximate: {}, note: null, failed: false }
 
 function objectUrl(blob: Blob): string | null {
   return typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : null
+}
+
+/** An effect's cleanup that revokes `url` (when it is replaced or the preview goes). */
+function revokeLater(url: string | null): (() => void) | undefined {
+  return url ? () => URL.revokeObjectURL?.(url) : undefined
 }
 
 /** JPG has no alpha: a transparent drawing is put on white first, as the export does. */
@@ -64,29 +84,21 @@ function onWhite(canvas: HTMLCanvasElement): HTMLCanvasElement {
 /**
  * Draws the page for the compare preview and estimates the file sizes: the browser encodes the preview in every format
  * it can (sizes scaled up when the preview is smaller than the file), and the server converts and optimizes it for the
- * chosen format when the download would go there too.
+ * chosen format when the download would go there too. An optimizer that sends the page to an outside service is not
+ * asked on its own: the browser's estimate shows until the person asks once (`ask`); the download still uses it.
  */
-export function usePreview({ engine, page, size, format, options, formats }: PreviewInput): PreviewState {
+export function usePreview({ engine, page, size, format, options, formats }: PreviewInput): Preview {
   const [state, setState] = useState<PreviewState>(EMPTY)
-  const [drawn, setDrawn] = useState<{ canvas: HTMLCanvasElement; png: Blob; factor: number } | null>(null)
-  const urls = useRef<string[]>([])
+  const [drawn, setDrawn] = useState<Drawn | null>(null)
+  const [asked, setAsked] = useState<{ drawn: Drawn; settings: string } | null>(null)
 
   const output = safeMultiplier(size.width, size.height, pageMultiplier(options, size))
   const scale = Math.min(output, PREVIEW_MAX_SIDE / Math.max(size.width, size.height))
   const transparent = options.transparent && (format === null || hasAlpha(format))
 
-  useEffect(
-    () => () => {
-      for (const url of urls.current) URL.revokeObjectURL?.(url)
-    },
-    [],
-  )
-  const keep = (url: string | null): string | null => {
-    if (url) urls.current.push(url)
-    // Only the last few are on screen: older ones go.
-    while (urls.current.length > 6) URL.revokeObjectURL?.(urls.current.shift() as string)
-    return url
-  }
+  // Each side's picture is let go once the next one is shown, or when the dialog closes.
+  useEffect(() => revokeLater(state.original), [state.original])
+  useEffect(() => revokeLater(state.after), [state.after])
 
   // Draw the page (again only when what is drawn changes).
   useEffect(() => {
@@ -98,8 +110,9 @@ export function usePreview({ engine, page, size, format, options, formats }: Pre
           const png = await canvasToBlob(canvas, 'image/png')
           if (!live) return
           const factor = Math.max(1, (output * output) / (scale * scale))
+          const original = objectUrl(png)
           setDrawn({ canvas, png, factor })
-          setState((s) => ({ ...s, original: keep(objectUrl(png)), failed: false }))
+          setState((s) => ({ ...s, original, failed: false }))
         })
         .catch(() => live && setState((s) => ({ ...s, failed: true })))
     }, ENCODE_DELAY)
@@ -107,12 +120,18 @@ export function usePreview({ engine, page, size, format, options, formats }: Pre
       live = false
       clearTimeout(timer)
     }
-    // keep() only touches a ref
+    // `size` is read through its width and height.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine, page, size.width, size.height, scale, output, transparent])
 
   const { quality, maxBytes, pngColors, optimize, optimizer, stripMetadata, progressive } = options
   const formatKey = formats.join(',')
+  const info = engine.adapter.imageOptimize
+  const chosen = format && optimize && serverConverts(engine.adapter, format) ? info?.optimizers.find((o) => o.id === (optimizer ?? info.default)) : undefined
+  // An optimizer leaves the formats it doesn't make smaller on the server.
+  const offsite = format && chosen?.sendsOffsite && (chosen.formats as string[]).includes(format) ? chosen.name : null
+  const settings = JSON.stringify([format, quality, maxBytes, pngColors, optimize, optimizer, stripMetadata, progressive, transparent])
+  const askedNow = offsite !== null && drawn !== null && asked?.drawn === drawn && asked.settings === settings
   // Encode in every format the browser makes, and the chosen one as the download will (server included).
   useEffect(() => {
     if (!drawn) return
@@ -126,6 +145,8 @@ export function usePreview({ engine, page, size, format, options, formats }: Pre
       const blobs: Partial<Record<RasterFormat, Blob>> = { png: drawn.png }
       const flat = onWhite(drawn.canvas)
       for (const f of formats) {
+        // A newer change started its own run: this one stops between formats instead of finishing for nothing.
+        if (!live) return
         if (f === 'png') blobs.png = drawn.png
         else if (browserEncodes(f)) {
           const blob = await canvasToBlob(f === 'jpg' ? flat : drawn.canvas, RASTER_MIME[f], quality)
@@ -149,27 +170,31 @@ export function usePreview({ engine, page, size, format, options, formats }: Pre
       let before: number | null = format && sizes[format] !== undefined ? (sizes[format] as number) : null
       let note: string | null = null
       const server = format !== null && serverConverts(engine.adapter, format) && wantsServer(format, options)
-      if (format && (server || (isLossy(format) && maxBytes))) {
-        if (server) await new Promise((resolve) => setTimeout(resolve, SERVER_DELAY))
+      // Not asked yet: the browser's file (fitted to the cap, if any) stands for the outside optimizer's.
+      const held = server && offsite !== null && !askedNow
+      if (held && format) approximate[format] = true
+      if (format && ((server && !held) || (isLossy(format) && maxBytes && (!held || browserEncodes(format))))) {
+        if (server && !held && !askedNow) await new Promise((resolve) => setTimeout(resolve, SERVER_DELAY))
         if (!live) return
         // The cap is for the whole file; the preview is smaller, so its share is too.
         const share = maxBytes ? Math.max(1000, Math.round(maxBytes / Math.pow(drawn.factor, GROWTH))) : undefined
         const source = format === 'jpg' ? flat : drawn.canvas
         try {
-          const result = await encodeRaster(source, format, { quality, maxBytes: share, pngColors, transparent, optimize, optimizer, stripMetadata, progressive }, engine.adapter, controller.signal)
+          const result = await encodeRaster(source, format, { quality, maxBytes: share, pngColors, transparent, optimize, optimizer, stripMetadata, progressive }, held ? {} : engine.adapter, controller.signal)
           if (!live) return
           after = result.blob
           if (result.format === format) {
             sizes[format] = grow(result.blob.size)
-            approximate[format] = approx
+            approximate[format] = approx || held
             before = grow(result.bytesBefore)
           }
-          note = result.note ?? null
+          note = held ? null : (result.note ?? null)
         } catch {
           return
         }
       }
-      setState((s) => ({ ...s, after: after ? keep(objectUrl(after)) : null, sizes, approximate, bytesBefore: before, note }))
+      const url = after ? objectUrl(after) : null
+      setState((s) => ({ ...s, after: url, sizes, approximate, bytesBefore: before, note }))
     }
     const timer = setTimeout(() => void run(), ENCODE_DELAY)
     return () => {
@@ -177,9 +202,12 @@ export function usePreview({ engine, page, size, format, options, formats }: Pre
       clearTimeout(timer)
       controller.abort()
     }
-    // `options` is read through the fields listed; keep() only touches a ref.
+    // `options` is read through the fields listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawn, engine, format, formatKey, quality, maxBytes, pngColors, optimize, optimizer, stripMetadata, progressive, transparent])
+  }, [drawn, engine, format, formatKey, quality, maxBytes, pngColors, optimize, optimizer, stripMetadata, progressive, transparent, offsite, askedNow])
 
-  return page ? state : EMPTY
+  const ask = (): void => {
+    if (drawn) setAsked({ drawn, settings })
+  }
+  return { ...(page ? state : EMPTY), offsite: page ? offsite : null, asked: askedNow, ask }
 }

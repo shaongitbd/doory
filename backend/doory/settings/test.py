@@ -21,7 +21,11 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": [],
     # Views that opt into scoped throttles must not trip over the many requests a test makes;
     # tests that exercise throttling lower the rate themselves.
-    "DEFAULT_THROTTLE_RATES": {**REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"], "auth": "100000/min"},
+    "DEFAULT_THROTTLE_RATES": {
+        **REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"],
+        "auth": "100000/min",
+        "oidc": "100000/min",
+    },
 }
 GOOGLE_CLIENT_ID = "test-google-client-id.apps.googleusercontent.com"
 UNSPLASH_ACCESS_KEY = ""

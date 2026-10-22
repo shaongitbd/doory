@@ -54,7 +54,7 @@ export interface HistoryStatus {
   redoLabel: string | null
 }
 
-export type DialogId = 'shortcuts' | 'resize' | 'download' | 'rename' | 'background-removal' | (string & {})
+export type DialogId = 'shortcuts' | 'resize' | 'download' | 'rename' | 'background-removal' | 'upscale' | (string & {})
 
 export interface Toast {
   id: number

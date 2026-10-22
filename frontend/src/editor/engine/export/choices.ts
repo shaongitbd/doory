@@ -63,8 +63,22 @@ const num = (value: unknown, min: number, max: number): number | undefined => (t
 const text = (value: unknown, max = 40): string | undefined => (typeof value === 'string' && value.length <= max ? value : undefined)
 const flag = (value: unknown): boolean | undefined => (typeof value === 'boolean' ? value : undefined)
 
-/** The last download's format and options in this browser (a per-viewer convenience), or null. */
-export function loadLastExport(): ExportChoice | null {
+/**
+ * `options` with an optimizer this server still offers: one it no longer has (remembered from an earlier download) gives
+ * way to the instance's default, or to none when there is no server.
+ */
+export function withOfferedOptimizer(engine: EditorEngine, options: ExportOptions): ExportOptions {
+  const info = engine.adapter.imageOptimize
+  if (options.optimizer === undefined || info?.optimizers.some((o) => o.id === options.optimizer)) return options
+  const next = { ...options }
+  const fallback = info?.default ?? info?.optimizers[0]?.id
+  if (fallback) next.optimizer = fallback
+  else delete next.optimizer
+  return next
+}
+
+/** The last download's format and options in this browser (a per-viewer convenience), or null. With `engine`, a stale optimizer is replaced. */
+export function loadLastExport(engine?: EditorEngine): ExportChoice | null {
   try {
     const raw = JSON.parse(safeGetItem(LAST_KEY) ?? 'null') as { formatId?: unknown; options?: Record<string, unknown> } | null
     const formatId = text(raw?.formatId, 20)
@@ -87,7 +101,7 @@ export function loadLastExport(): ExportChoice | null {
     for (const key of ['optimize', 'stripMetadata', 'progressive'] as const) if (flag(o[key]) !== undefined) options[key] = o[key] as boolean
     const optimizer = text(o.optimizer)
     if (optimizer) options.optimizer = optimizer
-    return { formatId, options }
+    return { formatId, options: engine ? withOfferedOptimizer(engine, options) : options }
   } catch {
     return null
   }

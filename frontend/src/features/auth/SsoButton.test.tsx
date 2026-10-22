@@ -63,9 +63,12 @@ describe('single sign-on on the sign-in pages', () => {
     expect(screen.queryByRole('separator')).not.toBeInTheDocument()
   })
 
-  it('explains what went wrong when the provider sends the user back with an error', async () => {
-    renderApp('/login?sso_error=oidc_account_exists', { config: withSso() })
+  it('explains what went wrong when the provider sends the user back with an error, and takes it off the address', async () => {
+    const { router } = renderApp(`/login?sso_error=oidc_account_exists&next=${encodeURIComponent('/design/abc')}`, { config: withSso() })
     expect(await screen.findByRole('alert')).toHaveTextContent('An account with this email address already exists. Log in with your password, then connect single sign-on in Settings.')
+    await waitFor(() => expect(router.state.location.search).toBe(`?next=${encodeURIComponent('/design/abc')}`))
+    expect(router.state.historyAction).toBe('REPLACE')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
   })
 
   it('has a generic message for codes it does not know', async () => {
@@ -99,17 +102,35 @@ describe('single sign-on in the sign-in dialog', () => {
     expect(within(dialog).getByRole('link', { name: 'Sign in with Authentik' })).toHaveAttribute('href', start('/local/l1?page=2'))
   })
 
-  it('is not offered to restore a session that ended over an open design, which it would leave', async () => {
+  async function endSessionOverOpenDesign(user = makeUser()) {
     const detail = { ...makeDesign('d1', { title: 'Server design', revision: 3 }), document: createBlankDocument(1080, 1080) }
     const expired = () => HttpResponse.json({ error: { code: 'not_authenticated', message: 'Authentication credentials were not provided.' } }, { status: 401 })
     renderApp('/design/d1', {
-      user: makeUser(),
+      user,
       config: withSso(),
       handlers: [http.get('*/api/v1/designs/d1/', () => HttpResponse.json(detail)), http.patch('*/api/v1/designs/d1/', expired)],
     })
     await userEvent.click(await screen.findByRole('button', { name: 'fake save' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Your session ended' })
+    return screen.findByRole('dialog', { name: 'Your session ended' })
+  }
+
+  it('is not offered to restore a session that ended over an open design, which it would leave', async () => {
+    const dialog = await endSessionOverOpenDesign()
     expect(within(dialog).queryByRole('link', { name: 'Sign in with Authentik' })).not.toBeInTheDocument()
     expect(within(dialog).queryByRole('separator')).not.toBeInTheDocument()
+  })
+
+  it('is offered there, below the password form, to an account without a password, saying that it leaves the page', async () => {
+    const dialog = await endSessionOverOpenDesign(makeUser({ has_password: false, oidc_linked: true }))
+    const button = within(dialog).getByRole('link', { name: 'Sign in with Authentik' })
+    expect(button).toHaveAttribute('href', start('/design/d1'))
+    expect(button).toHaveAccessibleDescription('This leaves the page, so changes that aren’t saved yet may be lost.')
+    expect(within(dialog).getByRole('form', { name: 'Log in' }).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(dialog).getByRole('separator')).toHaveTextContent('or')
+  })
+
+  it('is not offered there to an account without a password that is not connected to it', async () => {
+    const dialog = await endSessionOverOpenDesign(makeUser({ has_password: false, oidc_linked: false, google_linked: true }))
+    expect(within(dialog).queryByRole('link', { name: 'Sign in with Authentik' })).not.toBeInTheDocument()
   })
 })

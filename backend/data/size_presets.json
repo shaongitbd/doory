@@ -1084,7 +1084,7 @@
                   "unit": "in",
                   "icon": "mail",
                   "tags": [
-                    "1:1.5"
+                    "3:2"
                   ],
                   "meta": {
                     "bleed": "0.125 in"
@@ -13035,7 +13035,7 @@
             },
             {
               "slug": "spotify-apple-show-cover",
-              "label": "Spotify Apple Podcasts show cover",
+              "label": "Apple Podcasts show cover",
               "width": 3000,
               "height": 3000,
               "unit": "px",
@@ -13046,7 +13046,7 @@
             },
             {
               "slug": "spotify-apple-episode-art",
-              "label": "Spotify Apple Podcasts episode art",
+              "label": "Apple Podcasts episode art",
               "width": 3000,
               "height": 3000,
               "unit": "px",
@@ -13057,7 +13057,7 @@
             },
             {
               "slug": "spotify-apple-chapter-art",
-              "label": "Spotify Apple Podcasts chapter art",
+              "label": "Apple Podcasts chapter art",
               "width": 3000,
               "height": 3000,
               "unit": "px",
@@ -13068,7 +13068,7 @@
             },
             {
               "slug": "spotify-apple-full-page-art",
-              "label": "Spotify Apple Podcasts full page show art",
+              "label": "Apple Podcasts full page show art",
               "width": 2048,
               "height": 2732,
               "unit": "px",
@@ -13079,7 +13079,7 @@
             },
             {
               "slug": "spotify-apple-show-hero",
-              "label": "Spotify Apple Podcasts showcase hero, show",
+              "label": "Apple Podcasts showcase hero, show",
               "width": 4320,
               "height": 1080,
               "unit": "px",
@@ -13090,7 +13090,7 @@
             },
             {
               "slug": "spotify-apple-channel-icon",
-              "label": "Spotify Apple Podcasts channel icon",
+              "label": "Apple Podcasts channel icon",
               "width": 3000,
               "height": 3000,
               "unit": "px",
@@ -13101,7 +13101,7 @@
             },
             {
               "slug": "spotify-apple-channel-logo",
-              "label": "Spotify Apple Podcasts channel logo",
+              "label": "Apple Podcasts channel logo",
               "width": 3000,
               "height": 750,
               "unit": "px",
@@ -13112,7 +13112,7 @@
             },
             {
               "slug": "spotify-apple-channel-background",
-              "label": "Spotify Apple Podcasts channel background",
+              "label": "Apple Podcasts channel background",
               "width": 4320,
               "height": 3240,
               "unit": "px",
@@ -13123,7 +13123,7 @@
             },
             {
               "slug": "spotify-apple-channel-cover",
-              "label": "Spotify Apple Podcasts channel cover",
+              "label": "Apple Podcasts channel cover",
               "width": 3000,
               "height": 3000,
               "unit": "px",
@@ -13134,7 +13134,7 @@
             },
             {
               "slug": "spotify-apple-channel-hero",
-              "label": "Spotify Apple Podcasts channel showcase hero",
+              "label": "Apple Podcasts channel showcase hero",
               "width": 4320,
               "height": 1080,
               "unit": "px",
@@ -13145,7 +13145,7 @@
             },
             {
               "slug": "spotify-apple-subscription-promo",
-              "label": "Spotify Apple Podcasts subscription promotion",
+              "label": "Apple Podcasts subscription promotion",
               "width": 3000,
               "height": 3000,
               "unit": "px",
@@ -13156,7 +13156,7 @@
             },
             {
               "slug": "spotify-apple-subscription-icon",
-              "label": "Spotify Apple Podcasts subscription icon",
+              "label": "Apple Podcasts subscription icon",
               "width": 1080,
               "height": 1080,
               "unit": "px",
@@ -17251,7 +17251,7 @@
             },
             {
               "slug": "amazon-aplus-single-image",
-              "label": "Amazon A+ Standard single left/right image, single image & highlights/specs, three images & text, multiple…",
+              "label": "Amazon A+ Standard module image, single left/right image, three images & text and others",
               "width": 300,
               "height": 300,
               "unit": "px",
@@ -17676,7 +17676,7 @@
             },
             {
               "slug": "amazon-dsp-billboard",
-              "label": "Amazon DSP billboard 970×250",
+              "label": "Amazon DSP billboard 970×250 (2x)",
               "width": 1940,
               "height": 500,
               "unit": "px",
@@ -17688,7 +17688,7 @@
             },
             {
               "slug": "amazon-dsp-mobile-leaderboard",
-              "label": "Amazon DSP mobile leaderboard 320×50",
+              "label": "Amazon DSP mobile leaderboard 320×50 (2x)",
               "width": 640,
               "height": 100,
               "unit": "px",
@@ -17700,7 +17700,7 @@
             },
             {
               "slug": "amazon-dsp-mobile-414x125",
-              "label": "Amazon DSP mobile detail/search banner 414×125",
+              "label": "Amazon DSP mobile detail/search banner 414×125 (2x)",
               "width": 828,
               "height": 250,
               "unit": "px",
@@ -19398,7 +19398,7 @@
             },
             {
               "slug": "google-meet-hardware-wallpaper",
-              "label": "Google Meet Meet hardware, room device home screen wallpaper",
+              "label": "Google Meet hardware, room device home screen wallpaper",
               "width": 1920,
               "height": 1080,
               "unit": "px",
@@ -19569,7 +19569,7 @@
             },
             {
               "slug": "microsoft-teams-app-color-icon",
-              "label": "Microsoft Teams Teams app color icon, store, app bar flyouts",
+              "label": "Microsoft Teams app color icon, store, app bar flyouts",
               "width": 192,
               "height": 192,
               "unit": "px",
@@ -19588,7 +19588,7 @@
             },
             {
               "slug": "microsoft-teams-app-outline-icon",
-              "label": "Microsoft Teams Teams app outline, rest icon, app bar",
+              "label": "Microsoft Teams app outline, rest icon, app bar",
               "width": 32,
               "height": 32,
               "unit": "px",
@@ -19599,7 +19599,7 @@
             },
             {
               "slug": "microsoft-teams-store-screenshot",
-              "label": "Microsoft Teams Teams Store listing screenshot",
+              "label": "Microsoft Teams Store listing screenshot",
               "width": 1366,
               "height": 768,
               "unit": "px",

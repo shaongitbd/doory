@@ -9,7 +9,9 @@ import type { EditorEngine } from '../editor'
 import { type Rect, normalizeAngle } from '../geometry'
 import { asDory, ensureId, isLocked } from '../objects/dory'
 import { bakeInPlace } from '../objects/bake'
-import { anchorFrames, carriedPictures, clampSlotImage, followFrames, hasSlot, mirrorSlot, shiftSlot } from '../objects/slot'
+import { applyMask } from '../objects/masks'
+import { kindOfLive } from '../objects/kinds'
+import { anchorFrames, carriedPictures, clampSlotImage, coverSlotTransform, followFrames, hasSlot, mirrorSlot, shiftSlot } from '../objects/slot'
 import { getExtraProps } from '../serialization'
 import { coverFrame } from './insert'
 import { isFiniteNumber } from '../numbers'
@@ -20,17 +22,32 @@ import { t } from '../../strings'
 
 export type AlignTarget = 'page' | 'selection'
 
+/**
+ * Kinds Fit to page never applies to: text (stretching it would only blow up the font), QR codes (cropping one
+ * would break it) and lines (a line has no height to fill).
+ */
+const NO_FIT_KINDS: ReadonlySet<string> = new Set(['text', 'qr', 'line'])
+
+/** False for the object kinds Fit to page leaves alone. */
+export function canFitKind(kind: string): boolean {
+  return !NO_FIT_KINDS.has(kind)
+}
+
 /** Distance a duplicate or paste lands from its source, in page px. */
 export const DUPLICATE_OFFSET = 20
 
 /**
- * Re-assigns ids to an object and every object nested in it. A copy also loses its template field tag: the same
- * key twice on one page would clash, and the user tags the copy when it is meant to be a field too.
+ * Re-assigns ids to an object and every object nested in it (noting each old id's new one in `renamed`, when given).
+ * A copy also loses its template field tag: the same key twice on one page would clash, and the user tags the copy
+ * when it is meant to be a field too.
  */
-export function reidTree(obj: FabricObject): void {
-  asDory(obj).id = newId()
+export function reidTree(obj: FabricObject, renamed?: Map<string, string>): void {
+  const before = asDory(obj).id
+  const id = newId()
+  asDory(obj).id = id
+  if (before && renamed) renamed.set(before, id)
   asDory(obj).field = undefined
-  if (obj instanceof Group) for (const child of obj.getObjects()) reidTree(child)
+  if (obj instanceof Group) for (const child of obj.getObjects()) reidTree(child, renamed)
 }
 
 export function findLive(objects: readonly FabricObject[], id: string): FabricObject | undefined {
@@ -87,8 +104,14 @@ export class ArrangeApi {
     if (!view) return
     const objs = view.selectedObjects().filter((o) => !isLocked(o))
     if (objs.length === 0) return
+    // A clip's blurred background goes with it: it is locked in place and means nothing without its clip.
+    const gone = new Set(objs.map((o) => asDory(o).id))
+    const backdrops = view.canvas.getObjects().filter((o) => {
+      const of = (o as unknown as Record<string, unknown>).videoBackdropOf
+      return typeof of === 'string' && gone.has(of) && !objs.includes(o)
+    })
     view.canvas.discardActiveObject()
-    view.canvas.remove(...objs)
+    view.canvas.remove(...objs, ...backdrops)
     view.canvas.requestRenderAll()
     this.done(objs.length === 1 ? t.history.deleteLayer : t.history.deleteLayers)
     this.engine.announce(t.announce.deleted(objs.length))
@@ -420,26 +443,59 @@ export class ArrangeApi {
   }
 
   /**
-   * Makes the selected object, unrotated, cover the whole page: a picture is scaled and cropped, a shape stretched.
-   * Text is left alone, since stretching it would only blow up the font.
+   * True when Fit to page can act on the selection: one unlocked object of a kind it suits, on the page itself. A
+   * member of an entered group is left out: its size and position are in the group's terms, not the page's.
+   */
+  canFitToPage(): boolean {
+    const active = this.view?.canvas.getActiveObject()
+    return !!active && this.fitsPage(active)
+  }
+
+  private fitsPage(obj: FabricObject): boolean {
+    return !isLocked(obj) && !(obj instanceof ActiveSelection) && !(obj instanceof IText) && !obj.group && canFitKind(kindOfLive(obj))
+  }
+
+  /**
+   * Makes the selected object, unrotated, cover the whole page: a picture is scaled and cropped, a picture in a
+   * placeholder frame gets a page-sized frame, a group or an element is scaled evenly until it covers the page (what
+   * spills over is cut off by the page edge, like a picture's crop) and a shape is stretched. Text, QR codes and
+   * lines are left alone (see `canFitKind`).
    */
   fitToPage(): void {
     const view = this.view
     const active = view?.canvas.getActiveObject()
-    if (!view || !active || isLocked(active) || active instanceof ActiveSelection || active instanceof IText) return
+    if (!view || !active || !this.fitsPage(active)) return
     const page = this.engine.pageSizeOf(this.engine.state.activePageId)
+    const centre = new Point(page.width / 2, page.height / 2)
     const border = active.strokeUniform ? active.strokeWidth || 0 : 0
+    // The object's own size and the size it gets, both without a uniform border (which keeps its width when scaled).
+    const w0 = Math.max(1, (active.getScaledWidth() || 1) - border)
+    const h0 = Math.max(1, (active.getScaledHeight() || 1) - border)
+    const pageW = Math.max(1, page.width - border)
+    const pageH = Math.max(1, page.height - border)
     this.carrying(active, () => {
       active.rotate(0)
-      if (active instanceof FabricImage && !hasSlot(active)) {
+      const slot = asDory(active).slot
+      if (slot) {
+        // The frame is what shows of a placeholder picture: the frame takes the page and the picture covers it, centred.
+        const frame = { ...slot, cx: centre.x, cy: centre.y, width: page.width, height: page.height, angle: 0 }
+        asDory(active).slot = frame
+        const k = coverSlotTransform(frame, active.width, active.height).scale
+        active.set({ scaleX: active.scaleX < 0 ? -k : k, scaleY: active.scaleY < 0 ? -k : k })
+        applyMask(active)
+      } else if (active instanceof FabricImage) {
         coverFrame(active, page.width, page.height)
+        applyMask(active)
+      } else if (active instanceof Group || kindOfLive(active) === 'element') {
+        // Stretching would distort the parts of a group or a drawing, so it is scaled by one factor, like a picture.
+        const k = Math.max(pageW / w0, pageH / h0)
+        active.set({ scaleX: active.scaleX * k, scaleY: active.scaleY * k })
       } else {
-        const w0 = Math.max(1, (active.getScaledWidth() || 1) - border)
-        const h0 = Math.max(1, (active.getScaledHeight() || 1) - border)
-        active.set({ scaleX: (active.scaleX * Math.max(1, page.width - border)) / w0, scaleY: (active.scaleY * Math.max(1, page.height - border)) / h0 })
-        bakeInPlace(active)
+        active.set({ scaleX: (active.scaleX * pageW) / w0, scaleY: (active.scaleY * pageH) / h0 })
+        // A baked shape has a new width and height, so its frame (a placeholder's crop shape) is rebuilt to match.
+        if (bakeInPlace(active) && asDory(active).maskShape) applyMask(active)
       }
-      active.setPositionByOrigin(new Point(page.width / 2, page.height / 2), 'center', 'center')
+      active.setPositionByOrigin(centre, 'center', 'center')
     })
     clampSlotImage(active)
     active.setCoords()

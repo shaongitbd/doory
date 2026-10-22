@@ -4,12 +4,12 @@
  * ready; a clip that just went up ready is added to the page at once.
  */
 import { Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { isApiError } from '@/lib/api'
 import type { AssetRef, VideoService } from '@/types/adapter'
 import type { VideoInfo } from '@/types/api'
 import { I } from '../chrome/icons'
-import { VIDEO_ACCEPT, looksLikeVideo, megabytes, videoFilesFrom, whenProcessed } from '../clips/assets'
+import { VIDEO_ACCEPT, looksLikeVideo, megabytes, videoFilesFrom, videoUploads, whenProcessed } from '../clips/assets'
 import { formatClipTime } from '../clips/strings'
 import { useEditor } from '../context'
 import { useAsyncList } from '../hooks/useAsyncList'
@@ -22,12 +22,6 @@ import drawer from '../drawers/Drawers.module.css'
 import styles from './Videos.module.css'
 
 const s = t.clips.uploads
-
-interface Sending {
-  key: string
-  name: string
-  fraction: number
-}
 
 export function ClipTile({ clip, onPick, onRemove, busy }: { clip: AssetRef; onPick: () => void; onRemove?: () => void; busy?: boolean }) {
   const thumb = useResolvedSrc(clip.thumbUrl || clip.video?.posterUrl || '')
@@ -70,7 +64,9 @@ export function VideoUploadsTab({ close, service, info }: PanelProps & { service
   const [added, setAdded] = useState<AssetRef[]>([])
   const [fresh, setFresh] = useState<ReadonlyMap<string, AssetRef>>(new Map())
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set())
-  const [sending, setSending] = useState<Sending[]>([])
+  // Files going up carry on when the tool closes (they are the editor's), and show here again when it opens.
+  const uploads = videoUploads(service)
+  const sending = useSyncExternalStore(uploads.subscribe, uploads.getSnapshot)
   const [over, setOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -116,19 +112,15 @@ export function VideoUploadsTab({ close, service, info }: PanelProps & { service
         setError(s.tooLarge(file.name, megabytes(info.max_upload_bytes)))
         continue
       }
-      const key = `${file.name}:${file.size}:${file.lastModified}`
-      setSending((cur) => [...cur, { key, name: file.name, fraction: 0 }])
       try {
-        const ref = await service.upload(file, {
-          signal: alive.current.signal,
-          onProgress: (fraction) => setSending((cur) => cur.map((x) => (x.key === key ? { ...x, fraction } : x))),
-        })
+        const ref = await uploads.send(file)
         setAdded((cur) => [ref, ...cur.filter((a) => a.id !== ref.id)])
         if (ref.video?.status === 'ready') await editor.videos.use(ref)
       } catch (err) {
-        if (!alive.current.signal.aborted) setError(isApiError(err) && err.message ? err.message : s.uploadFailed(file.name))
-      } finally {
-        setSending((cur) => cur.filter((x) => x.key !== key))
+        const message = isApiError(err) && err.message ? err.message : s.uploadFailed(file.name)
+        // Closed meanwhile: the tool can't show it, so it is said where the rest of the editor's notices are.
+        if (alive.current.signal.aborted) editor.toast(message, 'error')
+        else setError(message)
       }
     }
   }

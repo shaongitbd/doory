@@ -2,8 +2,11 @@
  * Turns a drawn page into a PNG, JPG, WebP or AVIF file. The browser encodes what it can; the server
  * (`EditorAdapter.optimizeImage`) converts and optimizes when an optimizer is on, for AVIF (no browser encodes it from a
  * canvas), for WebP where the browser can't make it (Safari quietly answers with a PNG) and for palette PNGs. When the
- * server can't help, the browser's own file is kept and a note says so.
+ * server can't help, the browser's own file is kept and a note says so. The server takes one page per request under a
+ * per-minute limit: when it says to slow down (429), the page waits as long as it asks and tries again.
  */
+import { isApiError } from '@/lib/api/client'
+import type { OptimizeImageInput, OptimizedImage } from '@/types/adapter'
 import { canvasToBlob } from '../render'
 import { type OptimizeAdapter, type RasterFormat, type RasterOptions, RASTER_MIME, browserEncodes, hasAlpha, isLossy, serverConverts, wantsServer } from './raster'
 import { t } from '../../strings'
@@ -20,6 +23,41 @@ export interface EncodedRaster {
 }
 
 const FIT_STEPS = 7
+/** A page asked to wait (429) tries again this many times before the browser's file is kept. */
+const RATE_RETRIES = 3
+/** The longest wait for one retry, and the wait when the server names none (seconds). */
+const MAX_WAIT = 60
+const DEFAULT_WAIT = 10
+
+const aborted = (): DOMException => new DOMException('Aborted', 'AbortError')
+
+/** Waits `seconds`, or rejects as a cancel as soon as `signal` aborts. */
+function pause(seconds: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(aborted())
+    const stop = (): void => {
+      clearTimeout(timer)
+      reject(aborted())
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', stop)
+      resolve()
+    }, seconds * 1000)
+    signal?.addEventListener('abort', stop, { once: true })
+  })
+}
+
+/** The server's file. Too many pages a minute (429): wait as asked and try again, so a ZIP doesn't mix optimized and browser files. */
+async function askServer(optimizeImage: NonNullable<OptimizeAdapter['optimizeImage']>, input: OptimizeImageInput): Promise<OptimizedImage> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await optimizeImage(input)
+    } catch (err) {
+      if (!isApiError(err) || !err.isRateLimited || attempt >= RATE_RETRIES) throw err
+      await pause(Math.min(MAX_WAIT, err.retryAfter ?? DEFAULT_WAIT), input.signal)
+    }
+  }
+}
 
 /** The highest quality whose file stays under `maxBytes` (a binary search, as the server does); the lowest when none does. */
 async function fitInBrowser(canvas: HTMLCanvasElement, mime: string, maxBytes: number, quality: number): Promise<Blob> {
@@ -58,7 +96,7 @@ export async function encodeRaster(canvas: HTMLCanvasElement, format: RasterForm
   if (!optimizeImage || !serverConverts(adapter, format) || !wantsServer(format, options)) return fallback()
   try {
     const png = local.format === 'png' ? local.blob : await canvasToBlob(canvas, 'image/png')
-    const result = await optimizeImage({
+    const result = await askServer(optimizeImage, {
       file: png,
       format,
       quality: Math.round(options.quality * 100),

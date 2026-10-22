@@ -40,3 +40,16 @@
   height: 1px;
   background: var(--color-border);
 }
+
+.withNote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}

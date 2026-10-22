@@ -77,7 +77,7 @@ const PRESET_ICONS: Readonly<Record<string, LucideIcon>> = {
 
 function presetIcon(preset: SizePreset): LucideIcon {
   for (const name of [preset.icon, ...preset.path.map((group) => group.icon).reverse()]) {
-    if (name && PRESET_ICONS[name]) return PRESET_ICONS[name]
+    if (name && Object.hasOwn(PRESET_ICONS, name)) return PRESET_ICONS[name]
   }
   if (preset.width === preset.height) return Square
   return preset.width > preset.height ? RectangleHorizontal : RectangleVertical

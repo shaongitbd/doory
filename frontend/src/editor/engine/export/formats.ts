@@ -13,7 +13,7 @@ import {
   sanitizeFilename,
 } from './registry'
 import { type RasterFormat, browserEncodes, hasAlpha, serverConverts } from './raster'
-import { parseSize } from './size'
+import { MAX_SCALE, MIN_SCALE, sizeScale } from './size'
 import { embedFontFaces } from './svgFonts'
 import { t } from '../../strings'
 
@@ -27,7 +27,9 @@ function throwIfAborted(signal: AbortSignal): void {
 
 /** The scale a page is drawn at: the typed size when it reads as one (per page: `1080w` differs by page width), else `scale`. */
 export function pageMultiplier(options: ExportContext['options'], size: { width: number; height: number }): number {
-  return (options.size ? parseSize(options.size, size.width, size.height) : null) ?? options.scale
+  const scale = options.size ? sizeScale(options.size, size.width, size.height) : null
+  // A width or height too large (or small) for this page is kept to the scales allowed, not swapped for `scale`.
+  return scale === null ? options.scale : Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale))
 }
 
 async function rasterFiles(ctx: ExportContext, format: RasterFormat): Promise<ExportFile[]> {

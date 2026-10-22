@@ -1,6 +1,6 @@
 /**
  * Video assets as the Videos tool sees them: the server's limits (asked once per service), files the browser may
- * send, and following a clip the server is still converting until it is ready.
+ * send, the files going up, and following a clip the server is still converting until it is ready.
  */
 import { useEffect, useState } from 'react'
 import type { AssetRef, VideoService } from '@/types/adapter'
@@ -56,20 +56,77 @@ export function useVideoInfo(service: VideoService | null | undefined): VideoInf
 export async function whenProcessed(service: VideoService, ref: AssetRef, signal?: AbortSignal, intervalMs = POLL_MS): Promise<AssetRef> {
   let current = ref
   while (current.video?.status === 'processing') {
+    // Checked on every round: the signal may have gone while the server was being asked.
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, intervalMs)
-      signal?.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer)
-          reject(new DOMException('Aborted', 'AbortError'))
-        },
-        { once: true },
-      )
+      const onAbort = (): void => {
+        clearTimeout(timer)
+        reject(new DOMException('Aborted', 'AbortError'))
+      }
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort)
+        resolve()
+      }, intervalMs)
+      signal?.addEventListener('abort', onAbort, { once: true })
     })
     current = await service.get(ref.id)
   }
   return current
+}
+
+export interface VideoSending {
+  key: string
+  name: string
+  fraction: number
+}
+
+/**
+ * The video files going up to one service. They belong to the editor rather than to the Videos tool, as picture
+ * uploads do: closing the tool leaves them going, and opening it again shows them with their progress.
+ */
+export class VideoUploads {
+  private items: readonly VideoSending[] = []
+  private readonly listeners = new Set<() => void>()
+  private count = 0
+
+  constructor(private readonly service: VideoService) {}
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  getSnapshot = (): readonly VideoSending[] => this.items
+
+  private set(items: readonly VideoSending[]): void {
+    this.items = items
+    for (const listener of [...this.listeners]) listener()
+  }
+
+  /** Sends `file`; resolves with the new asset, or fails as the service does. */
+  async send(file: File): Promise<AssetRef> {
+    const key = `${++this.count}:${file.name}`
+    this.set([...this.items, { key, name: file.name, fraction: 0 }])
+    try {
+      return await this.service.upload(file, { onProgress: (fraction) => this.set(this.items.map((x) => (x.key === key ? { ...x, fraction } : x))) })
+    } finally {
+      this.set(this.items.filter((x) => x.key !== key))
+    }
+  }
+}
+
+const uploadsCache = new WeakMap<VideoService, VideoUploads>()
+
+/** The uploads going to `service` (one list per service, for as long as the service lives). */
+export function videoUploads(service: VideoService): VideoUploads {
+  let uploads = uploadsCache.get(service)
+  if (!uploads) {
+    uploads = new VideoUploads(service)
+    uploadsCache.set(service, uploads)
+  }
+  return uploads
 }
 
 export const megabytes = (bytes: number): number => Math.round(bytes / (1024 * 1024))

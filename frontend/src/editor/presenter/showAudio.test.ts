@@ -27,7 +27,7 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 20; i++) await Promise.resolve()
 }
 
-function setup(tracks: AudioTrack[], options: { refuse?: boolean; fail?: string[] } = {}) {
+function setup(tracks: AudioTrack[], options: { refuse?: boolean; fail?: string[]; clipLeadMs?: (from: number | null, to: number) => number } = {}) {
   const context = new FakeContext()
   context.state = options.refuse ? 'suspended' : 'running'
   context.refuseResume = options.refuse === true
@@ -37,7 +37,7 @@ function setup(tracks: AudioTrack[], options: { refuse?: boolean; fail?: string[
     return fakeBuffer(30)
   })
   const createContext = vi.fn(() => context as unknown as AudioContext)
-  const audio = new ShowAudio({ tracks: () => tracks, pageIds: () => ['a', 'b', 'c'], load, createContext, later: (fn, ms) => timers.push({ fn, ms }) })
+  const audio = new ShowAudio({ tracks: () => tracks, pageIds: () => ['a', 'b', 'c'], load, createContext, later: (fn, ms) => timers.push({ fn, ms }), clipLeadMs: options.clipLeadMs })
   return { audio, context, load, createContext, timers }
 }
 
@@ -105,6 +105,36 @@ describe('ShowAudio', () => {
     await settle()
     expect(context.sources).toHaveLength(3)
     expect(context.sources[2].started?.offset).toBe(0)
+  })
+
+  it('starts a clip sound after the transition that actually plays into its page, other page tracks at once', async () => {
+    const clipLeadMs = vi.fn((from: number | null) => (from === null ? 0 : 800))
+    const { audio, context } = setup(
+      [
+        track({ id: 'video:x', scope: { type: 'page', pageId: 'a' } }),
+        track({ id: 'video:y', scope: { type: 'page', pageId: 'b' }, startMs: 500 }),
+        track({ id: 'q', scope: { type: 'page', pageId: 'b' } }),
+      ],
+      { clipLeadMs },
+    )
+    audio.setView(view())
+    await settle()
+    // The first page shown comes in without a transition.
+    expect(clipLeadMs).toHaveBeenLastCalledWith(null, 0)
+    expect(context.sources[0].started?.when).toBeCloseTo(0.05, 5)
+    context.currentTime = 3
+    audio.setView(view({ index: 1, totalMs: 3000 }))
+    await settle()
+    expect(clipLeadMs).toHaveBeenLastCalledWith(0, 1)
+    const [, clip, other] = context.sources
+    expect(clip.started?.when).toBeCloseTo(3 + 0.8 + 0.5, 5)
+    expect(other.started?.when).toBeCloseTo(3.05, 5)
+    // Back from the end screen the page is simply shown again.
+    audio.setView(view({ index: 1, ended: true, totalMs: 4000 }))
+    await settle()
+    audio.setView(view({ index: 1, totalMs: 5000 }))
+    await settle()
+    expect(clipLeadMs).toHaveBeenLastCalledWith(null, 1)
   })
 
   it('ducks the other sound under a voiceover, and releases it afterwards', async () => {

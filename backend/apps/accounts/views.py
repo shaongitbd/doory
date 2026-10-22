@@ -1,7 +1,7 @@
 """`/auth/*` endpoints.
 
 Every unsafe endpoint enforces CSRF (`CsrfProtectedMixin`), including the anonymous ones, and the
-credential-handling ones share the per-IP `auth` throttle scope.
+credential-handling ones share the per-IP `auth` throttle scope (signing in with OIDC has its own, `oidc`).
 """
 
 from __future__ import annotations
@@ -389,7 +389,7 @@ class OidcStartView(APIView):
 
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"
+    throttle_scope = "oidc"
 
     def get(self, request):
         next_path = safe_next_path(request.query_params.get("next"))
@@ -439,7 +439,7 @@ class OidcCallbackView(APIView):
 
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"
+    throttle_scope = "oidc"
 
     def get(self, request):
         params = request.query_params

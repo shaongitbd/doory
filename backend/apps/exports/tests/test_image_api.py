@@ -7,10 +7,12 @@ import pytest
 from django.utils import timezone
 
 from apps.designs.tests.helpers import make_design, make_doc
-from apps.exports import services, views
+from apps.exports import optimizers, services, views
 from apps.exports.exceptions import ExportBusy, InvalidExport
 from apps.exports.services import IMAGE_FORMATS, ImageResult
-from apps.exports.throttling import ExportRateThrottle
+from apps.exports.throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
+
+from .helpers import FakeOptimizer
 
 IMAGE = b"\x89PNG\r\n\x1a\nfake"
 # What the view passes on when the body only names the page and format.
@@ -32,11 +34,17 @@ def url(design) -> str:
     return f"/api/v1/designs/{design.pk}/export/image/"
 
 
+@pytest.fixture(autouse=True)
+def _image_export_on(settings):
+    """The options are checked (server switch included) before `export_image`, which is faked below."""
+    settings.SERVER_IMAGE_EXPORT_ENABLED = True
+
+
 @pytest.fixture
 def renders(monkeypatch) -> list[dict]:
     calls: list[dict] = []
 
-    def fake_export_image(design, **options):
+    def fake_export_image(design, *, deadline, **options):
         calls.append(options)
         index = options["page"] if isinstance(options["page"], int) else 0
         ext = {"jpeg": "jpg", "auto": "webp"}.get(options["format"], options["format"])
@@ -185,7 +193,9 @@ def test_renders_are_rate_limited(client, design, renders, monkeypatch):
     assert client.post(url(design), {}, format="json").status_code == 429
 
 
-def test_the_new_options_are_passed_on(client, design, renders):
+def test_the_new_options_are_passed_on(client, design, renders, settings, monkeypatch):
+    settings.IMAGE_OPTIMIZERS = ["builtin", "tinypng"]
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "tinypng", FakeOptimizer("tinypng"))
     body = {
         "format": "avif",
         "quality": "small",
@@ -243,6 +253,43 @@ def test_each_extra_page_counts_against_the_export_rate(client, user, renders, m
     assert len(renders) == 2  # nothing is drawn once the budget is spent
 
 
+def test_a_refused_export_of_several_pages_costs_one_export(client, user, renders, monkeypatch):
+    monkeypatch.setattr(ExportRateThrottle, "THROTTLE_RATES", {"export": "2/min"})
+    design = make_design(user, document=make_doc(pages=3))
+    response = client.post(url(design), {"pages": "all", "optimize": "tinypng"}, format="json")
+    assert response.status_code == 400 and response.json()["error"]["code"] == "optimizer_unavailable"
+    assert client.post(url(design), {"pages": [1]}, format="json").status_code == 200
+    assert client.post(url(design), {"pages": [1]}, format="json").status_code == 429
+
+
+@pytest.fixture
+def offsite(settings, monkeypatch) -> FakeOptimizer:
+    """An optimizer that sends the image away, as TinyPNG does, next to the built-in one."""
+    settings.IMAGE_OPTIMIZERS = ["builtin", "tinypng"]
+    fake = FakeOptimizer("tinypng", "TinyPNG")
+    fake.sends_offsite = True
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "tinypng", fake)
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "builtin", FakeOptimizer())
+    monkeypatch.setattr(OffsiteOptimizeRateThrottle, "THROTTLE_RATES", {"optimize_offsite": "3/min"})
+    return fake
+
+
+def test_each_page_sent_to_an_offsite_optimizer_counts_against_its_own_rate(client, user, renders, offsite):
+    design = make_design(user, document=make_doc(pages=3))
+    for _ in range(2):  # the built-in optimizer runs here: not counted
+        assert (
+            client.post(url(design), {"pages": "all", "optimize": "builtin"}, format="json").status_code
+            == 200
+        )
+    assert (
+        client.post(url(design), {"pages": [1, 2], "optimize": "tinypng"}, format="json").status_code == 200
+    )
+    drawn = len(renders)
+    response = client.post(url(design), {"pages": [1, 2], "optimize": "tinypng"}, format="json")
+    assert response.status_code == 429 and len(renders) == drawn
+    assert client.post(url(design), {"optimize": "builtin"}, format="json").status_code == 200
+
+
 def test_too_many_pages_are_refused_before_anything_is_drawn(client, user, renders, settings):
     settings.EXPORT_IMAGE_MAX_PAGES = 2
     design = make_design(user, document=make_doc(pages=3))
@@ -295,8 +342,11 @@ def test_pdf_and_svg_with_the_print_options(client, design, documents, renders):
         "unix": None,
         "charge": None,
     }
+    assert "Content-Security-Policy" not in response
     response = client.post(url(design), {"format": "svg", "page": 1}, format="json")
     assert response["Content-Type"] == "image/svg+xml" and documents[1]["pages"] == [0]
+    assert response["Content-Security-Policy"] == views.SVG_SANDBOX_CSP
+    assert response["Content-Security-Policy"].startswith("sandbox; default-src 'none';")
     assert documents[1]["bleed_mm"] == 0 and documents[1]["crop_marks"] is False
     assert renders == []
 
@@ -414,6 +464,25 @@ def test_video_export_is_off_unless_turned_on(client, design, settings):
     response = client.post(url(design), {"format": "webm"}, format="json")
     assert response.status_code == 404
     assert "video export is not enabled" in response.content.decode()
+
+
+def test_a_video_file_is_streamed_and_closed_after(client, design, monkeypatch):
+    file = io.BytesIO(b"video-from-a-file")
+
+    def fake_export_video(design, **options):
+        video = ImageResult(b"", "mp4", "video/mp4", 1920, 1080, "p", 0)
+        return services.ImageBundle(
+            b"", "mp4", "video/mp4", "Clip.mp4", (video,), ("Clip.mp4",), file=file, file_size=17
+        )
+
+    monkeypatch.setattr(services, "export_video", fake_export_video)
+    response = client.post(url(design), {"format": "mp4"}, format="json")
+    assert response.status_code == 200 and response.streaming
+    assert response["Content-Length"] == "17" and response["Content-Type"] == "video/mp4"
+    assert response["Content-Disposition"] == 'attachment; filename="Clip.mp4"'
+    assert b"".join(response.streaming_content) == b"video-from-a-file"
+    response.close()
+    assert file.closed
 
 
 def test_the_schema_documents_video(client, db):

@@ -2,6 +2,7 @@ import { Crop, Frame, Replace } from 'lucide-react'
 import { I } from '../../chrome/icons'
 import { useEditor, useSelection } from '../../context'
 import { isBackgroundRemovalAvailable } from '../../engine/bgRemoval'
+import { isUpscaleSupported } from '../../engine/upscale/support'
 import { useBackgroundRemovalOptions } from '../../hooks/useBackgroundRemovalOptions'
 import { FILTER_PRESETS, FILTER_RANGES, TOGGLE_FILTERS, specValue } from '../../engine/objects/filters'
 import { MASK_SHAPE_IDS, maskPath } from '../../engine/objects/shapeGeometry'
@@ -91,7 +92,7 @@ export function AdjustPanel() {
   )
 }
 
-/** Images: crop, remove background, adjustments, frame and opacity; replace, border and shadow sit under `⋯`. A picture that fills a placeholder offers "Reset to placeholder" in place of crop and frame. */
+/** Images: crop, upscale, remove background, adjustments, frame and opacity; replace, border and shadow sit under `⋯`. A picture that fills a placeholder offers "Reset to placeholder" in place of crop and frame. */
 export function ImageSection() {
   const editor = useEditor()
   const sel = useSelection()
@@ -110,6 +111,12 @@ export function ImageSection() {
           <Crop size={18} aria-hidden="true" />
         </ToolButton>
       )}
+      {isUpscaleSupported() && editor.style.canUpscale() ? (
+        <ToolButton label={t.toolbar.upscale} featured testId="ed-upscale" onClick={() => editor.openDialog('upscale')}>
+          {I.upscale}
+          <span className={ed.toolText}>{t.toolbar.upscale}</span>
+        </ToolButton>
+      ) : null}
       <ToolButton label={t.toolbar.replaceImage} testId="ed-replace-image" onClick={() => void editor.insert.pickAndReplaceImage()}>
         <Replace size={18} aria-hidden="true" />
       </ToolButton>

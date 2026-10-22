@@ -90,19 +90,32 @@ export function applyBackgroundToAll(doc: DoryDocument, background: PageBackgrou
   return { ...doc, pages: doc.pages.map((p) => ({ ...p, background })) }
 }
 
-/** Deep-copies objects assigning fresh ids to every object (including group children). */
+/**
+ * Deep-copies objects assigning fresh ids to every object (including group children). A copied blurred background
+ * points at the copy of its clip; one whose clip was not copied along is no longer anyone's background.
+ */
 export function cloneObjects(objects: readonly DocObject[]): DocObject[] {
+  const renamed = new Map<string, string>()
   const reid = (o: DocObject): DocObject => {
     const copy = structuredClone(o)
     const walk = (node: DocObject): void => {
-      node.id = newId()
+      const id = newId()
+      renamed.set(node.id, id)
+      node.id = id
       const children = node.objects
       if (Array.isArray(children)) for (const child of children as DocObject[]) walk(child)
     }
     walk(copy)
     return copy
   }
-  return objects.map(reid)
+  const copies = objects.map(reid)
+  walkObjects(copies, (o) => {
+    if (typeof o.videoBackdropOf !== 'string') return
+    const clip = renamed.get(o.videoBackdropOf)
+    if (clip) o.videoBackdropOf = clip
+    else delete o.videoBackdropOf
+  })
+  return copies
 }
 
 export function duplicatePage(doc: DoryDocument, pageId: string): DoryDocument {

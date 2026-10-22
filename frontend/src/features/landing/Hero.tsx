@@ -2,7 +2,7 @@ import { PenLine } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import bunny from '@/assets/bunny-sticker.webp'
-import { CreateDesignDialog } from '@/features/create/CreateDesignDialog'
+import { LazyCreateDesignDialog } from '@/features/create/LazyCreateDesignDialog'
 import { PresetIcon } from '@/features/PresetIcon'
 import { createUrl } from '@/features/presets'
 import { quickPresets, useSizePresets } from '@/lib/sizePresets'
@@ -84,7 +84,7 @@ export function Hero() {
           </li>
         </ul>
       </div>
-      <CreateDesignDialog open={customOpen} onClose={() => setCustomOpen(false)} initialTab="custom" />
+      <LazyCreateDesignDialog open={customOpen} onClose={() => setCustomOpen(false)} initialTab="custom" />
     </section>
   )
 }

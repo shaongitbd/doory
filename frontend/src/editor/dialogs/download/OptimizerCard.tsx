@@ -42,7 +42,7 @@ export function OptimizerCard({ optimizers, on, onToggle, value, onPick, format,
             </div>
           ) : null}
           <small className={styles.hint}>
-            {skips ? t.dialog.downloadOptimizerSkips(chosen.name, formatLabel) : chosen.sendsOffsite ? t.dialog.downloadOptimizerOffsite(chosen.name) : t.dialog.downloadOptimizerLocal}
+            {skips ? t.dialog.downloadOptimizerSkips(chosen.name, formatLabel) : chosen.sendsOffsite ? t.dialog.downloadOptimizerOffsite(chosen.name) : t.dialog.downloadOptimizerLocal(chosen.name)}
           </small>
         </div>
       ) : null}

@@ -20,6 +20,7 @@ import type { Bus } from '../audio/graph'
 import { DUCK_ATTACK_MS, DUCK_RELEASE_MS, ducks, isAudible, trimmedLengthMs } from '../audio/model'
 import { type GainPoint, duckCurve, fitFades, mergeSpans } from '../audio/plan'
 import type { SourceLoader } from '../audio/sources'
+import { isClipVoice } from '../clips/audio'
 
 export interface ShowView {
   index: number
@@ -47,6 +48,11 @@ export interface ShowAudioDeps {
   load: SourceLoader
   createContext(): AudioContext
   later(handler: () => void, ms: number): number
+  /**
+   * How long after page `to` comes up its video clips start, coming from page `from` (`null`: the first page shown):
+   * the transition that actually plays in between. The clips' sounds wait as long; none when left out.
+   */
+  clipLeadMs?(from: number | null, to: number): number
 }
 
 /** Seconds between "now" and a sound that starts at once, so scheduling never lands in the past. */
@@ -196,8 +202,9 @@ export class ShowAudio {
     const { context } = ready
     if (!this.designRunning) void this.startDesign(ready.bus, context)
     if (view.index !== this.pageIndex) {
-      if (this.pageIndex >= 0) this.leavePage(context)
-      void this.enterPage(view.index, ready.bus, context)
+      const from = this.pageIndex >= 0 ? this.pageIndex : null
+      if (from !== null) this.leavePage(context)
+      void this.enterPage(view.index, from, ready.bus, context)
     }
     await this.applyRunState(context, view)
   }
@@ -247,19 +254,21 @@ export class ShowAudio {
 
   /* -------------------------------------------------------------------------------- page tracks */
 
-  private async enterPage(index: number, bus: Bus, context: AudioContext): Promise<void> {
+  private async enterPage(index: number, from: number | null, bus: Bus, context: AudioContext): Promise<void> {
     this.pageIndex = index
     const token = ++this.pageToken
     const pageId = this.deps.pageIds()[index]
     const tracks = this.audible().filter((track) => track.scope.type === 'page' && track.scope.pageId === pageId)
     if (tracks.length === 0) return
     const enteredAt = context.currentTime
+    const clipLeadMs = Math.max(0, this.deps.clipLeadMs?.(from, index) ?? 0)
     const loaded = await this.loadAll(tracks)
     if (token !== this.pageToken || this.context !== context) return
     const now = context.currentTime
     for (const { track, buffer } of loaded) {
       const lengthMs = track.loop ? null : trimmedLengthMs(track)
-      const at = Math.max(now + LEAD_SEC, enteredAt + track.startMs / 1000)
+      const startMs = track.startMs + (isClipVoice(track) ? clipLeadMs : 0)
+      const at = Math.max(now + LEAD_SEC, enteredAt + startMs / 1000)
       const fade = showFade(track, lengthMs).map((p) => ({ at: at + p.t / 1000, gain: p.gain }))
       this.addLive(bus, { track, buffer }, index, at, track.trimStartMs, lengthMs === null ? null : lengthMs / 1000, fade)
     }

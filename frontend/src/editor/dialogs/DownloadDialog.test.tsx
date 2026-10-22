@@ -3,14 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/lib/api/client'
 import { createBlankDocument } from '@/lib/document'
+import { type SizePresetCatalogue, buildCatalogue, setSizePresetsForTests } from '@/lib/sizePresets'
 import type { DocPage, DoryDocument } from '@/types/document'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { EditorProvider } from '../EditorProvider'
 import { EditorEngine } from '../engine/editor'
+import { saveLastExport } from '../engine/export/choices'
 import { downloadFiles } from '../engine/export/exporter'
+import { DEFAULT_EXPORT_OPTIONS } from '../engine/export/registry'
 import { t } from '../strings'
 import { DownloadDialog } from './DownloadDialog'
 import { ComparePreview } from './download/ComparePreview'
+import { OptimizerCard } from './download/OptimizerCard'
 import type { ImageOptimizeInfo, OptimizeImageInput, OptimizedImage } from '@/types/adapter'
 
 vi.mock('../engine/export/exporter', async (importOriginal) => ({ ...(await importOriginal<typeof import('../engine/export/exporter')>()), downloadFiles: vi.fn() }))
@@ -561,6 +565,25 @@ describe('Download dialog: pictures', () => {
     expect(within(dialog()).getByRole('button', { name: t.dialog.downloadButton })).toBeEnabled()
   })
 
+  it('checks a typed width against every page downloaded, not only the first', async () => {
+    ;({ engine } = setup())
+    // Pages of 1080, 794 and 400 px: 2000w is 5x of the last one.
+    await userEvent.clear(sizeField())
+    await userEvent.type(sizeField(), '2000w')
+    expect(within(dialog()).getByRole('alert')).toHaveTextContent(t.dialog.downloadSizeInvalid)
+    expect(within(dialog()).getByRole('button', { name: t.dialog.downloadNFiles(4) })).toBeDisabled()
+    await userEvent.clear(sizeField())
+    await userEvent.type(sizeField(), '1600w')
+    expect(within(dialog()).queryByRole('alert')).toBeNull()
+    expect(within(dialog()).getByRole('button', { name: t.dialog.downloadNFiles(4) })).toBeEnabled()
+    await userEvent.clear(sizeField())
+    await userEvent.type(sizeField(), '2000w')
+    await more()
+    await userEvent.click(within(dialog()).getByRole('radio', { name: t.dialog.downloadCurrentPage }))
+    expect(within(dialog()).queryByRole('alert')).toBeNull()
+    expect(within(dialog()).getByRole('button', { name: t.dialog.downloadButton })).toBeEnabled()
+  })
+
   it('the stops and the number set the quality; a typed number leaves the stops', async () => {
     ;({ engine } = setup({ doc: story() }))
     await userEvent.click(within(dialog()).getByRole('button', { name: /Small file/ }))
@@ -570,6 +593,23 @@ describe('Download dialog: pictures', () => {
     await userEvent.clear(number)
     await userEvent.type(number, '70')
     expect(within(dialog()).getByRole('button', { name: /Small file/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('an emptied quality number keeps the quality until a new one is typed, and comes back when left empty', async () => {
+    ;({ engine } = setup({ doc: story() }))
+    const number = within(dialog()).getByRole('spinbutton', { name: t.dialog.downloadQualityValue })
+    const slider = within(dialog()).getByRole('slider', { name: t.dialog.downloadQuality })
+    await userEvent.clear(number)
+    expect(number).toHaveValue(null)
+    expect(slider).toHaveValue('82')
+    await userEvent.tab()
+    expect(number).toHaveValue(82)
+    await userEvent.clear(number)
+    await userEvent.type(number, '150')
+    expect(slider).toHaveValue('15')
+    await userEvent.tab()
+    expect(number).toHaveValue(100)
+    expect(slider).toHaveValue('100')
   })
 
   it('downloads at the typed size, and remembers the settings as Last used', async () => {
@@ -595,7 +635,7 @@ describe('Download dialog: pictures', () => {
     expect(within(dialog()).getByRole('radio', { name: /^AVIF/ })).toBeInTheDocument()
     const toggle = within(dialog()).getByRole('switch', { name: new RegExp(t.dialog.downloadOptimize) })
     expect(toggle).toBeChecked()
-    expect(within(dialog()).getByText(t.dialog.downloadOptimizerLocal)).toBeInTheDocument()
+    expect(within(dialog()).getByText(t.dialog.downloadOptimizerLocal('Built-in'))).toBeInTheDocument()
     await userEvent.click(within(dialog()).getByRole('radio', { name: 'Our optimizer' }))
     expect(within(dialog()).getByText(t.dialog.downloadOptimizerOffsite('Our optimizer'))).toBeInTheDocument()
     await userEvent.click(within(dialog()).getByRole('radio', { name: 'Built-in' }))
@@ -607,6 +647,35 @@ describe('Download dialog: pictures', () => {
     const sent = ctx.optimizeImage.mock.calls.map(([input]) => input).find((input) => input.optimize === 'builtin' && input.format === 'jpg')
     expect(sent).toMatchObject({ format: 'jpg', quality: 82, optimize: 'builtin' })
     expect(vi.mocked(downloadFiles).mock.calls[0][0][0].filename).toBe('Menu.jpg')
+  })
+
+  it('previews an outside optimizer only when asked, and still downloads with it', async () => {
+    const answer = async (input: OptimizeImageInput): Promise<OptimizedImage> => ({ blob: new Blob(['small'], { type: 'image/jpeg' }), format: input.format, width: 1080, height: 1920, quality: 82, bytesBefore: 9000, optimizer: String(input.optimize), optimized: true, warnings: [] })
+    const ctx = withServer(story(), answer)
+    engine = ctx.engine
+    await userEvent.click(within(dialog()).getByRole('radio', { name: 'Our optimizer' }))
+    const ask = await within(dialog()).findByRole('button', { name: t.dialog.downloadPreviewWith('Our optimizer') })
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    const outside = () => ctx.optimizeImage.mock.calls.filter(([input]) => input.optimize === 'custom')
+    expect(outside()).toHaveLength(0)
+    await userEvent.click(ask)
+    await waitFor(() => expect(outside()).toHaveLength(1))
+    await waitFor(() => expect(within(dialog()).queryByRole('button', { name: t.dialog.downloadPreviewWith('Our optimizer') })).toBeNull())
+    await download()
+    await waitFor(() => expect(downloadFiles).toHaveBeenCalled())
+    expect(outside()).toHaveLength(2)
+  })
+
+  it('starts on the default optimizer when the one used last is no longer offered', async () => {
+    saveLastExport({ formatId: 'jpg', options: { ...DEFAULT_EXPORT_OPTIONS, optimize: true, optimizer: 'gone' } })
+    const answer = async (input: OptimizeImageInput): Promise<OptimizedImage> => ({ blob: new Blob(['small'], { type: 'image/jpeg' }), format: input.format, width: 1080, height: 1080, quality: 82, bytesBefore: 9000, optimizer: 'builtin', optimized: true, warnings: [] })
+    const ctx = withServer(createBlankDocument(1080, 1080), answer)
+    engine = ctx.engine
+    expect(within(dialog()).getByRole('radio', { name: 'Built-in' })).toBeChecked()
+    await download()
+    await waitFor(() => expect(downloadFiles).toHaveBeenCalled())
+    expect(ctx.optimizeImage.mock.calls.map(([input]) => input.optimize)).not.toContain('gone')
+    expect(ctx.optimizeImage).toHaveBeenCalledWith(expect.objectContaining({ format: 'jpg', optimize: 'builtin' }))
   })
 
   it('when the server fails, downloads the browser file and says so', async () => {
@@ -632,6 +701,17 @@ describe('Download dialog: pictures', () => {
     expect(api).toHaveTextContent('/api/v1/designs/design-9/export/image/')
   })
 
+  it('shows no API call while the page range is not one', async () => {
+    ;({ engine } = setup({ doc: story(), id: 'design-9' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: t.dialog.downloadApi }))
+    await more()
+    await userEvent.click(within(dialog()).getByRole('radio', { name: t.dialog.downloadRange }))
+    expect(screen.queryByTestId('download-api')).toBeNull()
+    await userEvent.type(within(dialog()).getByRole('textbox', { name: t.dialog.downloadRange }), '1')
+    expect(screen.getByTestId('download-api')).toHaveTextContent('"page": 1')
+    expect(screen.getByTestId('download-api')).not.toHaveTextContent('"pages": []')
+  })
+
   it('shows the API call for the PDFs with their print options, and for SVG', async () => {
     ;({ engine } = setup({ doc: story(), id: 'design-9' }))
     await pick(/Print-quality PDF/)
@@ -647,6 +727,21 @@ describe('Download dialog: pictures', () => {
     expect(screen.getByTestId('download-api')).not.toHaveTextContent('bleed_mm')
   })
 
+  it("says when the platform doesn't take the format, reading JPEG as JPG", async () => {
+    const tree = { version: 1, groups: [{ slug: 'social', label: 'Social', presets: [{ slug: 'feed', label: 'Feed', width: 1080, height: 1350, meta: { formats: ['jpeg'] } }] }] }
+    setSizePresetsForTests(buildCatalogue(tree) as SizePresetCatalogue)
+    try {
+      ;({ engine } = setup({ doc: { ...createBlankDocument(1080, 1350), meta: { presetId: 'feed' } } }))
+      const notAccepted = t.dialog.downloadNotAccepted('Social', 'JPEG')
+      expect(within(dialog()).getByRole('radio', { name: /^JPG/ })).toBeChecked()
+      expect(within(dialog()).queryByText(notAccepted)).toBeNull()
+      await pick(/^PNG/)
+      expect(within(dialog()).getByText(notAccepted)).toBeInTheDocument()
+    } finally {
+      setSizePresetsForTests()
+    }
+  })
+
   it('sums up the files in the footer and names the button by their number', async () => {
     ;({ engine } = setup())
     await pick(/^PNG/)
@@ -654,6 +749,13 @@ describe('Download dialog: pictures', () => {
     expect(within(dialog()).getByRole('button', { name: t.dialog.downloadNFiles(4) })).toBeInTheDocument()
     await pick(/^PDF/)
     expect(screen.getByTestId('download-summary')).toHaveTextContent('1 PDF · 4 pages · screen')
+  })
+})
+
+describe('Download dialog: the optimizer card', () => {
+  it('names the optimizer that runs on this server', () => {
+    render(<OptimizerCard optimizers={[{ id: 'squeeze', name: 'Squeeze', formats: ['jpg'], sendsOffsite: false }]} on onToggle={() => undefined} value="squeeze" onPick={() => undefined} format="jpg" formatLabel="JPG" />)
+    expect(screen.getByText(t.dialog.downloadOptimizerLocal('Squeeze'))).toHaveTextContent('Squeeze runs on this server.')
   })
 })
 

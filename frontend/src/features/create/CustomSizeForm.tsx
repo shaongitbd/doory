@@ -1,7 +1,7 @@
 import { Link2, Unlink2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { CUSTOM_UNITS, formatUnitValue, lockedCounterpart, MAX_DIMENSION, parseCustomSize, pxToUnit, unitToPx, type CustomUnit } from '@/features/presets'
-import { PresetShape } from '@/lib/sizePresets/SizePicker'
+import { PresetShape } from '@/lib/sizePresets/PresetShape'
 import { Button, IconButton, Input, Select } from '@/ui'
 import styles from './CustomSizeForm.module.css'
 

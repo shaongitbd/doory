@@ -5,11 +5,13 @@ import json
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.exports import optimizers
+from apps.exports import optimizers, services
+from apps.exports.exceptions import ExportBusy
 from apps.exports.renderer import render_slot
+from apps.exports.throttling import OffsiteOptimizeRateThrottle
 
 from .helpers import FakeOptimizer
 
@@ -139,7 +141,38 @@ def test_the_optimize_rate_limit_applies(client, monkeypatch, optimizer):
     assert client.post(URL, {"file": upload(drawn())}).status_code == 429
 
 
+def test_an_offsite_optimizer_has_its_own_lower_rate(client, monkeypatch, settings, optimizer):
+    settings.IMAGE_OPTIMIZERS = ["builtin", "kraken"]
+    kraken = FakeOptimizer("kraken", "Kraken.io")
+    kraken.sends_offsite = True
+    monkeypatch.setitem(optimizers.OPTIMIZERS, "kraken", kraken)
+    monkeypatch.setattr(OffsiteOptimizeRateThrottle, "THROTTLE_RATES", {"optimize_offsite": "1/min"})
+    assert client.post(URL, {"file": upload(drawn()), "optimize": "kraken"}).status_code == 200
+    assert client.post(URL, {"file": upload(drawn()), "optimize": "kraken"}).status_code == 429
+    assert len(kraken.jobs) == 1
+    assert client.post(URL, {"file": upload(drawn()), "optimize": "builtin"}).status_code == 200
+
+
 def test_a_busy_account_gets_a_busy_answer(client, user, optimizer):
     with render_slot(user.pk):
         response = client.post(URL, {"file": upload(drawn())})
     assert response.status_code == 503 and response.json()["error"]["code"] == "export_busy"
+
+
+@pytest.mark.parametrize("fmt", ["png", "webp"])
+def test_the_png_is_decoded_once_while_holding_the_render_slot(monkeypatch, fmt):
+    decodes = []
+    load = PngImagePlugin.PngImageFile.load
+
+    def watched(image):
+        if image.tile:  # pixels still to decode
+            try:
+                with render_slot("me"):
+                    decodes.append("outside the slot")
+            except ExportBusy:
+                decodes.append("in the slot")
+        return load(image)
+
+    monkeypatch.setattr(PngImagePlugin.PngImageFile, "load", watched)
+    result = services.optimize_image(drawn(), format=fmt, optimize=False, owner="me")
+    assert result.format == fmt and decodes == ["in the slot"]

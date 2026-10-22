@@ -51,6 +51,30 @@ export function keyIndexAtOrBefore(samples: readonly Pick<EncodedSample, 'timest
   return found
 }
 
+/** The parts of an edit list entry that place the media on the clip's time line. */
+export interface EditEntry {
+  /** In the movie's timescale. */
+  segment_duration: number
+  /** In the track's timescale; -1 for an empty edit (nothing shown for `segment_duration`). */
+  media_time: number
+}
+
+/**
+ * What to add to a sample's composition time (µs) to get its time in the clip as a player shows it: leading empty edits
+ * delay the media, and the first real edit starts it at its `media_time`. No edit list: the composition times as they are.
+ */
+export function editShiftUs(edits: readonly EditEntry[] | undefined, timescale: number, movieTimescale: number): number {
+  let shiftUs = 0
+  for (const edit of edits ?? []) {
+    if (edit.media_time === -1) {
+      if (movieTimescale > 0) shiftUs += (edit.segment_duration * 1_000_000) / movieTimescale
+      continue
+    }
+    return timescale > 0 ? shiftUs - (edit.media_time * 1_000_000) / timescale : shiftUs
+  }
+  return shiftUs
+}
+
 /** The codec's own description (the `avcC` box of the sample entry, without its header), as `VideoDecoder` wants it. */
 async function describe(file: { getTrackById(id: number): unknown }, trackId: number): Promise<Uint8Array | undefined> {
   const { DataStream, Endianness } = await import('mp4box')
@@ -73,6 +97,7 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
   const samples: EncodedSample[] = []
   let failure: Error | null = null
   let ready: Promise<VideoDecoderConfig> | null = null
+  let shiftUs = 0
   file.onError = (_module: string, message: string) => {
     failure = new ClipDecodeError(`A video clip could not be read: ${message}`)
   }
@@ -88,6 +113,7 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
       codedHeight: track.video?.height ?? track.track_height,
       ...(description ? { description } : {}),
     }))
+    shiftUs = editShiftUs(track.edits, track.timescale, track.movie_timescale)
     file.setExtractionOptions(track.id, undefined, { nbSamples: 250 })
     file.start()
   }
@@ -95,7 +121,7 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
     for (const sample of list) {
       if (!sample.data) continue
       samples.push({
-        timestampUs: Math.round((sample.cts * 1_000_000) / sample.timescale),
+        timestampUs: Math.round((sample.cts * 1_000_000) / sample.timescale + shiftUs),
         durationUs: Math.round((sample.duration * 1_000_000) / sample.timescale),
         key: sample.is_sync,
         data: sample.data,
@@ -108,13 +134,21 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
   if (!response.ok || !response.body) throw new ClipDecodeError()
   const reader = response.body.getReader()
   let offset = 0
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    const chunk = MP4BoxBuffer.fromArrayBuffer(value.slice().buffer, offset)
-    offset += value.byteLength
-    file.appendBuffer(chunk)
-    if (failure) throw failure
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      // A chunk is normally a whole buffer of its own; only a view into a larger one is copied out.
+      const whole = value.byteOffset === 0 && value.byteLength === value.buffer.byteLength
+      const chunk = MP4BoxBuffer.fromArrayBuffer(whole ? value.buffer : value.slice().buffer, offset)
+      offset += value.byteLength
+      file.appendBuffer(chunk)
+      if (failure) throw failure
+    }
+  } catch (error) {
+    // Stop the download: nothing more of it is needed.
+    void reader.cancel().catch(() => undefined)
+    throw error
   }
   file.flush()
   if (failure) throw failure
@@ -126,6 +160,9 @@ export async function demux(url: string, signal?: AbortSignal): Promise<Demuxed>
 export class DecoderSource implements ClipFrameSource {
   private loading: Promise<Demuxed | null> | null = null
   private demuxed: Demuxed | null = null
+  /** The time of the clip's earliest picture, µs. */
+  private firstUs = 0
+  private readonly abort = new AbortController()
   private decoder: VideoDecoder | null = null
   private fallback: ClipFrameSource | null = null
   /** Decoded pictures not shown yet, earliest first. */
@@ -141,7 +178,7 @@ export class DecoderSource implements ClipFrameSource {
   constructor(
     private readonly media: ClipMedia,
     private readonly onFrame: () => void,
-    private readonly loader: (url: string) => Promise<Demuxed> = demux,
+    private readonly loader: (url: string, signal?: AbortSignal) => Promise<Demuxed> = demux,
   ) {}
 
   get version(): number {
@@ -166,6 +203,7 @@ export class DecoderSource implements ClipFrameSource {
 
   dispose(): void {
     this.disposed = true
+    this.abort.abort()
     this.reset()
     this.current?.close()
     this.current = null
@@ -177,6 +215,8 @@ export class DecoderSource implements ClipFrameSource {
 
   async ready(ms: number): Promise<void> {
     const demuxed = await this.load()
+    if (this.disposed) return
+    if (this.failure) throw this.failure
     if (this.fallback) return this.fallback.ready(ms)
     if (!demuxed || !this.decoder) return
     const target = Math.round(ms * 1000)
@@ -184,6 +224,8 @@ export class DecoderSource implements ClipFrameSource {
     const showing = this.current
     const span = showing ? (showing.duration ?? samples[0]?.durationUs ?? 33_333) : 0
     if (showing && showing.timestamp <= target && target < showing.timestamp + span) return
+    // Before the first picture the first picture shows (as a player shows it): it is already there.
+    if (showing && target < showing.timestamp && showing.timestamp <= this.firstUs) return
     const key = keyIndexAtOrBefore(samples, target)
     if (!showing || target < showing.timestamp || key > this.next) this.seek(key)
     for (;;) {
@@ -252,13 +294,16 @@ export class DecoderSource implements ClipFrameSource {
   private load(): Promise<Demuxed | null> {
     this.loading ??= (async () => {
       try {
-        const demuxed = await this.loader(this.media.url)
+        const demuxed = await this.loader(this.media.url, this.abort.signal)
+        if (this.disposed) return null
         const support = await VideoDecoder.isConfigSupported(demuxed.config).catch(() => null)
+        if (this.disposed) return null
         if (!support?.supported) {
           this.useFallback()
           return null
         }
         this.demuxed = demuxed
+        this.firstUs = demuxed.samples.reduce((first, sample) => Math.min(first, sample.timestampUs), Number.POSITIVE_INFINITY)
         this.decoder = new VideoDecoder({
           output: (frame) => {
             if (this.disposed) {
@@ -280,6 +325,8 @@ export class DecoderSource implements ClipFrameSource {
         this.decoder.configure(demuxed.config)
         return demuxed
       } catch (error) {
+        // Disposed while loading (the download was stopped): nothing is made for a source that is gone.
+        if (this.disposed) return null
         if (error instanceof ClipDecodeError) throw error
         // Not an MP4 this demuxer understands (an older clip, a browser without streams): play it instead.
         this.useFallback()

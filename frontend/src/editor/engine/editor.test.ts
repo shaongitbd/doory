@@ -1,9 +1,10 @@
-import { FabricImage, type IText } from 'fabric'
+import { Ellipse, FabricImage, type IText } from 'fabric'
 import { createBlankDocument } from '@/lib/document'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { installImageStub } from '../test/imageStub'
 import { DUPLICATE_OFFSET } from './api/arrange'
 import { EditorEngine } from './editor'
+import { asDory } from './objects/dory'
 import { AUTOSAVE_DELAY_MS } from './persistence'
 
 /** jsdom has no DataTransfer; the clipboard API only needs these three members. */
@@ -30,6 +31,9 @@ async function setup(opts: { mode?: 'guest' | 'account' | 'shared-view'; pages?:
 }
 
 const objectsOf = (engine: EditorEngine, i = 0) => engine.state.doc.pages[i].objects
+
+/** Lets a pending canvas render run while the test's mocks are still in place (a disposed canvas still draws it). */
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 
 describe('EditorEngine', () => {
   beforeEach(() => {
@@ -591,6 +595,105 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('fit to page is one undo step', async () => {
+    const { engine } = await setup()
+    await engine.insert.shape('rect')
+    engine.arrange.setAngle(30)
+    engine.history.seal()
+    const before = structuredClone(objectsOf(engine))
+    engine.arrange.fitToPage()
+    expect(engine.state.history.undoLabel).toBe('Fit to page')
+    await engine.undo()
+    expect(objectsOf(engine)).toEqual(before)
+    engine.dispose()
+  })
+
+  it('fit to page puts the outer edge of a thick border on the page edge', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.shape('rect')
+    engine.style.setStroke({ color: '#000000', width: 24 })
+    engine.arrange.fitToPage()
+    const rect = view.canvas.getObjects()[0]
+    const r = rect.getBoundingRect()
+    expect([r.left, r.top, r.width, r.height].map((v) => Math.round(v * 100) / 100)).toEqual([0, 0, 800, 600])
+    // Half the border lies outside the shape's own box.
+    expect(rect.width).toBeCloseTo(800 - 24)
+    expect(rect.height).toBeCloseTo(600 - 24)
+    engine.dispose()
+  })
+
+  it('fit to page leaves lines and QR codes alone', async () => {
+    const restore = installImageStub({ width: 512, height: 512 })
+    vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined)
+    const { engine, view } = await setup()
+    await engine.insert.shape('line')
+    await engine.insert.qr()
+    await vi.waitFor(() => expect(view.canvas.getObjects()).toHaveLength(2))
+    for (const id of objectsOf(engine).map((o) => o.id)) {
+      engine.select([id])
+      const before = structuredClone(objectsOf(engine))
+      expect(engine.arrange.canFitToPage()).toBe(false)
+      engine.arrange.fitToPage()
+      expect(objectsOf(engine)).toEqual(before)
+    }
+    expect(engine.state.selection.kinds).toEqual(['qr'])
+    expect(engine.state.history.undoLabel).not.toBe('Fit to page')
+    await nextFrame()
+    engine.dispose()
+    restore()
+  })
+
+  it('fit to page leaves alone an object picked inside a group', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.shape('rect')
+    await engine.insert.shape('ellipse')
+    engine.selectAll()
+    engine.arrange.group()
+    const group = objectsOf(engine)[0] as unknown as { objects: { id: string }[] }
+    engine.arrange.selectLayer(group.objects[0].id)
+    expect(view.canvas.getActiveObject()?.group).toBeDefined()
+    const before = structuredClone(objectsOf(engine))
+    expect(engine.arrange.canFitToPage()).toBe(false)
+    engine.arrange.fitToPage()
+    expect(objectsOf(engine)).toEqual(before)
+    engine.dispose()
+  })
+
+  it('fit to page scales a group evenly until it covers the page', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.shape('rect')
+    await engine.insert.shape('ellipse')
+    engine.selectAll()
+    engine.arrange.group()
+    const group = view.canvas.getObjects()[0]
+    const w = group.getScaledWidth()
+    const h = group.getScaledHeight()
+    engine.arrange.fitToPage()
+    expect(group.scaleX).toBeCloseTo(group.scaleY)
+    // Narrower than the page: the width fits exactly and the top and bottom spill over evenly.
+    const r = group.getBoundingRect()
+    expect(w / h).toBeLessThan(800 / 600)
+    expect(r.width).toBeCloseTo(800)
+    expect(r.height).toBeCloseTo((800 * h) / w)
+    expect(r.left).toBeCloseTo(0)
+    expect(r.top + r.height / 2).toBeCloseTo(300)
+    engine.dispose()
+  })
+
+  it('fit to page scales an element evenly until it covers the page', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.svgElement('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 300"><path d="M0 0 H100 V300 H0 Z" fill="#7c5cff"/></svg>', 'test:tall', 'Tall')
+    expect(engine.state.selection.kinds).toEqual(['element'])
+    const el = view.canvas.getObjects()[0]
+    engine.arrange.fitToPage()
+    expect(el.scaleX).toBeCloseTo(el.scaleY)
+    const r = el.getBoundingRect()
+    expect(r.width).toBeCloseTo(800)
+    expect(r.height).toBeGreaterThan(2300)
+    expect(r.top + r.height / 2).toBeCloseTo(300)
+    engine.dispose()
+  })
+
   it('fit to page leaves text alone', async () => {
     const { engine, view } = await setup()
     await engine.insert.text('heading')
@@ -618,6 +721,57 @@ describe('EditorEngine', () => {
     expect(img.getScaledHeight()).toBeCloseTo(600)
     expect(img.getBoundingRect().left).toBeCloseTo(0)
     expect(img.getBoundingRect().top).toBeCloseTo(0)
+    await nextFrame()
+    engine.dispose()
+    restore()
+  })
+
+  it('fit to page rebuilds the frame of a masked picture for its new crop', async () => {
+    const restore = installImageStub({ width: 200, height: 100 })
+    vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined)
+    const { engine, view } = await setup()
+    URL.createObjectURL = vi.fn(() => 'blob:fake-1')
+    await engine.insert.imageFiles([new File([new Uint8Array([1])], 'wide.png', { type: 'image/png' })])
+    await vi.waitFor(() => expect(view.canvas.getObjects()).toHaveLength(1))
+    engine.style.setMask('circle')
+    engine.arrange.fitToPage()
+    const img = view.canvas.getObjects()[0] as FabricImage
+    // The oval spans the cropped picture (not the old, wider one), so it fills the page.
+    const clip = img.clipPath as Ellipse
+    expect(clip).toBeInstanceOf(Ellipse)
+    expect(clip.rx * 2).toBeCloseTo(img.width)
+    expect(clip.ry * 2).toBeCloseTo(img.height)
+    expect(clip.rx * 2 * img.scaleX).toBeCloseTo(800)
+    await nextFrame()
+    engine.dispose()
+    restore()
+  })
+
+  it('fit to page gives a picture in a placeholder a page-sized frame and covers it', async () => {
+    const restore = installImageStub({ width: 600, height: 300 })
+    vi.spyOn(FabricImage.prototype, '_render').mockImplementation(() => undefined)
+    URL.createObjectURL = vi.fn(() => 'blob:fake-1')
+    const { engine, pageId, view } = await setup()
+    await engine.insert.shape('ellipse')
+    engine.arrange.setAngle(20)
+    engine.style.setPlaceholder(true)
+    const ref = await engine.assets.upload(new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' }), 'photo.png')
+    await engine.insert.fillPlaceholderWith(pageId, engine.state.selection.ids[0], ref)
+    expect(engine.arrange.canFitToPage()).toBe(true)
+    engine.arrange.fitToPage()
+    const img = view.canvas.getObjects()[0] as FabricImage
+    expect(asDory(img).slot).toMatchObject({ cx: 400, cy: 300, width: 800, height: 600, angle: 0, mask: 'circle' })
+    // 600x300 over 800x600: scaled 2x, centred on the page, straight.
+    expect(img.angle).toBe(0)
+    expect(img.scaleX).toBeCloseTo(2)
+    expect(img.scaleY).toBeCloseTo(2)
+    expect(img.getCenterPoint().x).toBeCloseTo(400)
+    expect(img.getCenterPoint().y).toBeCloseTo(300)
+    // The clip is the new frame: the oval now spans the page.
+    const clip = img.clipPath as Ellipse
+    expect(clip.absolutePositioned).toBe(true)
+    expect([clip.left, clip.top, clip.rx * 2, clip.ry * 2]).toEqual([400, 300, 800, 600])
+    await nextFrame()
     engine.dispose()
     restore()
   })

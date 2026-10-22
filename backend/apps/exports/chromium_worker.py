@@ -77,6 +77,7 @@ HAS_RENDER_VIDEO = (
 )
 VIDEO_SLICE_BYTES = 4 * 1024 * 1024  # base64 through the DevTools connection, one slice at a time
 PAGE_SUFFIXES = {"svg": "svg", "print": "svg", "picture": "jpg"}
+PAGE_KINDS = {"svg": "SVG files", "print": "print pages", "picture": "pictures"}
 MAX_RECORDED_REQUESTS = 50
 LAUNCH_ARGS = (
     "--disable-dev-shm-usage",
@@ -173,7 +174,9 @@ def _render_pages(
     page, spec: dict[str, Any], remaining_ms: Callable[[], int], report: dict[str, Any]
 ) -> None:
     """Open `spec["render_url"]`, make the pages of the payload in `spec["payload_path"]` and write one file
-    per page into `spec["pages_dir"]` (`page-1.svg`, ...), in the order the page answered them."""
+    per page into `spec["pages_dir"]` (`page-1.svg`, ...), in the order the page answered them. A page over
+    `spec["max_page_bytes"]`, or pages over `spec["max_total_bytes"]` together, are refused (`too_large`)
+    before anything is written."""
     payload = json.loads(Path(spec["payload_path"]).read_text(encoding="utf-8"))
     page.goto(spec["render_url"], wait_until="load", timeout=remaining_ms())
     page.wait_for_function(RENDER_READY, timeout=remaining_ms())
@@ -189,7 +192,7 @@ def _render_pages(
     if not isinstance(pages, list) or not pages or not all(isinstance(item, dict) for item in pages):
         report.update(status="error", kind="failed", message="the render page sent no pages")
         return
-    report["pages"] = []
+    files: list[bytes] = []
     for number, item in enumerate(pages, start=1):
         try:
             data = (
@@ -200,6 +203,13 @@ def _render_pages(
         except (KeyError, TypeError, binascii.Error):
             report.update(status="error", kind="failed", message=f"the render page sent no page {number}")
             return
+        files.append(data)
+        too_large = _too_large(payload.get("output"), item, data, sum(map(len, files)), spec)
+        if too_large:
+            report.update(status="error", kind="render", error={"code": "too_large", "message": too_large})
+            return
+    report["pages"] = []
+    for number, (item, data) in enumerate(zip(pages, files, strict=True), start=1):
         name = f"page-{number}.{suffix}"
         (out / name).write_bytes(data)
         report["pages"].append(
@@ -221,6 +231,29 @@ def _render_pages(
         for item in files[:64]
         if isinstance(item, dict)
     ]
+
+
+def _megabytes(size: int) -> str:
+    return f"{size / 1024 / 1024:.1f} MB"
+
+
+def _too_large(output, item: dict, data: bytes, total: int, spec: dict[str, Any]) -> str:
+    """Why a page (`data`, after pages of `total` bytes with it) is over the limits of the spec, or ""."""
+    page, total_limit = spec.get("max_page_bytes"), spec.get("max_total_bytes")
+    kind = PAGE_KINDS.get(output, "pages")
+    if page and len(data) > page:
+        number = int(item.get("pageIndex") or 0) + 1
+        return (
+            f"Page {number} would be a file of {_megabytes(len(data))}; this server makes {kind} of at most "
+            f"{_megabytes(page)}. A picture is put into the file once for every time it is used: use large "
+            "pictures fewer times, or export PNG or JPG."
+        )
+    if total_limit and total > total_limit:
+        return (
+            f"The pages would be more than {_megabytes(total_limit)} together, the most this server makes in "
+            "one export. Export fewer pages at once."
+        )
+    return ""
 
 
 def _render_video(

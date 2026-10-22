@@ -4,7 +4,8 @@ import { createUrl } from '@/features/presets'
 import { type SizePreset } from '@/lib/sizePresets'
 import { noteUsedSize } from '@/lib/sizePresets/choices'
 import { presetSizeText } from '@/lib/sizePresets/picker'
-import { PresetShape, SizePicker } from '@/lib/sizePresets/SizePicker'
+import { PresetShape } from '@/lib/sizePresets/PresetShape'
+import { SizePicker } from '@/lib/sizePresets/SizePicker'
 import { Button, Dialog } from '@/ui'
 import { CustomSizeForm } from './CustomSizeForm'
 import styles from './CreateDesignDialog.module.css'
@@ -23,8 +24,13 @@ export function CreateDesignDialog({ open, onClose, initialTab = 'sizes' }: Crea
   // The custom size form has its own Create button.
   const [custom, setCustom] = useState(initialTab === 'custom')
 
-  function go(url: string) {
+  // The pages keep the dialog mounted while it is closed: it opens again with nothing chosen.
+  function close() {
+    setChosen(null)
     onClose()
+  }
+  function go(url: string) {
+    close()
     navigate(url)
   }
   const create = (preset: SizePreset): void => {
@@ -35,7 +41,7 @@ export function CreateDesignDialog({ open, onClose, initialTab = 'sizes' }: Crea
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={close}
       title="Create a design"
       description="Choose a size to start with. You can change it any time."
       size="xl"
@@ -56,7 +62,7 @@ export function CreateDesignDialog({ open, onClose, initialTab = 'sizes' }: Crea
               <small>Pick a size, then create. A double click creates it at once.</small>
             )}
           </div>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={close}>
             Cancel
           </Button>
           {custom ? null : (

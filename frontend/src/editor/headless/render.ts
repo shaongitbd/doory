@@ -122,6 +122,9 @@ export interface PagesInput {
   /** `picture`: output pixels per page pixel (300 dpi is 3.125). Lowered for a page whose picture would have more than `maxPixels`. */
   multiplier?: number
   maxPixels?: number
+  /** The largest file of one page and of all pages together, in bytes (the server's limits). Making stops at the first page over either, with `too_large`. */
+  maxPageBytes?: number
+  maxTotalBytes?: number
   fonts?: FontFamily[]
 }
 
@@ -147,6 +150,28 @@ export interface RenderedPages {
 }
 
 const PICTURE_QUALITY = 0.92 // as the editor's PDF download
+const PAGE_KINDS: Record<PageOutput, string> = { svg: 'SVG files', print: 'print pages', picture: 'pictures' }
+
+const megabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`
+
+/** The size of a page's file: UTF-8 text, or the JPEG behind the base64 of a picture. */
+function fileBytes(output: PageOutput, data: string): number {
+  if (output !== 'picture') return new TextEncoder().encode(data).length
+  return Math.floor((data.length * 3) / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0)
+}
+
+/** Refuses a page over the server's limits as soon as it is made (the server checks them again). */
+function checkSize(input: PagesInput, pageIndex: number, bytes: number, total: number): void {
+  if (input.maxPageBytes !== undefined && bytes > input.maxPageBytes) {
+    throw new RenderError(
+      'too_large',
+      `Page ${pageIndex + 1} would be a file of ${megabytes(bytes)}; this server makes ${PAGE_KINDS[input.output]} of at most ${megabytes(input.maxPageBytes)}. A picture is put into the file once for every time it is used: use large pictures fewer times, or export PNG or JPG.`,
+    )
+  }
+  if (input.maxTotalBytes !== undefined && total > input.maxTotalBytes) {
+    throw new RenderError('too_large', `The pages would be more than ${megabytes(input.maxTotalBytes)} together, the most this server makes in one export. Export fewer pages at once.`)
+  }
+}
 
 /** The bytes of `blob` in base64 (no `data:` prefix). */
 export function base64(blob: Blob): Promise<string> {
@@ -169,6 +194,7 @@ export async function renderDesignPages(input: PagesInput): Promise<RenderedPage
   const { doc, fonts, ctx } = session
   const chosen = (input.pages ?? [undefined]).map((ref) => pickPage(doc, ref))
   const pages: RenderedPageFile[] = []
+  let total = 0
   for (const [page, pageIndex] of chosen) {
     const size = pageSize(doc, page)
     const before = session.placeholders()
@@ -187,6 +213,11 @@ export async function renderDesignPages(input: PagesInput): Promise<RenderedPage
       // `renderPageToSvg` puts every picture into the file; one that can't be fetched stops it.
       if (error instanceof Error && error.name === 'SvgEmbedError') throw new RenderError('image_unavailable', error.message)
       throw error
+    }
+    if (input.maxPageBytes !== undefined || input.maxTotalBytes !== undefined) {
+      const bytes = fileBytes(input.output, file.data)
+      total += bytes
+      checkSize(input, pageIndex, bytes, total)
     }
     const missingFonts = await fonts.unavailable(fontsInObjects(renderableObjects(page.objects)))
     pages.push({ pageId: page.id, pageIndex, width: size.width, height: size.height, ...file, placeholders: session.placeholders() - before, missingFonts })

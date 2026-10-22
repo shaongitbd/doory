@@ -78,6 +78,7 @@ export class VideosApi {
 
   private replacingId: string | null = null
   private readonly replacingListeners = new Set<() => void>()
+  private stopWatchingPanel: (() => void) | null = null
 
   /** The clip a pick in the Videos tool replaces, while "Replace video" waits for one. */
   get replacing(): string | null {
@@ -94,12 +95,20 @@ export class VideosApi {
   private setReplacing(id: string | null): void {
     if (this.replacingId === id) return
     this.replacingId = id
+    this.stopWatchingPanel?.()
+    this.stopWatchingPanel = null
+    // The pick is made in the Videos tool: closing it without one leaves the clip as it is.
+    if (id) {
+      this.stopWatchingPanel = this.engine.store.subscribe((state) => {
+        if (state.ui.panelId !== 'videos') this.setReplacing(null)
+      })
+    }
     for (const listener of [...this.replacingListeners]) listener()
   }
 
   /** "Replace video": the next video picked in the Videos tool replaces the selected clip (the tool opens for it). */
   startReplace(id?: string): boolean {
-    const obj = this.target(id)
+    const obj = this.owner(id)
     const objectId = obj ? asDory(obj).id : undefined
     if (this.engine.readOnly || !objectId) return false
     this.setReplacing(objectId)
@@ -131,6 +140,16 @@ export class VideosApi {
     return isLiveClip(obj) && !asDory(obj).rawDoc ? obj : null
   }
 
+  /**
+   * The clip a command that cuts or swaps the video acts on: the clip itself, or for a blurred background the clip it
+   * belongs to (which takes its background along); null when that clip is not on the page.
+   */
+  private owner(id?: string): FabricImage | null {
+    const obj = this.target(id)
+    const of = obj ? liveClip(obj)?.backdropOf : ''
+    return of ? this.target(of) : obj
+  }
+
   /** The clip with this id (or the selected one) on the active page. */
   get(id?: string): Clip | null {
     const obj = this.target(id)
@@ -151,22 +170,19 @@ export class VideosApi {
     for (const [key, value] of Object.entries(patch) as [keyof ClipPatch, unknown][]) if (value !== undefined) merged[PROP[key]] = value
     const next = readClip({ ...merged, type: 'image' })
     if (!next) return false
-    const values: Record<string, unknown> = {
-      videoStartMs: next.startMs,
-      videoTrimStartMs: next.trimStartMs,
-      videoTrimEndMs: next.trimEndMs,
-      videoLoop: next.loop,
-      videoMuted: next.muted,
-      videoVolume: next.volume,
-      videoSpeed: next.speed,
-      videoFadeInMs: next.fadeInMs,
-      videoFadeOutMs: next.fadeOutMs,
+    // Only what the patch sets, and what clamping moves because of it (a trim end before its start swaps the two): a
+    // setting the patch leaves alone is never written, so a co-editor's change to it stands.
+    const changed: string[] = []
+    for (const key of Object.keys(PROP) as (keyof ClipPatch)[]) {
+      if (patch[key] === undefined && next[key] === clip[key]) continue
+      const prop = PROP[key]
+      if (record[prop] === next[key]) continue
+      record[prop] = next[key]
+      changed.push(prop)
     }
-    const changed = Object.entries(values).filter(([key, value]) => record[key] !== value)
     if (changed.length === 0) return false
-    for (const [key, value] of changed) record[key] = value
     obj.set('dirty', true)
-    this.followTiming(obj)
+    this.followTiming(obj, changed)
     this.engine.commitActive({ label, coalesceKey })
     return true
   }
@@ -184,12 +200,14 @@ export class VideosApi {
     return new Set((page?.objects ?? []).filter((o) => o.videoBackdropOf === id).map((o) => o.id))
   }
 
-  /** Gives the clip's blurred backgrounds its timing (without committing: the caller does). */
-  private followTiming(obj: FabricImage): void {
+  /** Gives the clip's blurred backgrounds its timing, or only the `props` of it that changed (without committing: the caller does). */
+  private followTiming(obj: FabricImage, props?: readonly string[]): void {
     const record = asRecord(obj)
+    const keys = props ? BACKDROP_TIMING_PROPS.filter((key) => props.includes(key)) : BACKDROP_TIMING_PROPS
+    if (keys.length === 0) return
     for (const backdrop of this.backdropsOf(asDory(obj).id)) {
       const other = asRecord(backdrop)
-      for (const key of BACKDROP_TIMING_PROPS) other[key] = record[key]
+      for (const key of keys) other[key] = record[key]
       backdrop.set('dirty', true)
     }
   }
@@ -254,7 +272,7 @@ export class VideosApi {
    */
   async replace(id: string | undefined, ref: AssetRef): Promise<boolean> {
     if (this.engine.readOnly || ref.kind !== 'video' || !ref.video || ref.video.status !== 'ready') return false
-    const obj = this.target(id)
+    const obj = this.owner(id)
     const objectId = obj ? asDory(obj).id : undefined
     if (!obj || !objectId) return false
     const poster = ref.video.posterUrl
@@ -304,12 +322,12 @@ export class VideosApi {
 
   /**
    * Cuts a clip in two at `pageMs` on the page clock: the clip keeps what plays before, a copy just above it (same
-   * frame on the page) plays the rest from there. Its blurred background is cut too. Returns the new clip's id, or
-   * null when `pageMs` is not inside the part of the clip that plays.
+   * frame on the page) plays the rest from there. Its blurred background is cut too (cutting the background cuts its
+   * clip). Returns the new clip's id, or null when `pageMs` is not inside the part of the clip that plays.
    */
   split(id: string | undefined, pageMs: number): string | null {
     if (this.engine.readOnly) return null
-    const obj = this.target(id)
+    const obj = this.owner(id)
     const clip = obj ? liveClip(obj) : null
     const objectId = obj ? asDory(obj).id : undefined
     if (!obj || !clip || !objectId || clip.loop) return null
@@ -382,8 +400,13 @@ export class VideosApi {
     const obj = this.target(id)
     if (!view || !obj) return false
     const page = this.engine.pageSizeOf(this.engine.state.activePageId)
-    const scale = Math.max(page.width / (obj.width || 1), page.height / (obj.height || 1))
-    obj.set({ left: page.width / 2, top: page.height / 2, originX: 'center', originY: 'center', scaleX: scale, scaleY: scale, angle: 0, skewX: 0, skewY: 0, cropX: 0, cropY: 0 })
+    // The whole video covers the page: the crop window goes back to the full picture, as "Reset crop" does.
+    const natural = obj.getOriginalSize()
+    const width = natural.width || obj.width || 1
+    const height = natural.height || obj.height || 1
+    const scale = Math.max(page.width / width, page.height / height)
+    obj.set({ left: page.width / 2, top: page.height / 2, originX: 'center', originY: 'center', scaleX: scale, scaleY: scale, angle: 0, skewX: 0, skewY: 0, cropX: 0, cropY: 0, width, height })
+    applyMask(obj)
     asDory(obj).locked = true
     applyLock(obj)
     view.canvas.sendObjectToBack(obj)
@@ -396,14 +419,15 @@ export class VideosApi {
 
   /**
    * Moves the clip's sound to an audio track of the page (same start, trim and volume) and mutes the clip: one undo step.
-   * Afterwards the sound can be moved, trimmed, faded and ducked like any track.
+   * Afterwards the sound can be moved, trimmed, faded and ducked like any track. Not for a clip that plays faster or
+   * slower: a track has no speed, so its sound would drift from the picture.
    */
   detachAudio(id?: string): boolean {
     if (this.engine.readOnly) return false
     const obj = this.target(id)
     const clip = obj ? liveClip(obj) : null
     const objectId = obj ? asDory(obj).id : undefined
-    if (!obj || !clip || !clip.audioSrc || !objectId) return false
+    if (!obj || !clip || !clip.audioSrc || clip.speed !== 1 || !objectId) return false
     const doc = this.engine.getDocument()
     const tracks = readTracks(doc)
     if (tracks.length >= MAX_TRACKS) {

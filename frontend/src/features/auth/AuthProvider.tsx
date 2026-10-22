@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { configureBackgroundRemoval } from '@/editor/engine/bgRemoval/install'
 import { ApiError, authApi, configApi, DEFAULT_CONFIG, isApiError, setUnauthorizedHandler } from '@/lib/api'
+import { setSizeChoicesUser } from '@/lib/sizePresets/choices'
 import type { ApiUser, AppConfig, RegisterInput } from '@/types/api'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous'
@@ -10,6 +11,10 @@ export type AuthStatus = 'loading' | 'authenticated' | 'anonymous'
 export interface LostSession {
   id: string
   email: string
+  /** Whether the account has a password to sign in again with. */
+  hasPassword: boolean
+  /** Whether it is connected to single sign-on. */
+  ssoLinked: boolean
 }
 
 /** Constraint for a sign-in that must restore a session that ended (the editor keeps saving to this account only). */
@@ -101,10 +106,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const previous = userRef.current
     if (!previous) return
     userRef.current = null
-    setLostSession({ id: previous.id, email: previous.email })
+    setLostSession({ id: previous.id, email: previous.email, hasPassword: previous.has_password, ssoLinked: previous.oidc_linked })
     setUserState(null)
     setStatus('anonymous')
   }, [])
+
+  // Pinned and recent sizes belong to the person signed in, not to the page.
+  const userId = user?.id ?? null
+  useEffect(() => {
+    if (status !== 'loading') setSizeChoicesUser(userId)
+  }, [status, userId])
 
   useEffect(() => {
     setUnauthorizedHandler(() => {

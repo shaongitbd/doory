@@ -1,6 +1,6 @@
 /**
  * Property edits on the current selection: fill, stroke, opacity, text styling, effects, shape parameters,
- * image adjustments, masks, recolouring, links and QR content. Continuous controls (sliders, colour
+ * image adjustments, masks, upscaling, recolouring, links and QR content. Continuous controls (sliders, colour
  * scrubbing) pass a `key` so their steps coalesce into one undo step.
  */
 import { type FabricImage, type FabricObject, IText, Point, Polygon, Rect, Shadow, util } from 'fabric'
@@ -8,6 +8,8 @@ import type { ArrowHead, DocField, DocTextFit, ImageFilterSpec, MaskShape, Objec
 import type { AssetRef } from '@/types/adapter'
 import type { EditorEngine } from '../editor'
 import { BACKGROUND_REMOVAL_TASK, BackgroundRemovalError, DEVICE_OPTION, removeBackground as runRemoval, type BgRemovalPhase } from '../bgRemoval'
+import { UpscaleError, fitsOutput, maxOutputPixels, targetSize, upscaleImage as runUpscale, type CropRect, type UpscaleMethod, type UpscaleProgress } from '../upscale'
+import { MAX_UPLOAD_BYTES } from '../assets'
 import { DoryLine } from '../objects/DoryLine'
 import { asDory } from '../objects/dory'
 import { SVG_EDIT_LIMITS, applyColorMap, elementColors, isSvgSource, parseSvgElement, shapeCount, svgEditProblem } from '../objects/elements'
@@ -56,6 +58,23 @@ export function dashArray(style: DashStyle, width: number): number[] | null {
 export function dashStyleOf(arr: readonly number[] | null | undefined): DashStyle {
   if (!arr || arr.length === 0) return 'solid'
   return arr[0] < 0.5 ? 'dotted' : 'dashed'
+}
+
+/**
+ * The same visible crop in the pixels of an image enlarged by `scale` (clamped to its new size). Not
+ * rounded: a crop can sit between pixels, and rounding it would move the picture.
+ */
+export function scaledCrop(crop: CropRect, width: number, height: number, scale: number): CropRect {
+  const targetWidth = Math.max(1, Math.round(width * scale))
+  const targetHeight = Math.max(1, Math.round(height * scale))
+  const x = Math.min(targetWidth - 1, Math.max(0, crop.x * scale))
+  const y = Math.min(targetHeight - 1, Math.max(0, crop.y * scale))
+  return {
+    x,
+    y,
+    width: Math.min(targetWidth - x, Math.max(1, crop.width * scale)),
+    height: Math.min(targetHeight - y, Math.max(1, crop.height * scale)),
+  }
 }
 
 export class StyleApi {
@@ -286,6 +305,25 @@ export class StyleApi {
     return this.targets().filter((o): o is FabricImage => o.type === 'image')
   }
 
+  /** The selected photo's full source size and the crop it currently shows, if any (in source pixels, not rounded). */
+  selectedImageSource(): { width: number; height: number; crop: CropRect | null } | null {
+    const img = this.images()[0]
+    if (!img) return null
+    const natural = img.getOriginalSize()
+    const width = Math.max(1, Math.round(natural.width || img.width || 1))
+    const height = Math.max(1, Math.round(natural.height || img.height || 1))
+    const rawX = Number.isFinite(img.cropX) ? img.cropX : 0
+    const rawY = Number.isFinite(img.cropY) ? img.cropY : 0
+    const rawWidth = Number.isFinite(img.width) && img.width > 0 ? img.width : width
+    const rawHeight = Number.isFinite(img.height) && img.height > 0 ? img.height : height
+    const x = Math.min(width - 1, Math.max(0, rawX))
+    const y = Math.min(height - 1, Math.max(0, rawY))
+    const cropWidth = Math.min(width - x, Math.max(1, rawWidth))
+    const cropHeight = Math.min(height - y, Math.max(1, rawHeight))
+    const cropped = x > 0 || y > 0 || cropWidth < width || cropHeight < height
+    return { width, height, crop: cropped ? { x, y, width: cropWidth, height: cropHeight } : null }
+  }
+
   setFilters(specs: readonly ImageFilterSpec[], key = 'filters'): void {
     const list = normalizeSpecs(specs)
     const imgs = this.adjustable()
@@ -422,6 +460,47 @@ export class StyleApi {
     const ref = result instanceof Blob ? await this.engine.assets.upload(result, 'cutout.png') : result
     if (stale()) return false
     await this.engine.insert.replaceSelectedImage(ref)
+    return true
+  }
+
+  /**
+   * Whether the selected picture can be upscaled: a raster picture, not an SVG (the worker cannot
+   * decode one, and a vector has no pixels to add). Video clips are never among `images()`.
+   */
+  canUpscale(): boolean {
+    const img = this.images()[0]
+    return img !== undefined && !isSvgSource(asDory(img).docSrc ?? img.getSrc())
+  }
+
+  /**
+   * Increases the resolution of the whole selected photo with the pure-code upscaler and swaps the
+   * result in, keeping the frame and the visible crop. Resolves `false` when cancelled, when the
+   * selection moved while it ran, or when the selection is an SVG or a video clip.
+   */
+  async upscale(options: { scale: number; method?: UpscaleMethod; detail?: number }, onProgress?: UpscaleProgress, signal?: AbortSignal): Promise<boolean> {
+    const img = this.images()[0]
+    if (!img || !this.canUpscale() || this.engine.readOnly || asDory(img).locked || signal?.aborted) return false
+    const source = this.selectedImageSource()
+    if (!source) return false
+    const target = targetSize(source.width, source.height, options.scale)
+    // Refuse up front what this device cannot hold, rather than failing after the work.
+    if (!fitsOutput(target, maxOutputPixels())) throw new UpscaleError(t.dialog.upscaleTooLarge)
+    const stale = (): boolean => signal?.aborted === true || this.images()[0] !== img
+    let result: Blob
+    try {
+      const blob = await (await fetch(img.getSrc(), { signal })).blob()
+      result = await runUpscale(blob, { ...options, maxBytes: MAX_UPLOAD_BYTES }, onProgress, signal)
+    } catch (error) {
+      // Cancel is not a failure: the engine has stopped its work and the design stays as it was.
+      if (signal?.aborted) return false
+      throw error
+    }
+    if (stale()) return false
+    const ext = result.type === 'image/webp' ? 'webp' : 'png'
+    const ref = await this.engine.assets.upload(result, `upscaled-${target.width}x${target.height}.${ext}`)
+    if (stale()) return false
+    const crop = source.crop ? scaledCrop(source.crop, source.width, source.height, options.scale) : null
+    await this.engine.insert.replaceSelectedImage(ref, t.history.upscale, crop ?? undefined)
     return true
   }
 

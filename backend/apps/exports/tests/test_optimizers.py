@@ -313,7 +313,7 @@ def keys(settings):
     settings.TINYPNG_API_KEY = "tiny-key-123"
     settings.KRAKEN_API_KEY = "kraken-key"
     settings.KRAKEN_API_SECRET = "kraken-secret"
-    settings.IMAGE_OPTIMIZER_CUSTOM_URL = "http://10.0.0.5:9000/optimize"
+    settings.IMAGE_OPTIMIZER_CUSTOM_URL = "https://10.0.0.5:9000/optimize"
     settings.IMAGE_OPTIMIZER_CUSTOM_KEY = "custom-key"
     settings.IMAGE_OPTIMIZER_CUSTOM_NAME = "Our squeezer"
 
@@ -437,6 +437,12 @@ def test_kraken_keeps_a_png_lossless_and_its_metadata_when_asked(keys, remote):
     [
         ({"success": False, "message": "Unknown API Key"}, "answered 200: Unknown API Key"),
         ({"success": True, "kraked_url": "http://dl.kraken.io/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://169.254.169.254/latest/meta-data/"}, "no download address"),
+        ({"success": True, "kraked_url": "https://10.0.0.7:8443/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://dl.kraken.io.example.com/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://evilkraken.io/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://dl.kraken.io:8443/a.png"}, "no download address"),
+        ({"success": True, "kraked_url": "https://user@dl.kraken.io/a.png"}, "no download address"),
     ],
 )
 def test_kraken_failures_leave_the_file_with_a_note(keys, remote, answer, warned):
@@ -460,7 +466,7 @@ def test_the_custom_optimizer_follows_the_contract(keys, remote):
     assert result.optimized and result.data == SMALLER
     (call,) = remote.calls
     parts = urlsplit(call["url"])
-    assert f"{parts.scheme}://{parts.netloc}{parts.path}" == "http://10.0.0.5:9000/optimize"
+    assert f"{parts.scheme}://{parts.netloc}{parts.path}" == "https://10.0.0.5:9000/optimize"
     assert parse_qs(parts.query) == {"format": ["keep"], "metadata": ["icc"], "quality": ["77"]}
     assert call["headers"] == {"Content-Type": "image/jpeg", "Authorization": "Bearer custom-key"}
     assert call["body"] == work.data
@@ -614,3 +620,18 @@ def test_the_custom_key_may_not_hold_a_line_break(keys, tools, settings):
     settings.IMAGE_OPTIMIZER_CUSTOM_KEY = "a\nb"
     assert not CUSTOM.ready()
     assert ids(checks.check_image_optimizers(None)) == ["exports.W003"]
+
+
+def test_a_custom_key_sent_over_plain_http_is_reported(settings):
+    settings.IMAGE_OPTIMIZERS = ["custom"]
+    settings.IMAGE_OPTIMIZER_DEFAULT = "custom"
+    settings.IMAGE_OPTIMIZER_CUSTOM_URL = "http://10.0.0.5:9000/optimize"
+    settings.IMAGE_OPTIMIZER_CUSTOM_KEY = "custom-key"
+    (issue,) = checks.check_image_optimizers(None)
+    assert issue.id == "exports.W005" and "IMAGE_OPTIMIZER_CUSTOM_KEY" in issue.msg
+    assert CUSTOM.ready()  # a warning only: on a private network it may be what the admin wants
+    settings.IMAGE_OPTIMIZER_CUSTOM_KEY = ""
+    assert checks.check_image_optimizers(None) == []
+    settings.IMAGE_OPTIMIZER_CUSTOM_KEY = "custom-key"
+    settings.IMAGE_OPTIMIZER_CUSTOM_URL = "https://10.0.0.5:9000/optimize"
+    assert checks.check_image_optimizers(None) == []

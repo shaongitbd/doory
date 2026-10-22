@@ -1,7 +1,7 @@
 import { Plus, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CreateDesignDialog } from '@/features/create/CreateDesignDialog'
+import { LazyCreateDesignDialog } from '@/features/create/LazyCreateDesignDialog'
 import { PresetIcon } from '@/features/PresetIcon'
 import { createUrl } from '@/features/presets'
 import { useSizePresets } from '@/lib/sizePresets'
@@ -37,7 +37,7 @@ export function CreateMenu() {
         </MenuItem>
         <MenuItem onSelect={() => setDialog('sizes')}>All sizes…</MenuItem>
       </Menu>
-      <CreateDesignDialog open={dialog !== null} onClose={() => setDialog(null)} initialTab={dialog === 'custom' ? 'custom' : 'sizes'} />
+      <LazyCreateDesignDialog open={dialog !== null} onClose={() => setDialog(null)} initialTab={dialog === 'custom' ? 'custom' : 'sizes'} />
     </>
   )
 }

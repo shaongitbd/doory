@@ -1,7 +1,8 @@
 import { ChevronDown, ChevronRight, Clock, Ruler, Search, Star } from 'lucide-react'
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
+import { useMediaQuery } from '@/ui/hooks'
 import { type PresetGroup, type SizePreset } from './catalogue'
-import { knownPresets, setCollapsed, togglePinned, useSizeChoices, yourSizes } from './choices'
+import { knownPresets, MAX_PINNED, setCollapsed, togglePinned, useSizeChoices, yourSizes } from './choices'
 import { GroupIcon } from './GroupIcon'
 import {
   entryBlocks,
@@ -15,6 +16,7 @@ import {
   type PickerBlock,
   type ShapeFilter,
 } from './picker'
+import { PresetShape } from './PresetShape'
 import { useSizePresets } from './store'
 import styles from './SizePicker.module.css'
 
@@ -38,12 +40,6 @@ export interface SizePickerProps {
   onCustomChange?(open: boolean): void
 }
 
-/** The page's shape, drawn to scale inside a fixed box. */
-export function PresetShape({ preset, size = 52 }: { preset: Pick<SizePreset, 'width' | 'height'>; size?: number }) {
-  const k = size / Math.max(preset.width, preset.height)
-  return <span className={styles.shape} style={{ width: Math.max(6, Math.round(preset.width * k)), height: Math.max(6, Math.round(preset.height * k)) }} aria-hidden="true" />
-}
-
 /**
  * The size catalogue as one browsable list: formats and platforms on the left (sections fold, and stay folded in this
  * browser), the sizes of the chosen one on the right under their headings, with shape and posts/ads filters and one
@@ -60,7 +56,11 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
   const [query, setQuery] = useState('')
   const [shape, setShape] = useState<ShapeFilter>('all')
   const [kind, setKind] = useState<KindFilter>('all')
+  // Set when a star could not pin a size because your sizes are full.
+  const [full, setFull] = useState(false)
   const collapsed = choices.collapsed
+  // On a phone the list is one row without section titles, so nothing could unfold a folded section there.
+  const narrow = useMediaQuery('(max-width: 639px)')
   const headingId = useId()
 
   const group = useMemo(() => {
@@ -85,6 +85,7 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
     setQuery('')
     setShape('all')
     setKind('all')
+    setFull(false)
   }
   const fold = (key: string): void => {
     setCollapsed(collapsed.includes(key) ? collapsed.filter((item) => item !== key) : [...collapsed, key])
@@ -93,7 +94,7 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
   const title = searching ? `Sizes matching “${query.trim()}”` : entry === MINE ? 'Your sizes' : entry === RECENT ? 'Recent' : entry === CUSTOM ? 'Custom size' : (group?.label ?? '')
   const showPlatform = searching || entry === MINE || entry === RECENT
   const pinnedIds = mine.map((preset) => preset.id)
-  const pin = (preset: SizePreset): void => togglePinned(preset.id, pinnedIds)
+  const pin = (preset: SizePreset): void => setFull(!togglePinned(preset.id, pinnedIds))
 
   return (
     <div className={styles.picker}>
@@ -123,7 +124,7 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
             </button>
           ) : null}
           {sections.map((section) => {
-            const closed = collapsed.includes(section.key)
+            const closed = !narrow && collapsed.includes(section.key)
             // A folded section still shows the entry that is open, so the list never hides where you are.
             const entries = closed ? section.entries.filter((item) => item.group.slug === entry) : section.entries
             return (
@@ -153,11 +154,22 @@ export function SizePicker({ selectedId, onSelect, onConfirm, custom, startWithC
               </>
             )}
           </div>
+          {full ? (
+            <p className={styles.notice} role="status">
+              Your sizes hold up to {MAX_PINNED}. Remove one to add another.
+            </p>
+          ) : null}
           <div className={styles.scroll} onKeyDown={moveBetweenCards}>
             {entry === CUSTOM && !searching ? (
               custom
             ) : shown.length === 0 ? (
-              <p className={styles.empty}>{searching ? 'No size matches. Try another word, or enter a custom size.' : 'No size of this shape here.'}</p>
+              <p className={styles.empty}>
+                {searching
+                  ? 'No size matches. Try another word, or enter a custom size.'
+                  : entry === MINE && mine.length === 0
+                    ? 'No sizes here yet. To keep a size here, choose the star in the corner of its card.'
+                    : 'No size of this shape here.'}
+              </p>
             ) : (
               shown.map((block) => (
                 <div key={block.key} className={styles.block}>

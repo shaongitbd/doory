@@ -58,7 +58,10 @@ def test_pins_and_folds_are_saved_per_person(api, user):
     ],
 )
 def test_rejects_what_is_not_a_short_list_of_slugs(api, body):
-    assert api.patch(URL, body, format="json").status_code == 400
+    res = api.patch(URL, body, format="json")
+    assert res.status_code == 400
+    # The standard error format, naming the field.
+    assert list(res.json()["error"]["fields"]) == list(body)
 
 
 def test_recent_sizes_come_from_the_latest_designs_each_once(api, user):

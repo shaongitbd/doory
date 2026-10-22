@@ -116,6 +116,13 @@ export const I = {
     <circle key="b" cx="9" cy="9" r="1.6" fill="currentColor" stroke="none" />,
     <path key="c" d="M4 18l4-4 3.5 3.5L16 12l4 4" />,
   ]),
+  upscale: svg(18, 1.7, [
+    <path key="a" d="M9 4H5a1 1 0 0 0-1 1v4" />,
+    <path key="b" d="M15 4h4a1 1 0 0 1 1 1v4" />,
+    <path key="c" d="M20 15v4a1 1 0 0 1-1 1h-4" />,
+    <path key="d" d="M9 20H5a1 1 0 0 1-1-1v-4" />,
+    <path key="e" d="m9 15 6-6M15 9V7h-2" />,
+  ]),
   flipH: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true" focusable="false">
       <line x1="12" y1="3" x2="12" y2="21" strokeDasharray="2 2" />

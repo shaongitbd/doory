@@ -1,7 +1,7 @@
 import { ArrowRight, LayoutGrid } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CreateDesignDialog } from '@/features/create/CreateDesignDialog'
+import { LazyCreateDesignDialog } from '@/features/create/LazyCreateDesignDialog'
 import { DesignTile } from '@/features/dashboard/DesignTile'
 import bunny from '@/assets/bunny-sticker.webp'
 import { createUrl, presetParts } from '@/features/presets'
@@ -77,7 +77,7 @@ export default function HomePage() {
             </button>
           </li>
         </ul>
-        <CreateDesignDialog open={allSizes} onClose={() => setAllSizes(false)} />
+        <LazyCreateDesignDialog open={allSizes} onClose={() => setAllSizes(false)} />
         <img className={homeStyles.bunny} src={bunny} alt="" width={523} height={713} draggable={false} />
       </section>
 

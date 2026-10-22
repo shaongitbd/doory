@@ -55,7 +55,7 @@ function startingPoint(editor: ReturnType<typeof useEditor>, asked: unknown, pur
   if (typeof asked === 'string' && usable(asked)) return { formatId: asked, options: fresh(asked), purpose: null }
   const own = purposes.find((p) => p.own && p.id === 'preset')
   if (own) return { formatId: own.formatId, options: own.options, purpose: own.id }
-  const last = loadLastExport()
+  const last = loadLastExport(editor)
   if (last && usable(last.formatId)) return { formatId: last.formatId, options: last.options, purpose: null }
   return { formatId: 'png', options: fresh('png'), purpose: null }
 }
@@ -118,10 +118,11 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
   const files = chosen.length
   const zipped = files > 1 && format?.mime !== 'application/pdf' && !video
 
-  // The size as typed, the scale it means for the first page, and whether the browser had to draw smaller.
+  // The size as typed, the scale it means for the first page, and whether the browser had to draw smaller. Every page
+  // downloaded must take it: `2000w` is 1.9x of a 1080 px page but 5x of a 400 px one.
   const sizeText = options.size ?? `${options.scale}x`
   const typed = parseSize(sizeText, size.width, size.height)
-  const sizeValid = !raster || typed !== null
+  const sizeValid = !raster || (typed !== null && chosen.every((s) => parseSize(sizeText, s.width, s.height) !== null))
   const wanted = typed ?? options.scale
   const clamped = !!raster && chosen.some((s) => safeMultiplier(s.width, s.height, pageMultiplier(options, s)) < pageMultiplier(options, s) - 1e-6)
   const multiplier = safeMultiplier(size.width, size.height, wanted)
@@ -237,7 +238,8 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
     )
     if (!format) return null
     if (video) return note(t.dialog.downloadVideoNext, '', 'download-format-note')
-    if (raster && preset?.formats && !preset.formats.includes(raster)) return note(t.dialog.downloadNotAccepted(platform, preset.formats.map((f) => f.toUpperCase()).join(', ')), 'warn')
+    // Catalogues write JPG as `jpg` or `jpeg`.
+    if (raster && preset?.formats && !preset.formats.some((f) => (f === 'jpeg' ? 'jpg' : f) === raster)) return note(t.dialog.downloadNotAccepted(platform, preset.formats.map((f) => f.toUpperCase()).join(', ')), 'warn')
     if (raster === 'avif') return note(t.dialog.downloadAvifNote, 'warn', 'download-format-note')
     if (raster && preset?.maxBytes && perPage !== undefined) {
       const limit = formatBytes(preset.maxBytes)
@@ -290,6 +292,11 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
       <div className={dl.previewBar}>
         <span className={dl.pill}>{t.dialog.downloadPageOf(shownIndex + 1, total)}</span>
         <span className={dl.spacer} />
+        {raster && preview.offsite && !preview.asked ? (
+          <button type="button" className={dl.ask} onClick={preview.ask}>
+            {t.dialog.downloadPreviewWith(preview.offsite)}
+          </button>
+        ) : null}
         {raster ? (
           <div className={dl.zoom} role="group" aria-label={t.dialog.downloadZoom}>
             {(['fit', 'detail'] as const).map((z) => (
@@ -466,7 +473,7 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
           </MoreSettings>
         </div>
 
-        {apiOpen && apiCallable && format ? (
+        {apiOpen && apiCallable && format && !rangeInvalid ? (
           <ApiPreview
             text={describeCall(
               { designId: editor.designId, formatId: format.id, options: effective, pages: scope === 'all' ? 'all' : chosenPages.map((p) => p.index + 1), fileNames: nameStyle },

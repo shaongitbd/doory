@@ -17,9 +17,12 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import BinaryIO
 from urllib.parse import urlsplit
 
 from django.conf import settings
+
+from apps.core import svg
 
 from .exceptions import ExportBusy, ExportFailed, ExportTimeout, ExportUnavailable, InvalidExport
 from .policy import RequestPolicy
@@ -49,7 +52,14 @@ RENDER_PAGE_INPUT_ERRORS = frozenset(
 # The render page's browser has no encoder for the video asked for (a 503).
 RENDER_PAGE_UNAVAILABLE = frozenset({"video_unsupported"})
 PAGE_MIME_TYPES = {"svg": "image/svg+xml", "print": "image/svg+xml", "picture": "image/jpeg"}
+# The largest file of one page `render_pages` takes, and of all its pages together (`too_large`, before the
+# worker writes them). An SVG carries its pictures inside, once for every use: a design that repeats a large
+# picture makes a huge file. Print pages go through the SVG sanitiser, which takes at most `svg.MAX_BYTES`.
+# Pictures (JPEG) are bounded by their pixels.
+MAX_PAGE_BYTES = {"svg": 50 * 1024 * 1024, "print": svg.MAX_BYTES}
+MAX_PAGES_TOTAL_BYTES = 200 * 1024 * 1024
 VIDEO_MIME_TYPES = frozenset({"video/mp4", "video/webm", "image/gif"})
+COPY_CHUNK_BYTES = 1024 * 1024
 _ENV_ALLOWLIST = (
     "PATH",
     "HOME",
@@ -120,7 +130,8 @@ class PagesResult:
 class VideoResult:
     """The file `render_video` made and what the render page reported about it."""
 
-    data: bytes
+    file: BinaryIO  # open at its start; a temporary file, deleted when it is closed
+    size: int
     mime: str  # video/mp4, video/webm or image/gif
     width: int
     height: int
@@ -289,11 +300,12 @@ def _check_render_url(render_url: str) -> None:
         raise ExportUnavailable
 
 
-def render_image(payload: dict, *, render_url: str) -> RenderResult:
+def render_image(payload: dict, *, render_url: str, timeout: float | None = None) -> RenderResult:
     """Draw one design page as a PNG on the frontend's headless render page at `render_url`.
 
-    `payload` is the render page's input (`document`, `page`, `multiplier`, `transparent`, `fonts`). Raises
-    the `Export*` API exceptions, and `InvalidExport` with the page's code when it refuses the input."""
+    `payload` is the render page's input (`document`, `page`, `multiplier`, `transparent`, `fonts`). `timeout`
+    replaces `EXPORT_TIMEOUT_SECONDS`. Raises the `Export*` API exceptions, and `InvalidExport` with the
+    page's code when it refuses the input."""
     _check_render_url(render_url)
 
     def prepare(workdir: Path) -> tuple[dict, Path]:
@@ -307,7 +319,7 @@ def render_image(payload: dict, *, render_url: str) -> RenderResult:
         }
         return spec, png_path
 
-    return _run_worker(prepare, "image/png", "Image export")
+    return _run_worker(prepare, "image/png", "Image export", timeout=timeout)
 
 
 def render_pages(payload: dict, *, render_url: str, timeout: float | None = None) -> PagesResult:
@@ -316,19 +328,26 @@ def render_pages(payload: dict, *, render_url: str, timeout: float | None = None
     picture).
 
     `payload` is the render page's input (`document`, `pages`, `output`, `bleed`, `multiplier`, `maxPixels`,
-    `fonts`). `timeout` replaces `EXPORT_TIMEOUT_SECONDS` (several pages take longer than one). Raises the
-    `Export*` API exceptions, and `InvalidExport` with the page's code when it refuses the input."""
+    `fonts`); the size limits of SVG and print pages (`MAX_PAGE_BYTES`, `MAX_PAGES_TOTAL_BYTES`) are added to
+    it. `timeout` replaces `EXPORT_TIMEOUT_SECONDS` (several pages take longer than one). Raises the `Export*`
+    API exceptions, and `InvalidExport` with the page's code when it refuses the input (`too_large` for pages
+    over the limits)."""
     _check_render_url(render_url)
+    limits = {}
+    if payload.get("output") in MAX_PAGE_BYTES:
+        limits = {"maxPageBytes": MAX_PAGE_BYTES[payload["output"]], "maxTotalBytes": MAX_PAGES_TOTAL_BYTES}
 
     def prepare(workdir: Path) -> tuple[dict, Path]:
         payload_path, pages_dir = workdir / "payload.json", workdir / "pages"
-        payload_path.write_text(json.dumps(payload), encoding="utf-8")
+        payload_path.write_text(json.dumps({**payload, **limits}), encoding="utf-8")
         pages_dir.mkdir()
         spec = {
             "mode": "pages",
             "render_url": render_url,
             "payload_path": str(payload_path),
             "pages_dir": str(pages_dir),
+            "max_page_bytes": limits.get("maxPageBytes"),
+            "max_total_bytes": limits.get("maxTotalBytes"),
         }
         return spec, pages_dir
 
@@ -339,8 +358,9 @@ def render_pages(payload: dict, *, render_url: str, timeout: float | None = None
 def render_video(payload: dict, *, render_url: str, timeout: float, max_bytes: int) -> VideoResult:
     """Make an MP4, WebM or GIF of a design on the frontend's headless render page at `render_url`, in one
     browser, within `timeout` seconds. `payload` is the render page's input (`document`, `pages`, `format` and
-    the video options, `maxMs`, `maxBytes`, `fonts`); a file over `max_bytes` is refused. The design's sound
-    files may be up to `MAX_SOUND_BYTES`. Raises the `Export*` API exceptions, `InvalidExport` with the page's
+    the video options, `maxMs`, `maxBytes`, `fonts`); a file over `max_bytes` is refused. The video comes back
+    as a temporary file (never all in memory), which the caller closes. The design's sound files may be up to
+    `MAX_SOUND_BYTES`. Raises the `Export*` API exceptions, `InvalidExport` with the page's
     code when it refuses the input, and `ExportUnavailable` when the browser cannot encode the format."""
     _check_render_url(render_url)
 
@@ -509,29 +529,38 @@ def _read_pages(report: dict, pages_dir: Path, mime: str) -> PagesResult:
 
 
 def _read_video(report: dict, video_path: Path, mime: str) -> VideoResult:
+    """The video, copied out of the work directory (removed next) into a temporary file that goes away when it
+    is closed; a file of up to `EXPORT_VIDEO_MAX_BYTES` is never read into memory."""
     try:
-        data = video_path.read_bytes()
-        result = VideoResult(
-            data=data,
-            mime=str(report["mime"]),
-            width=int(report["width"]),
-            height=int(report["height"]),
-            fps=int(report["fps"]),
-            frames=int(report["frames"]),
-            duration_ms=int(report["duration_ms"]),
-            video=str(report["video"]),
-            audio=str(report["audio"]) if report.get("audio") else None,
-            warnings=tuple(str(code) for code in report.get("warnings", [])),
-            page_ids=tuple(str(item) for item in report.get("page_ids", [])),
-            page_indexes=tuple(int(item) for item in report.get("page_indexes", [])),
-            placeholders=int(report.get("placeholders", 0)),
-            missing_fonts=tuple(str(name) for name in report.get("missing_fonts", [])),
-            allowed_total=int(report.get("allowed_total", 0)),
-            blocked_total=int(report.get("blocked_total", 0)),
-            blocked=_blocked(report),
-        )
+        size = video_path.stat().st_size
+        details = {
+            "mime": str(report["mime"]),
+            "width": int(report["width"]),
+            "height": int(report["height"]),
+            "fps": int(report["fps"]),
+            "frames": int(report["frames"]),
+            "duration_ms": int(report["duration_ms"]),
+            "video": str(report["video"]),
+            "audio": str(report["audio"]) if report.get("audio") else None,
+            "warnings": tuple(str(code) for code in report.get("warnings", [])),
+            "page_ids": tuple(str(item) for item in report.get("page_ids", [])),
+            "page_indexes": tuple(int(item) for item in report.get("page_indexes", [])),
+            "placeholders": int(report.get("placeholders", 0)),
+            "missing_fonts": tuple(str(name) for name in report.get("missing_fonts", [])),
+            "allowed_total": int(report.get("allowed_total", 0)),
+            "blocked_total": int(report.get("blocked_total", 0)),
+            "blocked": _blocked(report),
+        }
     except (OSError, KeyError, TypeError, ValueError):
         raise ExportFailed
-    if result.mime not in VIDEO_MIME_TYPES or not data or len(data) != report.get("bytes"):
+    if details["mime"] not in VIDEO_MIME_TYPES or not size or size != report.get("bytes"):
         raise ExportFailed
-    return result
+    file = tempfile.TemporaryFile(prefix="doory-video-", dir=settings.EXPORT_WORK_DIR or None)  # noqa: SIM115
+    try:
+        with video_path.open("rb") as source:
+            shutil.copyfileobj(source, file, COPY_CHUNK_BYTES)
+        file.seek(0)
+    except OSError:
+        file.close()
+        raise ExportFailed
+    return VideoResult(file=file, size=size, **details)

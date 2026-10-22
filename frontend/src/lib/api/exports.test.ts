@@ -11,6 +11,15 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+// jsdom's Blob has no text() on every Node version; FileReader reads it everywhere.
+const readText = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(r.result as string)
+    r.onerror = () => reject(r.error)
+    r.readAsText(blob)
+  })
+
 const pdf = () => new Response('%PDF', { headers: { 'content-type': 'application/pdf' } })
 const one = [new Blob(['<svg/>'])]
 
@@ -85,7 +94,7 @@ describe('exportsApi.optimize', () => {
     captureFetch(answer)
     const out = await exportsApi.optimize({ file: new Blob(['png']), format: 'webp', optimize: true })
     expect(out).toMatchObject({ format: 'webp', width: 1080, height: 1350, quality: 74, bytesBefore: 50000, optimizer: 'builtin', optimized: false, warnings: ['Built-in leaves WebP as it is.'] })
-    expect(await out.blob.text()).toBe('webp-bytes')
+    expect(await readText(out.blob)).toBe('webp-bytes')
   })
 
   it('copes with missing or broken headers', async () => {

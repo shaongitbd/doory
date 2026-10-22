@@ -42,9 +42,11 @@ from .services import (
     optimize_image,
     page_index,
 )
-from .throttling import ExportRateThrottle
+from .throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 
 MULTIPART_OVERHEAD_BYTES = 2 * 1024 * 1024
+# An SVG may carry markup: never let it run as a page of this site, however it is opened.
+SVG_SANDBOX_CSP = "sandbox; default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
 
 
 class AnyAcceptNegotiation(DefaultContentNegotiation):
@@ -118,6 +120,12 @@ def _charge_pages(user, extra: int) -> None:
         charge(ExportRateThrottle(), user)
 
 
+def _charge_offsite(user, files: int) -> None:
+    """Each image sent to an optimizer off this server counts against the `optimize_offsite` rate."""
+    for _ in range(files):
+        charge(OffsiteOptimizeRateThrottle(), user)
+
+
 class ImageExportView(APIView):
     """Render pages of a saved design as PNG, JPG, WebP, AVIF or SVG on the server, as the editor draws them
     (several pages come back as one ZIP), as one PDF of pictures (`pdf`) or vector pages (`pdf-print`), or as
@@ -161,6 +169,7 @@ class ImageExportView(APIView):
             filename_style=style,
             unix=unix_now() if stamp else None,
             charge=lambda extra: _charge_pages(request.user, extra),
+            charge_offsite=lambda files: _charge_offsite(request.user, files),
             format=data["format"],
             quality=data["quality"],
             scale=data["scale"],
@@ -183,8 +192,13 @@ class ImageExportView(APIView):
             dither=data["dither"],
             page_seconds=data["page_seconds"],
         )
-        response = HttpResponse(result.data, content_type=result.mime)
+        if result.file is not None:  # a video: streamed from its file, deleted when the response closes it
+            response = FileResponse(result.file, content_type=result.mime)
+        else:
+            response = HttpResponse(result.data, content_type=result.mime)
         response["X-Doory-Placeholders"] = str(result.placeholders)
+        if result.mime == SVG_MIME:
+            response["Content-Security-Policy"] = SVG_SANDBOX_CSP
         return _file_headers(response, result.filename, attachment=True)
 
 
@@ -232,7 +246,12 @@ class ImageOptimizeView(APIView):
         body = ImageOptimizeSerializer(data=fields)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        result = optimize_image(file.read(), owner=request.user.pk, **data)
+        result = optimize_image(
+            file.read(),
+            owner=request.user.pk,
+            charge_offsite=lambda files: _charge_offsite(request.user, files),
+            **data,
+        )
         response = HttpResponse(result.data, content_type=result.mime)
         response["X-Doory-Format"] = result.format
         response["X-Doory-Width"] = str(result.width)
@@ -267,8 +286,5 @@ class ImageDownloadView(APIView):
             raise Http404 from exc
         response = FileResponse(stream, content_type=mime)
         if mime == SVG_MIME:
-            # An SVG may carry markup: never let it run as a page of this site.
-            response["Content-Security-Policy"] = (
-                "sandbox; default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
-            )
+            response["Content-Security-Policy"] = SVG_SANDBOX_CSP
         return _file_headers(response, name, attachment=mime in (ZIP_MIME, SVG_MIME))

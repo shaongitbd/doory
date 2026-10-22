@@ -16,7 +16,7 @@ from apps.designs.doc.ops import PageRef
 from apps.exports.delivery import store_image
 from apps.exports.filenames import FILE_NAMES, unix_now
 from apps.exports.services import VIDEO_FORMATS, ImageBundle, ImageResult, export_images, page_index
-from apps.exports.throttling import ExportRateThrottle
+from apps.exports.throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 
 from ..registry import charge_call, throttle, tool
 from .designs import DesignId, _design, editor_url
@@ -29,6 +29,12 @@ def _charge_pages(extra: int) -> None:
     for _ in range(extra):
         charge_call()
         throttle(ExportRateThrottle())
+
+
+def _charge_offsite(files: int) -> None:
+    """Each image sent to an optimizer off this server uses the `optimize_offsite` rate, as over REST."""
+    for _ in range(files):
+        throttle(OffsiteOptimizeRateThrottle())
 
 
 def _page_info(image: ImageResult, filename: str) -> dict[str, Any]:
@@ -77,7 +83,7 @@ def _video_info(bundle: ImageBundle) -> dict[str, Any]:
     video, options = bundle.images[0], bundle.options
     return {
         "format": bundle.format,
-        "bytes": len(bundle.data),
+        "bytes": bundle.size,
         "width": video.width,
         "height": video.height,
         **{key: options[key] for key in ("fps", "duration_ms", "frames", "video", "audio", "pages")},
@@ -108,13 +114,14 @@ def export_design(
         Literal["png", "jpg", "webp", "avif", "auto", "svg", "pdf", "pdf-print", "mp4", "webm", "gif"],
         Field(
             description=(
-                "auto: the smallest image of all formats (no JPG when transparent). svg: one vector file per "
-                "page, with its pictures and fonts inside. pdf: one PDF of all pages, each a 300 dpi picture "
-                "(as the editor's PDF download). pdf-print: one vector PDF for printing (the editor's "
-                "print-quality PDF). mp4, webm, gif: a video of the pages one after another, with their "
-                "animations, transitions and (mp4, webm) the design's sound, as the editor's video download; "
-                "each started 10 s after the first counts as one more call. AVIF, SVG, PDF and videos are "
-                "links; the image options (quality to optimize) do not apply to SVG, PDF and videos."
+                "auto: the smallest image of all formats (no JPG when transparent, no AVIF above 8 million "
+                "pixels). svg: one vector file per page, with its pictures and fonts inside. pdf: one PDF of "
+                "all pages, each a 300 dpi picture (as the editor's PDF download). pdf-print: one vector PDF "
+                "for printing (the editor's print-quality PDF). mp4, webm, gif: a video of the pages one "
+                "after another, with their animations, transitions and (mp4, webm) the design's sound, as "
+                "the editor's video download; each started 10 s after the first counts as one more call. "
+                "AVIF, SVG, PDF and videos are links; the image options (quality to optimize) do not apply "
+                "to SVG, PDF and videos."
             )
         ),
     ] = "png",
@@ -228,6 +235,7 @@ def export_design(
         filename_style=FILE_NAMES.get(file_names or ""),
         unix=unix_now() if settings.EXPORT_FILENAME_TIMESTAMP else None,
         charge=_charge_pages,
+        charge_offsite=_charge_offsite,
         format=format,
         quality=quality,
         scale=scale,
@@ -275,14 +283,18 @@ def export_design(
             "AVIF images, SVG files, PDFs, ZIPs of several pages and videos are always sent as a link."
         )
         delivery = "url"
-    if delivery == "inline" and len(bundle.data) > settings.MCP_EXPORT_INLINE_MAX_BYTES:
+    if delivery == "inline" and bundle.size > settings.MCP_EXPORT_INLINE_MAX_BYTES:
         info["note"] = (
             f"The image is larger than {settings.MCP_EXPORT_INLINE_MAX_BYTES} bytes, so it is sent as a "
             "link. Use a smaller scale, or jpg/webp, to get it inline."
         )
         delivery = "url"
     if delivery == "url":
-        info["url"] = store_image(bundle.data, bundle.mime)
+        if bundle.file is not None:  # a video: stored from its file, which closing deletes
+            with bundle.file:
+                info["url"] = store_image(bundle.file, bundle.mime)
+        else:
+            info["url"] = store_image(bundle.data, bundle.mime)
         info["expires_in_seconds"] = settings.MCP_EXPORT_URL_TTL_SECONDS
         return [TextContent(text=json.dumps(info))]
     return [

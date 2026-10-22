@@ -145,7 +145,7 @@ export const BUILTIN_PRESET_TREE: PresetTree = {
                   height: 4,
                   unit: 'in',
                   icon: 'mail',
-                  tags: ['1:1.5'],
+                  tags: ['3:2'],
                   meta: {
                     bleed: '0.125 in',
                   },

@@ -7,6 +7,7 @@ from django.views.decorators.cache import cache_control
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -109,10 +110,10 @@ def _recent(user) -> list[str]:
 def _slugs(value, *, limit: int, pattern, field: str) -> list[str]:
     items = value if isinstance(value, list) else [None]
     if not all(isinstance(item, str) and pattern.fullmatch(item) for item in items):
-        raise ValueError(f"`{field}` must be a list of slugs.")
+        raise ValidationError({field: [f"`{field}` must be a list of slugs."]})
     unique = list(dict.fromkeys(value))
     if len(unique) > limit:
-        raise ValueError(f"`{field}` can hold at most {limit} items.")
+        raise ValidationError({field: [f"`{field}` can hold at most {limit} items."]})
     return unique
 
 
@@ -139,18 +140,15 @@ def my_sizes(request):
     if request.method == "PATCH":
         data = request.data if isinstance(request.data, dict) else {}
         changes = {}
-        try:
-            if "pinned" in data:
-                pinned = data["pinned"]
-                if pinned is not None:
-                    pinned = _slugs(pinned, limit=MAX_PINNED, pattern=PRESET_SLUG, field="pinned")
-                changes["pinned"] = pinned
-            if "collapsed" in data:
-                changes["collapsed"] = _slugs(
-                    data["collapsed"], limit=MAX_COLLAPSED, pattern=GROUP_SLUG, field="collapsed"
-                )
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=400)
+        if "pinned" in data:
+            pinned = data["pinned"]
+            if pinned is not None:
+                pinned = _slugs(pinned, limit=MAX_PINNED, pattern=PRESET_SLUG, field="pinned")
+            changes["pinned"] = pinned
+        if "collapsed" in data:
+            changes["collapsed"] = _slugs(
+                data["collapsed"], limit=MAX_COLLAPSED, pattern=GROUP_SLUG, field="collapsed"
+            )
         choices, _ = SizeChoices.objects.update_or_create(user=request.user, defaults=changes)
     return Response(
         {

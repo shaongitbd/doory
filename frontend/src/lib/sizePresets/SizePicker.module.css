@@ -275,14 +275,7 @@
   height: 58px;
 }
 
-.shape {
-  display: block;
-  background: var(--color-brand-soft);
-  border: 1.5px solid var(--color-text);
-  border-radius: 3px;
-}
-
-.card[aria-pressed='true'] .shape {
+.card[aria-pressed='true'] .thumb > span {
   border-color: var(--color-brand);
 }
 
@@ -319,6 +312,15 @@
   font-size: var(--text-xs);
   font-weight: 700;
   color: var(--color-brand-strong);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+  background: var(--color-bg-muted);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .empty {

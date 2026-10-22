@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from django.conf import settings
 from django.core.checks import Tags, Warning, register
 
@@ -65,6 +67,15 @@ def check_image_optimizers(app_configs, **kwargs):
                 Warning(
                     f"IMAGE_OPTIMIZER_CUSTOM_URL: {problem.rstrip('.')}; the custom optimizer is left out.",
                     id="exports.W003",
+                )
+            )
+        elif settings.IMAGE_OPTIMIZER_CUSTOM_KEY.strip() and urlsplit(url).scheme.lower() == "http":
+            issues.append(
+                Warning(
+                    "IMAGE_OPTIMIZER_CUSTOM_URL is a plain http:// address: IMAGE_OPTIMIZER_CUSTOM_KEY and "
+                    "the images are sent to it unencrypted.",
+                    hint="Use an https:// address, or no key for an optimizer on your own private network.",
+                    id="exports.W005",
                 )
             )
     default = str(settings.IMAGE_OPTIMIZER_DEFAULT).strip().lower()

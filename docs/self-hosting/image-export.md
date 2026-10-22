@@ -43,7 +43,7 @@ The REST endpoint (a JSON body) and the MCP tool `export_design` take the same o
 |--------|---------|--------------|
 | `page` | first page | One page, by its id or its number counting from 1 |
 | `pages` | | Several pages instead: `"all"` or a list such as `[1, 3]`. They come back as one ZIP |
-| `format` | `png` | `png`, `jpg`, `webp`, `avif`, or `auto`: all of them, keeping the smallest file (no JPG when `transparent`). Also `svg`, `pdf` and `pdf-print`: see [SVG and PDF](#svg-and-pdf); and `mp4`, `webm` and `gif`: see [Video](#video) |
+| `format` | `png` | `png`, `jpg`, `webp`, `avif`, or `auto`: all of them, keeping the smallest file (no JPG when `transparent`, and no AVIF for images of more than 8 million pixels, which are slow to make in AVIF). Also `svg`, `pdf` and `pdf-print`: see [SVG and PDF](#svg-and-pdf); and `mp4`, `webm` and `gif`: see [Video](#video) |
 | `quality` | `90` | JPG, WebP and AVIF: 1 to 100, or `small` (65), `balanced` (82), `best` (95), `original` (100) |
 | `max_bytes` | | Largest file wanted. JPG, WebP and AVIF use the highest quality, up to `quality`, that fits. If even the lowest doesn't fit, the smallest file comes back with a warning |
 | `scale` | `1` | Output pixels per page pixel, from 0.1 to 4 |
@@ -61,10 +61,16 @@ The REST endpoint (a JSON body) and the MCP tool `export_design` take the same o
 | `resolution`, `fps`, `fit`, `sound`, `loop`, `dither`, `page_seconds` | | Video only: see [Video](#video) |
 
 Each page is drawn on its own, one after another, so a ZIP of many pages takes as long as that many exports.
-Each page after the first counts once more against the `export` rate (30 a minute per user), and over MCP
-against `MCP_CALLS_PER_MINUTE` too. `EXPORT_IMAGE_MAX_PAGES` limits the pages one export may draw. Over MCP,
-AVIF images, SVG files, PDFs and ZIPs are always sent as a download link, because clients can't show them
-inline.
+The whole export, drawing, converting and optimizing every page, must be done within
+`EXPORT_IMAGE_TIMEOUT_SECONDS` (100 s): each page's render gets at most `EXPORT_TIMEOUT_SECONDS` (30 s) of what
+is left, a `max_bytes` search and `auto` keep the best file made by then, an optimizer that runs out of time
+leaves its file unoptimized, and a page that can't start in time stops the export with `export_timeout` (504).
+The options are checked for every page before anything is drawn. Each page after the first counts once more
+against the `export` rate (30 a minute per user), and over MCP against `MCP_CALLS_PER_MINUTE` too. With an
+optimizer that sends the image off the server (TinyPNG, Kraken.io or the custom one), every page also counts
+against the `optimize_offsite` rate (10 a minute per user). `EXPORT_IMAGE_MAX_PAGES` limits the pages one
+export may draw. Over MCP, AVIF images, SVG files, PDFs and ZIPs are always sent as a download link, because
+clients can't show them inline.
 
 ## SVG and PDF
 
@@ -79,7 +85,10 @@ These formats make the same files as the editor's Download:
 All pages are made in one browser, within `EXPORT_TIMEOUT_SECONDS` for each page. A PDF is then printed within
 another `EXPORT_TIMEOUT_SECONDS`. Both PDFs take `bleed_mm` and `crop_marks`, and their pages get TrimBox and
 BleedBox entries like the print PDF. A `pdf` page whose picture would have more than `EXPORT_IMAGE_MAX_PIXELS`
-pixels at 300 dpi is drawn at a lower resolution, with a warning. The image options (from `quality` to
+pixels at 300 dpi is drawn at a lower resolution, with a warning. An SVG page may be at most 50 MB and a
+`pdf-print` page 5 MB, and all pages of one export 200 MB together; a page over that is refused with
+`too_large` (400) before the next one is made. An SVG holds a copy of a picture for every time the design uses
+it, so a large picture used many times is the usual cause. The image options (from `quality` to
 `optimize`) don't apply to these formats. Each page after the first counts once more against the rates, as for
 images. There is no CMYK conversion.
 
@@ -115,7 +124,9 @@ SERVER_VIDEO_EXPORT_ENABLED=true
   for its whole time.
 - **Rates:** each started 10 s of the pages' time after the first counts once more against the `export` rate,
   and over MCP against `MCP_CALLS_PER_MINUTE`.
-- **Delivery:** the REST endpoint answers with the file. Over MCP, a video is always a download link.
+- **Delivery:** the REST endpoint answers with the file, streamed from a temporary file in `EXPORT_WORK_DIR`
+  (the system temp folder by default) rather than held in memory. Leave room there for two copies of
+  `EXPORT_VIDEO_MAX_BYTES` for each video being made. Over MCP, a video is always a download link.
 - **Proxy:** the request stays open while the video is made. The bundled nginx waits 330 s for this endpoint and
   for `/mcp`; a proxy of your own needs at least `EXPORT_VIDEO_TIMEOUT_SECONDS` there too.
 - **Secure page:** the browser's video encoders only work on a secure page. When `EXPORT_RENDER_PAGE_URL` is a
@@ -146,8 +157,9 @@ images are deleted each time a new one is stored. On a quiet site, `manage.py pu
 - **Chromium crashes in Docker:** the services set `shm_size: 512m`; keep it. For the `mcp` service, raise
   `MCP_MEM_LIMIT` if it runs out of memory.
 - **Exports time out:** raise `EXPORT_TIMEOUT_SECONDS`, or lower `EXPORT_MAX_CONCURRENCY` on small servers.
-  Exports of several pages run in one request: keep `EXPORT_IMAGE_MAX_PAGES` times the time of one export under
-  the web server's worker timeout (120 s in the Docker image).
+  Exports of several pages run in one request and stop after `EXPORT_IMAGE_TIMEOUT_SECONDS`: export fewer pages
+  at once, or a smaller size. Keep `EXPORT_IMAGE_TIMEOUT_SECONDS` under the web server's worker timeout (120 s
+  in the Docker image).
 - **Image export returns blank pages or 404s:** `EXPORT_RENDER_PAGE_URL` must point to the *built* frontend, at an
   address the API container can reach.
 - **SVG and PDF fail with 503 while images work:** the frontend is older than the API; deploy both from the same
@@ -158,6 +170,8 @@ images are deleted each time a new one is stored. On a quiet site, `manage.py pu
   than 30 MB). The error names it.
 - **Video exports end with 504 at the proxy:** raise the proxy's read timeout for
   `/api/v1/designs/*/export/image/` and `/mcp` to at least `EXPORT_VIDEO_TIMEOUT_SECONDS`.
+- **An SVG or `pdf-print` export fails with `too_large`:** a page would be larger than the limits in
+  [SVG and PDF](#svg-and-pdf). Use large pictures fewer times, or export PNG, JPG or `pdf`.
 - **An SVG export fails with `image_unavailable`:** a picture of the design could not be fetched to put into the
   file. Check that it is under `/media/` on an allowed origin.
 - **macOS development, "socket path too long":** set `EXPORT_WORK_DIR` to a short path such as `/tmp/dxw`.

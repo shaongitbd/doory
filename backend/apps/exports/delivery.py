@@ -14,10 +14,11 @@ import logging
 import re
 import time
 import uuid
+from typing import BinaryIO
 
 from django.conf import settings
 from django.core import signing
-from django.core.files.base import ContentFile
+from django.core.files.base import ContentFile, File
 from django.core.files.storage import FileSystemStorage
 from django.urls import reverse
 
@@ -47,12 +48,12 @@ def export_storage() -> FileSystemStorage:
     return storage
 
 
-def store_image(data: bytes, mime: str) -> str:
-    """Store `data` and return an absolute link to it, valid for `MCP_EXPORT_URL_TTL_SECONDS`."""
+def store_image(data: bytes | BinaryIO, mime: str) -> str:
+    """Store `data` (bytes, or a file, copied in chunks) and return an absolute link to it, valid for
+    `MCP_EXPORT_URL_TTL_SECONDS`."""
     purge_expired()
-    name = export_storage().save(
-        f"{int(time.time()):010d}-{uuid.uuid4().hex}.{EXTENSIONS[mime]}", ContentFile(data)
-    )
+    content = ContentFile(data) if isinstance(data, bytes) else File(data)
+    name = export_storage().save(f"{int(time.time()):010d}-{uuid.uuid4().hex}.{EXTENSIONS[mime]}", content)
     token = signing.dumps({"name": name}, salt=SALT, compress=True)
     path = reverse("export-image-download", kwargs={"token": token})
     return f"{settings.SITE_URL.rstrip('/')}{path}"

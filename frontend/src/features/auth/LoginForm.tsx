@@ -16,10 +16,12 @@ export interface LoginFormProps {
   autoFocus?: boolean
   /**
    * Signing in again after the session ended: the address is fixed and only that account is accepted. Single sign-on
-   * is not offered then, since it leaves the page and what the editor still holds.
+   * is not offered then, since it leaves the page and what the editor still holds, unless `lockedSso` says so.
    */
   lockedEmail?: string
   expectUserId?: string
+  /** With `lockedEmail`: offer single sign-on anyway (the account has no password but is connected to it), saying that it leaves the page. */
+  lockedSso?: boolean
   /** Where single sign-on comes back to (by default, this page). */
   ssoNext?: string
   /** An error to show from the start (single sign-on came back with one). */
@@ -28,13 +30,14 @@ export interface LoginFormProps {
 
 const FIELDS = ['email', 'password'] as const
 
-export function LoginForm({ onSuccess, onNavigate, autoFocus = true, lockedEmail, expectUserId, ssoNext, initialError }: LoginFormProps) {
+export function LoginForm({ onSuccess, onNavigate, autoFocus = true, lockedEmail, expectUserId, lockedSso = false, ssoNext, initialError }: LoginFormProps) {
   const { login, google } = useAuth()
   const [email, setEmail] = useState(lockedEmail ?? '')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState(initialError ?? '')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const offerSso = !lockedEmail || lockedSso
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -93,8 +96,8 @@ export function LoginForm({ onSuccess, onNavigate, autoFocus = true, lockedEmail
           Log in
         </Button>
       </form>
-      <SignInDivider sso={!lockedEmail} />
-      {lockedEmail ? null : <SsoButton next={ssoNext} />}
+      <SignInDivider sso={offerSso} />
+      {offerSso ? <SsoButton next={ssoNext} note={lockedEmail ? 'This leaves the page, so changes that aren’t saved yet may be lost.' : undefined} /> : null}
       <GoogleButton onCredential={handleGoogle} text="signin_with" />
     </div>
   )

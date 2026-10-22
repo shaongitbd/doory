@@ -15,9 +15,11 @@ import requests
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from django.core import mail
 from django.core.management import call_command
+from django.db import IntegrityError
 from rest_framework.test import APIClient
+from rest_framework.throttling import SimpleRateThrottle
 
-from apps.accounts import oidc
+from apps.accounts import oidc, services
 from apps.accounts.checks import check_oidc_settings
 from apps.accounts.google import GoogleIdentity
 from apps.accounts.models import OidcIdentity, User
@@ -171,6 +173,14 @@ def configured(settings):
     settings.OIDC_BUTTON_LABEL = "Sign in with Authentik"
     settings.OIDC_SCOPES = "openid email profile"
     settings.OIDC_TRUST_EMAIL = False
+
+
+@pytest.fixture(autouse=True)
+def resolver(monkeypatch):
+    """Host names resolve to a public address unless a test says otherwise."""
+    names: dict[str, list[str]] = {}
+    monkeypatch.setattr(oidc, "_resolve", lambda host: names.get(host, ["203.0.113.10"]))
+    return names
 
 
 @pytest.fixture
@@ -344,6 +354,37 @@ def test_discovery_for_another_issuer_is_refused(client, provider):
     assert sso_error(client.get(START)) == "oidc_unavailable"
 
 
+@pytest.mark.parametrize(
+    "jwks_uri",
+    [
+        "https://169.254.169.254/latest/meta-data/",
+        "https://[fe80::1]/keys",
+        "https://[::ffff:169.254.169.254]/keys",
+        "https://100.100.100.200/keys",
+        "https://metadata.example.com/keys",  # a host name that resolves to a metadata address
+    ],
+)
+def test_documents_never_come_from_link_local_or_metadata_addresses(client, provider, resolver, jwks_uri):
+    resolver["metadata.example.com"] = ["10.0.0.5", "169.254.169.254"]
+    provider.metadata["jwks_uri"] = jwks_uri
+    assert sso_error(sign_in(client, provider)) == "oidc_unavailable"
+    assert not [call for call in provider.calls if call[1] == jwks_uri]
+
+
+def test_a_provider_on_a_private_network_is_allowed(client, provider, resolver):
+    resolver["idp.example.com"] = ["10.0.0.5"]
+    assert sso_error(sign_in(client, provider)) is None
+
+
+def test_a_provider_whose_name_cannot_be_found_is_unavailable(client, provider, monkeypatch):
+    def missing(host):
+        raise oidc.remote.RemoteImageError("no such host")
+
+    monkeypatch.setattr(oidc, "_resolve", missing)
+    assert sso_error(client.get(START)) == "oidc_unavailable"
+    assert not provider.calls
+
+
 def test_an_unreachable_provider_is_reported_without_details(client):
     with mock.patch("apps.accounts.oidc.requests.request", side_effect=requests.ConnectionError("secret")):
         res = client.get(START)
@@ -356,20 +397,32 @@ def test_an_unreachable_provider_is_reported_without_details(client):
 def test_a_new_user_is_created_signed_in_and_sent_to_next(client, provider):
     assert location(sign_in(client, provider)) == f"{SITE}{NEXT}"
     user = User.objects.get()
-    assert (user.email, user.display_name, user.is_email_verified) == (
-        "ada@example.com",
-        "Ada Lovelace",
-        True,
-    )
+    assert (user.email, user.display_name) == ("ada@example.com", "Ada Lovelace")
     assert not user.has_usable_password()
     assert OidcIdentity.objects.filter(user=user, issuer=ISSUER, subject="sub-1").exists()
     me = client.get(ME).json()["user"]
     assert me["email"] == "ada@example.com" and me["oidc_linked"] is True
+
+
+def test_without_trusting_email_a_new_account_proves_its_address_by_email(client, provider):
+    sign_in(client, provider)  # the provider says the address is verified, but that isn't trusted
+    assert User.objects.get().is_email_verified is False
+    assert len(mail.outbox) == 1 and mail.outbox[0].to == ["ada@example.com"]
+
+
+def test_trusting_email_takes_the_providers_word_for_a_new_account(client, provider, settings):
+    settings.OIDC_TRUST_EMAIL = True
+    sign_in(client, provider)
+    assert User.objects.get().is_email_verified is True
     assert mail.outbox == []
 
 
-def test_an_unverified_email_makes_an_unverified_account_and_sends_the_check(client, provider):
+@pytest.mark.parametrize("trust", [False, True])
+def test_an_unverified_email_makes_an_unverified_account_and_sends_the_check(
+    client, provider, settings, trust
+):
     """Authentik, for one, sends email_verified=false unless told otherwise."""
+    settings.OIDC_TRUST_EMAIL = trust
     provider.claims = {"email_verified": False}
     sign_in(client, provider)
     assert User.objects.get().is_email_verified is False
@@ -451,6 +504,13 @@ def test_trusting_email_refuses_an_account_connected_to_someone_else(client, pro
     owner = make_user("ada@example.com", is_email_verified=True)
     OidcIdentity.objects.create(user=owner, issuer=ISSUER, subject="sub-0")
     assert sso_error(sign_in(client, provider)) == "oidc_account_mismatch"
+
+
+def test_a_sign_in_that_keeps_racing_another_fails_cleanly(client, provider):
+    with mock.patch.object(services, "_oidc_find_link_or_create", side_effect=IntegrityError) as attempt:
+        assert sso_error(sign_in(client, provider)) == "oidc_failed"
+    assert attempt.call_count == 2
+    assert signed_in_email(client) is None
 
 
 def test_a_disabled_account_cannot_sign_in(client, provider):
@@ -666,6 +726,21 @@ def test_rotated_keys_are_fetched_again_once(client, provider):
     assert len(provider.calls_to(provider.metadata["jwks_uri"])) == 2
 
 
+def test_sso_has_its_own_throttle_scope(client, provider, monkeypatch):
+    monkeypatch.setattr(
+        SimpleRateThrottle,
+        "THROTTLE_RATES",
+        {"auth": "1/min", "oidc": "3/min", "anon": "1000/min", "user": "1000/min"},
+    )
+    payload = {"email": "x@example.com", "password": "wrong-guess-1234"}
+    for _ in range(2):  # the per-IP budget for passwords runs out...
+        res = client.post(LOGIN, payload, format="json")
+    assert res.status_code == 429
+    for _ in range(3):  # ...without touching the one for single sign-on
+        assert client.get(START).status_code == 302
+    assert client.get(START).status_code == 429
+
+
 # --- connecting an existing account -----------------------------------------------------------------------
 
 
@@ -707,6 +782,32 @@ def test_a_provider_account_already_used_by_someone_else_is_refused(auth_client,
     OidcIdentity.objects.create(user=make_user("grace@example.com"), issuer=ISSUER, subject="sub-1")
     res = connect(auth_client, provider)
     assert location(res) == f"{SITE}/settings?sso_error=oidc_identity_in_use"
+
+
+@pytest.mark.parametrize(
+    ("owner", "subject", "result"),
+    [
+        ("grace@example.com", "sub-1", "sso_error=oidc_identity_in_use"),  # this provider account, elsewhere
+        ("ada@example.com", "sub-0", "sso_error=oidc_account_mismatch"),  # another provider account, here
+        ("ada@example.com", "sub-1", "sso=connected"),  # the same connection, made twice
+    ],
+)
+def test_a_connection_made_at_the_same_moment_is_told_apart(
+    auth_client, provider, make_user, owner, subject, result
+):
+    connect_now = services._connect_oidc
+
+    def raced(user, claims):
+        if not raced.done:  # the other connection is saved just before ours
+            raced.done = True
+            other = User.objects.filter(email=owner).first() or make_user(owner)
+            OidcIdentity.objects.create(user=other, issuer=ISSUER, subject=subject)
+            raise IntegrityError
+        connect_now(user, claims)
+
+    raced.done = False
+    with mock.patch.object(services, "_connect_oidc", side_effect=raced):
+        assert location(connect(auth_client, provider)) == f"{SITE}/settings?{result}"
 
 
 def test_a_connect_flow_is_bound_to_the_account_that_started_it(auth_client, provider, make_user):
