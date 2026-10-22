@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { buildCatalogue, setSizePresetsForTests, type SizePresetCatalogue } from '@/lib/sizePresets'
@@ -117,6 +118,26 @@ describe('Create a design dialog', () => {
       vi.unstubAllGlobals()
       setSizeChoicesForTests()
     }
+  })
+
+  it('opens again with nothing chosen', async () => {
+    function Host() {
+      const [open, setOpen] = useState(true)
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open
+          </button>
+          <CreateDesignDialog open={open} onClose={() => setOpen(false)} />
+        </>
+      )
+    }
+    renderWithProviders(<Host />)
+    await userEvent.click(screen.getByRole('button', { name: /Card\s*85 × 55 mm/ }))
+    expect(screen.getByRole('button', { name: 'Create design' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Open' }))
+    expect(await screen.findByRole('button', { name: 'Create design' })).toBeDisabled()
   })
 
   it('pins a size to your sizes and shows recent ones', async () => {
