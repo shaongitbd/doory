@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { ssoErrorMessage } from '@/features/auth/errors'
@@ -8,12 +9,20 @@ import styles from './AuthPage.module.css'
 
 export default function LoginPage() {
   usePageMeta({ title: 'Log in', noindex: true })
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const { status } = useAuth()
   const next = safeNextPath(params.get('next'))
   const nextQuery = params.get('next') ? `?next=${encodeURIComponent(params.get('next') ?? '')}` : ''
-  const ssoError = params.get('sso_error')
+  // Single sign-on comes back here with `?sso_error=<code>`: shown once, then taken off the address.
+  const [ssoError] = useState(() => params.get('sso_error'))
+
+  useEffect(() => {
+    if (!params.has('sso_error')) return
+    const rest = new URLSearchParams(params)
+    rest.delete('sso_error')
+    setParams(rest, { replace: true })
+  }, [params, setParams])
 
   if (status === 'authenticated') return <Navigate to={next} replace />
 

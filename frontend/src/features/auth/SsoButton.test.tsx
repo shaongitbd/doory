@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -49,9 +49,12 @@ describe('single sign-on on the sign-in pages', () => {
     expect(screen.queryByRole('separator')).not.toBeInTheDocument()
   })
 
-  it('explains what went wrong when the provider sends the user back with an error', async () => {
-    renderApp('/login?sso_error=oidc_account_exists', { config: withSso() })
+  it('explains what went wrong when the provider sends the user back with an error, and takes it off the address', async () => {
+    const { router } = renderApp(`/login?sso_error=oidc_account_exists&next=${encodeURIComponent('/design/abc')}`, { config: withSso() })
     expect(await screen.findByRole('alert')).toHaveTextContent('An account with this email address already exists. Log in with your password, then connect single sign-on in Settings.')
+    await waitFor(() => expect(router.state.location.search).toBe(`?next=${encodeURIComponent('/design/abc')}`))
+    expect(router.state.historyAction).toBe('REPLACE')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
   })
 
   it('has a generic message for codes it does not know', async () => {
