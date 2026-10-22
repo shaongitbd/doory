@@ -13,6 +13,7 @@ import { DEFAULT_EXPORT_OPTIONS } from '../engine/export/registry'
 import { t } from '../strings'
 import { DownloadDialog } from './DownloadDialog'
 import { ComparePreview } from './download/ComparePreview'
+import { OptimizerCard } from './download/OptimizerCard'
 import type { ImageOptimizeInfo, OptimizeImageInput, OptimizedImage } from '@/types/adapter'
 
 vi.mock('../engine/export/exporter', async (importOriginal) => ({ ...(await importOriginal<typeof import('../engine/export/exporter')>()), downloadFiles: vi.fn() }))
@@ -633,7 +634,7 @@ describe('Download dialog: pictures', () => {
     expect(within(dialog()).getByRole('radio', { name: /^AVIF/ })).toBeInTheDocument()
     const toggle = within(dialog()).getByRole('switch', { name: new RegExp(t.dialog.downloadOptimize) })
     expect(toggle).toBeChecked()
-    expect(within(dialog()).getByText(t.dialog.downloadOptimizerLocal)).toBeInTheDocument()
+    expect(within(dialog()).getByText(t.dialog.downloadOptimizerLocal('Built-in'))).toBeInTheDocument()
     await userEvent.click(within(dialog()).getByRole('radio', { name: 'Our optimizer' }))
     expect(within(dialog()).getByText(t.dialog.downloadOptimizerOffsite('Our optimizer'))).toBeInTheDocument()
     await userEvent.click(within(dialog()).getByRole('radio', { name: 'Built-in' }))
@@ -721,6 +722,13 @@ describe('Download dialog: pictures', () => {
     expect(within(dialog()).getByRole('button', { name: t.dialog.downloadNFiles(4) })).toBeInTheDocument()
     await pick(/^PDF/)
     expect(screen.getByTestId('download-summary')).toHaveTextContent('1 PDF · 4 pages · screen')
+  })
+})
+
+describe('Download dialog: the optimizer card', () => {
+  it('names the optimizer that runs on this server', () => {
+    render(<OptimizerCard optimizers={[{ id: 'squeeze', name: 'Squeeze', formats: ['jpg'], sendsOffsite: false }]} on onToggle={() => undefined} value="squeeze" onPick={() => undefined} format="jpg" formatLabel="JPG" />)
+    expect(screen.getByText(t.dialog.downloadOptimizerLocal('Squeeze'))).toHaveTextContent('Squeeze runs on this server.')
   })
 })
 

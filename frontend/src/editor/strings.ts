@@ -578,7 +578,7 @@ export const t = {
     downloadOptimize: 'Optimize file size',
     downloadOptimizeHint: 'Recompress after rendering and remove hidden data. Never makes a file bigger.',
     downloadOptimizer: 'Optimizer',
-    downloadOptimizerLocal: 'Built-in runs on this server.',
+    downloadOptimizerLocal: (name: string) => `${name} runs on this server.`,
     downloadOptimizerOffsite: (name: string) => `${name} sends the image to an outside service, chosen by your admin.`,
     downloadOptimizerSkips: (name: string, format: string) => `${name} leaves ${format} as it is; the file is still converted on the server.`,
     downloadPreview: 'Preview',
