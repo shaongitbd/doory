@@ -20,7 +20,7 @@ export interface LoginFormProps {
    */
   lockedEmail?: string
   expectUserId?: string
-  /** With `lockedEmail`: offer single sign-on anyway (the account has no password), saying that it leaves the page. */
+  /** With `lockedEmail`: offer single sign-on anyway (the account has no password but is connected to it), saying that it leaves the page. */
   lockedSso?: boolean
   /** Where single sign-on comes back to (by default, this page). */
   ssoNext?: string

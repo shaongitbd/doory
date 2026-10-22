@@ -114,4 +114,9 @@ describe('single sign-on in the sign-in dialog', () => {
     expect(within(dialog).getByRole('form', { name: 'Log in' }).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(dialog).getByRole('separator')).toHaveTextContent('or')
   })
+
+  it('is not offered there to an account without a password that is not connected to it', async () => {
+    const dialog = await endSessionOverOpenDesign(makeUser({ has_password: false, oidc_linked: false, google_linked: true }))
+    expect(within(dialog).queryByRole('link', { name: 'Sign in with Authentik' })).not.toBeInTheDocument()
+  })
 })
