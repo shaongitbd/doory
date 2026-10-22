@@ -673,6 +673,22 @@ def test_optimize_makes_the_file_smaller_after_converting_it(design, renders, op
     assert opened(result.data).size == (40, 20)
 
 
+def test_converting_and_optimizing_hold_the_render_slot(design, renders, optimizer, monkeypatch):
+    held = []
+
+    def shrink(job, deadline):
+        try:
+            with render_slot(design.owner_id):
+                held.append(False)
+        except ExportBusy:
+            held.append(True)
+        return job.data
+
+    monkeypatch.setattr(optimizer, "shrink", shrink)
+    services.export_image(design, format="webp", optimize=True)
+    assert held == [True]
+
+
 def test_an_optimizer_by_id_and_a_failing_one_keeps_the_export(design, renders, monkeypatch, settings):
     settings.IMAGE_OPTIMIZERS = ["builtin", "custom"]
     monkeypatch.setitem(optimizers.OPTIMIZERS, "custom", FakeOptimizer("custom", "Ours", fail=True))

@@ -662,14 +662,15 @@ def export_image(
     }
     with render_slot(design.owner_id):
         result = render_image(payload, render_url=settings.EXPORT_RENDER_PAGE_URL)
-    try:
-        converted = _convert(result.data, encoding)
-    except (OSError, ValueError) as exc:
-        logger.error("Image export: the render page sent an unreadable PNG (%s)", exc)
-        raise ExportFailed from exc
-    converted = _optimized(
-        converted, optimizer, encoding, source=result.data, width=result.width, height=result.height
-    )
+        # Converting (AVIF, a `max_bytes` search) and optimizing may take as long as drawing: keep the slot.
+        try:
+            converted = _convert(result.data, encoding)
+        except (OSError, ValueError) as exc:
+            logger.error("Image export: the render page sent an unreadable PNG (%s)", exc)
+            raise ExportFailed from exc
+        converted = _optimized(
+            converted, optimizer, encoding, source=result.data, width=result.width, height=result.height
+        )
     warnings = _drawing_warnings(result.placeholders, result.missing_fonts)
     warnings.extend(converted.warnings)
     data = converted.data
