@@ -59,6 +59,26 @@ def convert(source: Path, info: video.VideoInfo) -> Converted:
     return Converted(target, result, stills, audio if has_audio else None)
 
 
+class Duplicate(Exception):
+    """The owner already has a clip from the same source (another request made it first)."""
+
+    def __init__(self, asset: Asset):
+        super().__init__()
+        self.asset = asset
+
+
+def _claim(asset: Asset, same: dict | None) -> None:
+    """Under the owner's lock: refuse a clip the owner already has from the same source (`same`: filters on
+    the asset, say its stock provider and id), and remove their failed attempts at it, which this replaces."""
+    if not same:
+        return
+    rows = Asset.objects.filter(owner=asset.owner_id, kind=Asset.Kind.VIDEO, **same).exclude(pk=asset.pk)
+    existing = rows.exclude(status=Asset.Status.FAILED).first()
+    if existing is not None:
+        raise Duplicate(existing)
+    rows.delete()
+
+
 def _used_by_others(owner, asset_id) -> int:
     rows = Asset.objects.filter(owner=owner).exclude(pk=asset_id)
     return rows.aggregate(total=Sum("size"))["total"] or 0
@@ -106,10 +126,11 @@ def _stored_size(converted: Converted) -> int:
     return size + (converted.audio.stat().st_size if converted.audio else 0)
 
 
-def store(asset: Asset, converted: Converted, *, new: bool) -> Asset:
+def store(asset: Asset, converted: Converted, *, new: bool, same: dict | None = None) -> Asset:
     """Store the files, then (under the owner's lock) check the quota and save the row.
 
     The files go up first so the owner's row is never locked while hundreds of megabytes travel to storage.
+    A new clip made from a source the owner already has (`same`, see `_claim`) raises `Duplicate` instead.
     A background job (`new=False`) only updates a row that still exists: a clip deleted while it was being
     converted must not come back, and its files are removed again.
     """
@@ -118,6 +139,8 @@ def store(asset: Asset, converted: Converted, *, new: bool) -> Asset:
     try:
         with transaction.atomic():
             get_user_model().objects.select_for_update().get(pk=asset.owner_id)
+            if new:
+                _claim(asset, same)
             if _used_by_others(asset.owner_id, asset.pk) + asset.size > settings.USER_STORAGE_QUOTA_BYTES:
                 raise QuotaExceeded()
             if new:
@@ -134,10 +157,11 @@ def store(asset: Asset, converted: Converted, *, new: bool) -> Asset:
     return asset
 
 
-def reserve(asset: Asset) -> Asset:
+def reserve(asset: Asset, same: dict | None = None) -> Asset:
     """Register a clip that still has to be converted, holding its source size against the quota."""
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=asset.owner_id)
+        _claim(asset, same)
         used = Asset.objects.filter(owner=asset.owner_id).aggregate(total=Sum("size"))["total"] or 0
         if used + asset.size > settings.USER_STORAGE_QUOTA_BYTES:
             raise QuotaExceeded()
@@ -147,12 +171,20 @@ def reserve(asset: Asset) -> Asset:
 
 
 def create_video_asset(
-    owner, source: Path, info: video.VideoInfo, *, name: str, tags: list[str] | None = None, meta=None
+    owner,
+    source: Path,
+    info: video.VideoInfo,
+    *,
+    name: str,
+    tags: list[str] | None = None,
+    meta=None,
+    same: dict | None = None,
 ) -> Asset:
     """Register the clip at `source` (inside its own work directory, which this takes over) for `owner`.
 
     Returns a `ready` asset when the clip only needed rewrapping, else a `processing` one whose conversion
-    starts once the surrounding transaction commits.
+    starts once the surrounding transaction commits. With `same`, raises `Duplicate` when the owner already
+    has a clip from that source and replaces their failed attempts at it.
     """
     asset = Asset(
         owner=owner,
@@ -168,7 +200,7 @@ def create_video_asset(
     workdir = source.parent
     if not info.web_ready:
         try:
-            reserve(asset)
+            reserve(asset, same)
         except Exception:
             shutil.rmtree(workdir, ignore_errors=True)
             raise
@@ -182,7 +214,7 @@ def create_video_asset(
             raise ServerBusy() from exc
         except video.VideoError as exc:
             raise InvalidFile(str(exc)) from exc
-        return store(asset, converted, new=True)
+        return store(asset, converted, new=True, same=same)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 

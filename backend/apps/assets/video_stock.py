@@ -172,9 +172,10 @@ def import_video(owner, provider_name: str, video_id: str) -> tuple[Asset, bool]
     if not provider.valid_id(video_id):
         raise serializers.ValidationError({"id": ["Not a valid video id for this provider."]})
 
-    existing = Asset.objects.filter(
-        owner=owner, kind=Asset.Kind.VIDEO, meta__provider=provider.name, meta__video_id=video_id
-    ).exclude(status=Asset.Status.FAILED)
+    same = {"meta__provider": provider.name, "meta__video_id": video_id}
+    existing = Asset.objects.filter(owner=owner, kind=Asset.Kind.VIDEO, **same)
+    video_jobs.fail_stale(existing)  # an import whose conversion died is tried again
+    existing = existing.exclude(status=Asset.Status.FAILED)
     if existing.exists():
         return existing.first(), False
 
@@ -207,22 +208,28 @@ def import_video(owner, provider_name: str, video_id: str) -> tuple[Asset, bool]
         raise
 
     clip = resolved.video
-    asset = video_jobs.create_video_asset(
-        owner,
-        source,
-        info,
-        name=clean_name(f"Video by {clip.author}" if clip.author else f"{provider.label} video"),
-        meta={
-            "provider": provider.name,
-            "video_id": video_id,
-            "attribution": {
+    try:
+        # Checked again under the owner's lock: two imports of one clip at once make one asset. A failed
+        # earlier import of it is replaced.
+        asset = video_jobs.create_video_asset(
+            owner,
+            source,
+            info,
+            name=clean_name(f"Video by {clip.author}" if clip.author else f"{provider.label} video"),
+            meta={
                 "provider": provider.name,
-                "author": clip.author,
-                "author_url": clip.author_url,
-                "source_url": clip.source_url,
+                "video_id": video_id,
+                "attribution": {
+                    "provider": provider.name,
+                    "author": clip.author,
+                    "author_url": clip.author_url,
+                    "source_url": clip.source_url,
+                },
             },
-        },
-    )
+            same=same,
+        )
+    except video_jobs.Duplicate as exc:
+        return exc.asset, False
     return asset, True
 
 

@@ -1,11 +1,15 @@
 """Stock videos: search, filters, key fallback, the clip CDN allow-list, and importing through ffmpeg."""
 
-import pytest
+from datetime import timedelta
 
-from apps.assets import providers, video
+import pytest
+from django.utils import timezone
+
+from apps.assets import providers, video, video_jobs
 from apps.assets.models import Asset
 
 from .test_stock import FakeNetwork, FakeResponse
+from .test_video_probe import info as described_clip
 from .video_helpers import clip, needs_ffmpeg
 
 SEARCH = "/api/v1/stock/videos/"
@@ -227,6 +231,42 @@ class TestImport:
         )
         res = api.post(IMPORT, {"provider": "pexels_video", "id": "101"}, format="json")
         assert res.status_code == 413
+
+    @pytest.fixture
+    def converting(self, net, monkeypatch):
+        """Pexels clip 101, which needs converting: ffprobe and the background conversion are faked."""
+        net.add(f"{PEXELS}/videos/101", FakeResponse(payload=pexels_video()))
+        net.add("https://videos.pexels.com/video-files/101/1920x1080.mp4", FakeResponse(body=b"clip"))
+        monkeypatch.setattr(video, "probe", lambda path: described_clip(codec_name="hevc"))
+        monkeypatch.setattr(video_jobs, "submit", lambda *args: None)
+
+    def stock_clip(self, user, **fields):
+        meta = {"provider": "pexels_video", "video_id": "101"}
+        return Asset.objects.create(owner=user, kind="video", mime="video/mp4", meta=meta, **fields)
+
+    def test_importing_again_replaces_a_failed_import(self, api, user, keys, converting):
+        failed = self.stock_clip(user, status="failed", error="The video could not be converted.")
+        res = api.post(IMPORT, {"provider": "pexels_video", "id": "101"}, format="json")
+        assert res.status_code == 202, res.content
+        (asset,) = Asset.objects.all()  # the failed one is gone
+        assert (str(asset.pk), asset.status) == (res.json()["id"], "processing") and asset.pk != failed.pk
+
+    def test_an_import_whose_conversion_died_is_tried_again(self, api, user, keys, converting):
+        dead = self.stock_clip(user, status="processing", size=10)
+        Asset.objects.filter(pk=dead.pk).update(updated_at=timezone.now() - timedelta(hours=2))
+        res = api.post(IMPORT, {"provider": "pexels_video", "id": "101"}, format="json")
+        assert res.status_code == 202 and res.json()["id"] != str(dead.pk)
+        assert not Asset.objects.filter(pk=dead.pk).exists()
+
+    def test_two_imports_at_once_make_one_asset(self, api, user, keys, converting, monkeypatch):
+        def first_one_wins(path):  # the other import commits while this one downloads and checks the clip
+            self.stock_clip(user, status="processing", size=10)
+            return described_clip(codec_name="hevc")
+
+        monkeypatch.setattr(video, "probe", first_one_wins)
+        res = api.post(IMPORT, {"provider": "pexels_video", "id": "101"}, format="json")
+        assert res.status_code == 200, res.content
+        assert Asset.objects.count() == 1 and res.json()["id"] == str(Asset.objects.get().pk)
 
     @needs_ffmpeg
     def test_imports_picks_the_1080p_file_and_dedupes(self, api, keys, net):
