@@ -214,6 +214,20 @@ describe('video clip commands', () => {
     expect(backdrops.map((o) => [o.videoTrimStartMs ?? 0, o.videoTrimEndMs]).sort()).toEqual([[0, 4000], [4000, 8000]])
   })
 
+  it('cuts and replaces the clip when its blurred background is chosen, never the background alone', async () => {
+    engine.videos.blurredBackground('clip')
+    await settle()
+    const backdropId = engine.getDocument().pages[0].objects[0].id
+    expect(engine.videos.startReplace(backdropId)).toBe(true)
+    expect(engine.videos.replacing).toBe('clip')
+    engine.videos.cancelReplace()
+    const second = engine.videos.split(backdropId, 4000)!
+    const objects = engine.getDocument().pages[0].objects
+    expect(objects.find((o) => o.id === second)).not.toHaveProperty('videoBackdropOf')
+    expect(objects.filter((o) => o.videoBackdropOf).map((o) => o.videoBackdropOf).sort()).toEqual(['clip', second].sort())
+    expect(readClip(objects.find((o) => o.id === 'clip')!)?.trimEndMs).toBe(4000)
+  })
+
   it('replaces the video of a clip, keeping its frame and settings, through the Videos tool', async () => {
     engine.videos.update('clip', { volume: 0.4, trimStartMs: 1000 })
     const before = engine.getDocument().pages[0].objects.find((o) => o.id === 'clip')!

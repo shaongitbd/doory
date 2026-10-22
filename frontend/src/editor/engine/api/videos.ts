@@ -99,7 +99,7 @@ export class VideosApi {
 
   /** "Replace video": the next video picked in the Videos tool replaces the selected clip (the tool opens for it). */
   startReplace(id?: string): boolean {
-    const obj = this.target(id)
+    const obj = this.owner(id)
     const objectId = obj ? asDory(obj).id : undefined
     if (this.engine.readOnly || !objectId) return false
     this.setReplacing(objectId)
@@ -129,6 +129,16 @@ export class VideosApi {
     if (!view) return null
     const obj = id ? view.getById(id) : view.selectedObjects().length === 1 ? view.selectedObjects()[0] : undefined
     return isLiveClip(obj) && !asDory(obj).rawDoc ? obj : null
+  }
+
+  /**
+   * The clip a command that cuts or swaps the video acts on: the clip itself, or for a blurred background the clip it
+   * belongs to (which takes its background along); null when that clip is not on the page.
+   */
+  private owner(id?: string): FabricImage | null {
+    const obj = this.target(id)
+    const of = obj ? liveClip(obj)?.backdropOf : ''
+    return of ? this.target(of) : obj
   }
 
   /** The clip with this id (or the selected one) on the active page. */
@@ -253,7 +263,7 @@ export class VideosApi {
    */
   async replace(id: string | undefined, ref: AssetRef): Promise<boolean> {
     if (this.engine.readOnly || ref.kind !== 'video' || !ref.video || ref.video.status !== 'ready') return false
-    const obj = this.target(id)
+    const obj = this.owner(id)
     const objectId = obj ? asDory(obj).id : undefined
     if (!obj || !objectId) return false
     const poster = ref.video.posterUrl
@@ -303,12 +313,12 @@ export class VideosApi {
 
   /**
    * Cuts a clip in two at `pageMs` on the page clock: the clip keeps what plays before, a copy just above it (same
-   * frame on the page) plays the rest from there. Its blurred background is cut too. Returns the new clip's id, or
-   * null when `pageMs` is not inside the part of the clip that plays.
+   * frame on the page) plays the rest from there. Its blurred background is cut too (cutting the background cuts its
+   * clip). Returns the new clip's id, or null when `pageMs` is not inside the part of the clip that plays.
    */
   split(id: string | undefined, pageMs: number): string | null {
     if (this.engine.readOnly) return null
-    const obj = this.target(id)
+    const obj = this.owner(id)
     const clip = obj ? liveClip(obj) : null
     const objectId = obj ? asDory(obj).id : undefined
     if (!obj || !clip || !objectId || clip.loop) return null
