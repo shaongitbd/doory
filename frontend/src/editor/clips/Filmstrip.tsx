@@ -4,6 +4,7 @@
  * carry the meaning.
  */
 import type { CSSProperties } from 'react'
+import { cssUrl } from '@/lib/cssUrl'
 import { useResolvedSrc } from '../hooks/useResolvedSrc'
 import type { ClipFilmstrip } from './model'
 
@@ -36,7 +37,7 @@ export function Filmstrip({ strip, poster, fromMs, toMs, tiles, className, style
             style={{
               flex: '1 1 0',
               minWidth: 0,
-              backgroundImage: `url("${url}")`,
+              backgroundImage: cssUrl(url),
               backgroundRepeat: 'no-repeat',
               // Each tile shows one frame of the sprite, scaled to the tile's height.
               backgroundSize: strip ? `${frames * 100}% 100%` : 'cover',
