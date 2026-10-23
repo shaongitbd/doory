@@ -24,13 +24,13 @@ is [THIRD_PARTY.md](../THIRD_PARTY.md); reproduce this file with `python license
 | `@axe-core/playwright` 4.13.0 | MPL-2.0 | npm, build/test only | accept, dev/test only: MPL-2.0, same as axe-core: test tooling only, unmodified, not in the production bundle, not redistributed. |
 | `axe-core` 4.13.0 | MPL-2.0 | npm, build/test only | accept, dev/test only: MPL-2.0 is file-level copyleft. The package is only loaded by the accessibility checks of the end-to-end suite (frontend/e2e/app/a11y.spec.ts); it is not in the production bundle (verified from the build's source maps), is used unmodified and is not redistributed. |
 | `caniuse-lite` 1.0.30001814 | CC-BY-4.0 | npm, build/test only | accept, build tooling only: Data licensed CC-BY-4.0 (attribution), read by Babel/browserslist while building. Nothing of it is in the production bundle (verified from the build's source maps) or in any image, so no attribution obligation arises from distribution; dropping it is not possible without dropping the Vite React plugin. |
-| `certifi` 2026.7.22 | MPL-2.0 | Python, server runtime | accept: MPL-2.0 covers only the CA certificate list, which is data. It is installed unmodified from PyPI (a dependency of requests), so the MPL source-availability duty is met by PyPI and the upstream repository; copyleft does not reach Doory's code. |
+| `certifi` 2026.10.19 | MPL-2.0 | Python, server runtime | accept: MPL-2.0 covers only the CA certificate list, which is data. It is installed unmodified from PyPI (a dependency of requests), so the MPL source-availability duty is met by PyPI and the upstream repository; copyleft does not reach Doory's code. |
 | `hypothesis` 6.168.5 | MPL-2.0 | Python, dev/test only | accept, dev/test only: MPL-2.0, used unmodified by the property-based tests. It is only in requirements-dev.txt, which the Dockerfile does not install, so it is neither in the image nor redistributed. |
 | `psycopg2-binary` 2.9.13 | LGPL-3.0-or-later | Python, server runtime | accept, with conditions: LGPL-3.0-or-later (with an OpenSSL linking exception), the PostgreSQL driver Django uses. It stays a separate library: installed unmodified from PyPI by pip, imported dynamically, never vendored or patched, so Doory itself remains MIT; an operator can replace it with another build (pip install). psycopg 3 is LGPL-3.0 too and Django has no permissive PostgreSQL driver, so a swap would not help. Condition: never copy its code into this repository. |
 
 Packages offering a choice of licences where Doory uses the permissive one:
 
-- `dompurify` 3.4.16: (MPL-2.0 OR Apache-2.0), used under Apache-2.0
+- `dompurify` 3.4.17: (MPL-2.0 OR Apache-2.0), used under Apache-2.0
 - `rgbcolor` 1.0.1: MIT OR SEE LICENSE IN FEEL-FREE.md, used under MIT
 
 ## npm packages shipped to browsers (production bundle, fonts, WebAssembly)
@@ -48,7 +48,7 @@ Packages offering a choice of licences where Doory uses the permissive one:
 | `canvg` | 3.0.11 |  | MIT | https://github.com/canvg/canvg |
 | `core-js` | 3.50.0 |  | MIT | https://github.com/zloirock/core-js |
 | `dijkstrajs` | 1.0.3 |  | MIT | https://github.com/tcort/dijkstrajs |
-| `dompurify` | 3.4.16 |  | (MPL-2.0 OR Apache-2.0) | https://github.com/cure53/DOMPurify |
+| `dompurify` | 3.4.17 |  | (MPL-2.0 OR Apache-2.0) | https://github.com/cure53/DOMPurify |
 | `fabric` | 7.4.0 | `^7.2.0` | MIT | https://github.com/fabricjs/fabric.js |
 | `fast-png` | 6.4.0 |  | MIT | https://github.com/image-js/fast-png |
 | `fflate` | 0.8.3 | `^0.8.3` | MIT | https://github.com/101arrowz/fflate |
@@ -520,7 +520,7 @@ Packages offering a choice of licences where Doory uses the permissive one:
 | `boto3` | 1.43.109 | `>=1.35` | Apache-2.0 | https://github.com/boto/boto3 |
 | `botocore` | 1.43.109 |  | Apache-2.0 | https://github.com/boto/botocore |
 | `brotli` | 1.2.0 | `>=1.1` | MIT | https://github.com/google/brotli |
-| `certifi` | 2026.7.22 |  | MPL-2.0 | https://github.com/certifi/python-certifi |
+| `certifi` | 2026.10.19 |  | MPL-2.0 | https://github.com/certifi/python-certifi |
 | `cffi` | 2.1.1 |  | MIT-0 | https://github.com/python-cffi/cffi |
 | `channels` | 4.3.2 | `>=4.2,<5` | BSD-3-Clause | http://github.com/django/channels |
 | `channels_redis` | 4.3.0 | `>=4.2` | BSD-3-Clause | http://github.com/django/channels_redis/ |
@@ -547,7 +547,7 @@ Packages offering a choice of licences where Doory uses the permissive one:
 | `jsonschema` | 4.26.0 |  | MIT | https://github.com/python-jsonschema/jsonschema |
 | `jsonschema-specifications` | 2025.9.1 |  | MIT | https://github.com/python-jsonschema/jsonschema-specifications |
 | `msgpack` | 1.2.3 |  | Apache-2.0 | https://github.com/msgpack/msgpack-python/ |
-| `pillow` | 12.3.0 | `>=11` | MIT-CMU | https://github.com/python-pillow/Pillow |
+| `pillow` | 13.0.0 | `>=13.0` | MIT-CMU | https://github.com/python-pillow/Pillow |
 | `playwright` | 1.63.0 | `>=1.50` | Apache-2.0 | https://github.com/Microsoft/playwright-python |
 | `psycopg2-binary` | 2.9.13 | `>=2.9` | LGPL-3.0-or-later | https://psycopg.org/ |
 | `pyasn1` | 0.6.4 |  | BSD-2-Clause | https://github.com/pyasn1/pyasn1 |
