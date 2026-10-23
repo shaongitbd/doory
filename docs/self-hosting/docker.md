@@ -33,25 +33,28 @@ To start optional services, set the profiles in `.env`, e.g. `COMPOSE_PROFILES=m
 Instead of building, you can pull the published images (amd64 and arm64):
 
 - `ghcr.io/shaongitbd/doory-backend` for `api`, `realtime` and `mcp`. It includes the headless Chromium that
-  server-side export needs.
+  server-side export needs, and the built-in image optimizer. It doesn't include ffmpeg, so it takes no
+  [video clips](video.md); to have them, build the images yourself (`INSTALL_FFMPEG=true`, the default for
+  `docker compose up --build`).
 - `ghcr.io/shaongitbd/doory-frontend` for `web`.
 
-Tags are a version (the first is `0.1.0`), `latest`, and `sha-<commit>`. Pin a version. To use them, put
+Tags are a version (for example `0.2.0`; the list is on the
+[releases page](https://github.com/shaongitbd/doory/releases)), `latest`, and `sha-<commit>`. Pin a version. To use them, put
 this in a `docker-compose.override.yml` next to `docker-compose.yml`:
 
 ```yaml
 services:
   api:
-    image: ghcr.io/shaongitbd/doory-backend:0.1.0
+    image: ghcr.io/shaongitbd/doory-backend:0.2.0
     pull_policy: always
   realtime:
-    image: ghcr.io/shaongitbd/doory-backend:0.1.0
+    image: ghcr.io/shaongitbd/doory-backend:0.2.0
     pull_policy: always
   mcp:
-    image: ghcr.io/shaongitbd/doory-backend:0.1.0
+    image: ghcr.io/shaongitbd/doory-backend:0.2.0
     pull_policy: always
   web:
-    image: ghcr.io/shaongitbd/doory-frontend:0.1.0
+    image: ghcr.io/shaongitbd/doory-frontend:0.2.0
     pull_policy: always
 ```
 
