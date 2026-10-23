@@ -133,11 +133,16 @@ class CompactionInput:
 
 
 def read_for_compaction(design_id: uuid.UUID) -> CompactionInput | None:
-    state = YState.objects.filter(design_id=design_id).first()
-    rows = list(YUpdate.objects.filter(design_id=design_id).order_by("version"))
-    if state is None or not rows:
-        return None
-    return CompactionInput(bytes(state.snapshot), [row.pk for row in rows], [bytes(row.data) for row in rows])
+    with transaction.atomic():
+        state = YState.objects.select_for_update().filter(design_id=design_id).first()
+        if state is None:
+            return None
+        rows = list(YUpdate.objects.filter(design_id=design_id).order_by("version"))
+        if not rows:
+            return None
+        return CompactionInput(
+            bytes(state.snapshot), [row.pk for row in rows], [bytes(row.data) for row in rows]
+        )
 
 
 def apply_compaction(design_id: uuid.UUID, source: CompactionInput, merged: bytes) -> bool:
@@ -242,11 +247,12 @@ def commit_replacement(design_id: uuid.UUID, ticket: ReplaceTicket, delta: bytes
 
 def load_current(design_id: uuid.UUID) -> tuple[bytes, list[bytes]] | None:
     """Snapshot and update rows as they are now (a room that fell behind re-reads them)."""
-    state = YState.objects.filter(design_id=design_id).first()
-    if state is None:
-        return None
-    updates = [bytes(row.data) for row in YUpdate.objects.filter(design_id=design_id).order_by("version")]
-    return bytes(state.snapshot), updates
+    with transaction.atomic():
+        state = YState.objects.select_for_update().filter(design_id=design_id).first()
+        if state is None:
+            return None
+        updates = [bytes(row.data) for row in YUpdate.objects.filter(design_id=design_id).order_by("version")]
+        return bytes(state.snapshot), updates
 
 
 def current_version(design_id: uuid.UUID) -> int | None:
