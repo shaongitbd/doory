@@ -189,6 +189,8 @@ See [google-sign-in.md](../integrations/google-sign-in.md).
 
 ## OpenID Connect sign-in
 
+See [oidc.md](../integrations/oidc.md).
+
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | `OIDC_ISSUER` | | Issuer URL of your identity provider, e.g. `https://auth.example.com/application/o/doory/`. Sign-in is on when this, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are all set and `SITE_URL` is an `https://` address (`http://` works only with `DJANGO_DEBUG` on). `manage.py check` says what keeps it off |

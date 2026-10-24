@@ -84,7 +84,7 @@ The [documentation](docs/README.md) covers the rest:
 
 - [Install with Docker](docs/self-hosting/docker.md) or [without Docker](docs/self-hosting/manual.md) (nginx and systemd)
 - [Every setting](docs/self-hosting/configuration.md), [upgrading](docs/self-hosting/upgrading.md), [backups](docs/self-hosting/backup.md) and [troubleshooting](docs/self-hosting/troubleshooting.md)
-- Optional: [email](docs/integrations/email.md), [Google sign-in](docs/integrations/google-sign-in.md), [S3-compatible storage](docs/integrations/object-storage.md), [stock photos](docs/integrations/stock-media.md), [server-side export](docs/self-hosting/image-export.md)
+- Optional: [email](docs/integrations/email.md), [Google sign-in](docs/integrations/google-sign-in.md), [single sign-on (OpenID Connect)](docs/integrations/oidc.md), [S3-compatible storage](docs/integrations/object-storage.md), [stock photos](docs/integrations/stock-media.md), [server-side export](docs/self-hosting/image-export.md)
 - [Develop locally](docs/development/README.md): `make setup`, `make dev-api`, `make dev-web`
 
 ## Use it from an AI assistant (MCP)

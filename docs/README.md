@@ -23,6 +23,7 @@ These docs are for people who install, run or develop Doory. The editor's featur
 | Fix a problem                                 | [self-hosting/troubleshooting.md](self-hosting/troubleshooting.md) |
 | Send email                                    | [integrations/email.md](integrations/email.md)               |
 | Add "Sign in with Google"                     | [integrations/google-sign-in.md](integrations/google-sign-in.md) |
+| Sign in with Authentik, Keycloak or other SSO | [integrations/oidc.md](integrations/oidc.md)                 |
 | Store uploads in S3-compatible storage        | [integrations/object-storage.md](integrations/object-storage.md) |
 | Turn on stock photo and video search          | [integrations/stock-media.md](integrations/stock-media.md)   |
 | Set up a development environment             | [development/README.md](development/README.md)               |
