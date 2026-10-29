@@ -248,6 +248,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
   const editor = useEditor()
   const history = useEditorState((s) => s.history)
   const readOnly = useEditorState((s) => s.readOnly)
+  const mode = useEditorState((s) => s.mode)
   const ui = useEditorState((s) => s.ui)
   const notesOpen = useNotesOpen()
   const timelineOpen = useTimelineView().open
@@ -292,6 +293,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
         { id: 'f2', separator: true },
         cmd('file.download'),
         ...notesDownloads,
+        ...(mode === 'guest' ? [cmd('file.exportProject')] : []),
         { id: 'f3', separator: true },
         cmd('file.reset'),
       ]

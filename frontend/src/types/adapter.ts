@@ -285,6 +285,8 @@ export interface EditorAdapter {
   uploadAsset(file: File | Blob, opts?: { name?: string }): Promise<AssetRef>
   /** Turn a stored `src` (`idb://…`, `/media/…`, `https://…`) into a URL Fabric can load. */
   resolveSrc(src: string): Promise<string>
+  /** Guest-only portable backup of the editable project and its browser-owned files. */
+  exportProject?: () => Promise<{ blob: Blob; filename: string }>
   services: EditorServices
   /** The design's live room; absent or `null` when real-time editing is not available (the editor saves over REST). */
   realtime?: RealtimeConnection | null

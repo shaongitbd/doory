@@ -1065,6 +1065,7 @@ export const t = {
     nudge: (px: number) => `Nudge ${px} px`,
     fileSave: 'Save now',
     fileDownload: 'Download…',
+    fileExportProject: 'Export project backup…',
     fileShortcuts: 'Keyboard shortcuts',
     fileResize: 'Resize design…',
     fileRename: 'Rename…',
@@ -1124,6 +1125,10 @@ export const t = {
     filePresent: 'Present',
     filePresentNotes: 'Present with notes',
     viewNotes: 'Notes',
+  },
+  projectBackup: {
+    exported: 'Project backup downloaded.',
+    exportFailed: 'The project backup could not be created.',
   },
   cmdGroup: {
     move: 'Move',

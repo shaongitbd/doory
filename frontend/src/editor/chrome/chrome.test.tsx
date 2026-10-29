@@ -27,8 +27,9 @@ vi.mock('../engine/export/exporter', async (importOriginal) => ({
   runExport: vi.fn(async () => [{ blob: new Blob(['x']), filename: 'Test.jpg' }]),
 }))
 
-async function mount(mode?: 'guest' | 'shared-view', doc?: DoryDocument) {
+async function mount(mode?: 'guest' | 'shared-view', doc?: DoryDocument, exportProject?: () => Promise<{ blob: Blob; filename: string }>) {
   const { engine } = await setupEditor({ mode, doc })
+  if (exportProject) engine.adapter.exportProject = exportProject
   await act(async () => {
     render(
       <EditorProvider engine={engine} portalRoot={document.body}>
@@ -123,6 +124,19 @@ describe('editor chrome', () => {
     const view = screen.getByRole('menu', { name: t.topbar.view })
     expect(within(view).getByRole('menuitemcheckbox', { name: t.menu.rulers })).toBeInTheDocument()
     expect(within(view).getByRole('menuitem', { name: /Keyboard shortcuts/ })).toBeInTheDocument()
+  })
+
+  it('downloads a portable project backup from the File menu for a guest design', async () => {
+    const exportProject = vi.fn(async () => ({ blob: new Blob(['project']), filename: 'Test.doory' }))
+    const createObjectURL = vi.fn(() => 'blob:project')
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    vi.stubGlobal('URL', Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL: vi.fn() }))
+    engine = await mount('guest', undefined, exportProject)
+    await userEvent.click(screen.getByRole('button', { name: t.topbar.file }))
+    await userEvent.click(within(screen.getByRole('menu', { name: t.topbar.file })).getByRole('menuitem', { name: t.cmd.fileExportProject }))
+    await waitFor(() => expect(exportProject).toHaveBeenCalledOnce())
+    expect(createObjectURL).toHaveBeenCalledOnce()
+    expect(click).toHaveBeenCalledOnce()
   })
 
   it('switches high contrast from the View menu', async () => {

@@ -100,6 +100,10 @@ export function createGuestAdapter(options: GuestAdapterOptions): EditorAdapter 
       if (!url) throw new Error('This image is no longer stored in this browser.')
       return url
     },
+    exportProject: async () => {
+      const { exportLocalProject } = await import('@/lib/local/projectArchive')
+      return exportLocalProject(options.localId, repo)
+    },
     services: {
       ...createPublicServices(),
       assets: {

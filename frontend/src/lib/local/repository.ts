@@ -97,8 +97,8 @@ export class LocalRepository {
     return (await store.getDesign(id)) ?? null
   }
 
-  async createDesign(input: { title: string; document: DoryDocument }): Promise<LocalDesign> {
-    return this.saveDesign({ id: newId(), title: input.title, document: input.document })
+  async createDesign(input: { title: string; document: DoryDocument; thumbnail?: Blob }): Promise<LocalDesign> {
+    return this.saveDesign({ id: newId(), title: input.title, document: input.document, thumbnail: input.thumbnail })
   }
 
   /** Upsert. Keeps `createdAt` and any previous thumbnail when none is supplied. */

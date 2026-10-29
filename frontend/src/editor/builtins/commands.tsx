@@ -6,6 +6,7 @@ import {
   AlignJustify,
   AlignLeft,
   AlignRight,
+  Archive,
   Bold,
   BringToFront,
   ClipboardPaste,
@@ -34,6 +35,7 @@ import {
   ArrowDownToLine,
 } from 'lucide-react'
 import { toggleContrast } from '@/lib/contrast'
+import { downloadBlob } from '@/lib/download'
 import { t } from '../strings'
 import { openAccountDialog } from '../chrome/accountGate'
 import { registerCommand } from '../commands'
@@ -72,6 +74,24 @@ export function registerBuiltinCommands(): void {
 
   registerCommand({ id: 'file.save', label: t.cmd.fileSave, shortcut: 'Mod+S', group: t.cmdGroup.file, icon: <Save size={18} />, whileEditing: true, run: (e) => e.persistence.saveNow() })
   registerCommand({ id: 'file.download', label: t.cmd.fileDownload, shortcut: 'Mod+Shift+D', group: t.cmdGroup.file, icon: <Download size={18} />, run: (e) => e.openDialog('download') })
+  registerCommand({
+    id: 'file.exportProject',
+    label: t.cmd.fileExportProject,
+    group: t.cmdGroup.file,
+    icon: <Archive size={18} />,
+    enabled: ({ editor, state }) => state.mode === 'guest' && !!editor.adapter.exportProject,
+    run: async (e) => {
+      try {
+        await e.persistence.saveNow()
+        const project = await e.adapter.exportProject?.()
+        if (!project) return
+        downloadBlob(project.blob, project.filename)
+        e.toast(t.projectBackup.exported, 'success')
+      } catch (error) {
+        e.toast(error instanceof Error ? error.message : t.projectBackup.exportFailed, 'error')
+      }
+    },
+  })
   registerCommand({ id: 'file.shortcuts', label: t.cmd.fileShortcuts, shortcut: '?', group: t.cmdGroup.file, icon: <Keyboard size={18} />, run: (e) => e.openDialog('shortcuts') })
   registerCommand({ id: 'file.share', label: t.cmd.fileShare, group: t.cmdGroup.file, icon: <Share2 size={18} />, enabled: ({ state }) => !state.readOnly, run: (e) => openAccountDialog(e, 'share', 'share', (x) => !!x.adapter.services.sharing, t.share.unavailable) })
   registerCommand({ id: 'file.history', label: t.cmd.fileHistory, group: t.cmdGroup.file, icon: <History size={18} />, enabled: ({ state }) => !state.readOnly, run: (e) => openAccountDialog(e, 'version-history', 'versions', (x) => !!x.adapter.services.versions, t.versions.unavailable) })

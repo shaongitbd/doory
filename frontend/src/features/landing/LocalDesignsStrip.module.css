@@ -20,6 +20,36 @@
   max-width: 38rem;
 }
 
+.headerRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.restoreOnly {
+  padding-top: 0;
+}
+
+.restorePanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-block: var(--space-6);
+}
+
+.restoreHeading {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.restorePanel code {
+  font-size: 0.9em;
+}
+
 .eyebrow {
   padding: 0 var(--space-2);
   color: var(--ink);
@@ -184,6 +214,12 @@
 @media (max-width: 640px) {
   .panel {
     padding: var(--space-6);
+  }
+
+  .headerRow,
+  .restorePanel {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
