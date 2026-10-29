@@ -13,5 +13,15 @@ class MaskStyle(ApiStyle):
         'Settings: path, file_field (default "file"), model_field, extra_fields, extra_headers. '
         "The answer is a mask image: white keeps, black removes."
     )
-    keys = frozenset({"path", "file_field", "model_field", "options_field", "extra_fields", "extra_headers"})
+    keys = frozenset(
+        {
+            "path",
+            "file_field",
+            "model_field",
+            "options_field",
+            "option_fields",
+            "extra_fields",
+            "extra_headers",
+        }
+    )
     fixed = {"body": "multipart", "send_as": "file", "response": "mask", "response_format": "binary"}

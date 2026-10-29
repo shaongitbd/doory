@@ -1,9 +1,9 @@
-"""AI image tasks on a server model (background removal, for now)."""
+"""AI image tasks on a server model: background removal and upscaling."""
 
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from django.conf import settings
 from mcp.server.mcpserver.exceptions import ToolError
@@ -24,6 +24,7 @@ from ..context import current
 from ..registry import throttle, tool
 
 BACKGROUND_REMOVAL = "background-removal"
+UPSCALE = "upscale"
 
 
 def _server_default(user, task: str) -> Option | None:
@@ -76,10 +77,12 @@ def model_info(option: Option) -> dict[str, Any]:
     return {"id": option.id, "label": option.label, "sends_offsite": option.sends_offsite}
 
 
-def run_model(user, asset: Asset, option: Option, task: str = BACKGROUND_REMOVAL) -> Asset:
+def run_model(
+    user, asset: Asset, option: Option, task: str = BACKGROUND_REMOVAL, options: dict[str, Any] | None = None
+) -> Asset:
     """The new asset `option` makes from `asset` (one of `user`'s uploads). Raises `ToolError`."""
     try:
-        return ai_services.run(user, task, asset, option.id)
+        return ai_services.run(user, task, asset, option.id, options)
     except QuotaReached as exc:
         raise ToolError(_quota_message(exc)) from exc
     except AIProviderError as exc:
@@ -112,6 +115,17 @@ def list_ai_models(
     }
 
 
+def _own_picture(user, asset_id: str) -> Asset:
+    try:
+        pk = uuid.UUID(str(asset_id))
+    except ValueError:
+        pk = None
+    asset = Asset.objects.filter(pk=pk, owner=user).first() if pk else None
+    if asset is None or asset.kind not in Asset.PICTURE_KINDS:
+        raise ToolError(f"There is no picture {asset_id!r} in your uploads (see list_assets).")
+    return asset
+
+
 @tool(scope=ASSETS_WRITE, title="Remove background from an upload")
 def remove_asset_background(
     asset_id: Annotated[str, Field(description="A picture's id from list_assets or import_stock_photo.")],
@@ -124,13 +138,29 @@ def remove_asset_background(
     from .assets import _asset
 
     user = current().user
-    try:
-        pk = uuid.UUID(str(asset_id))
-    except ValueError:
-        pk = None
-    asset = Asset.objects.filter(pk=pk, owner=user).first() if pk else None
-    if asset is None or asset.kind not in Asset.PICTURE_KINDS:
-        raise ToolError(f"There is no picture {asset_id!r} in your uploads (see list_assets).")
+    asset = _own_picture(user, asset_id)
     option = choose_model(user, model)
     reserve_run(user, option)
     return {**_asset(run_model(user, asset, option)), "model": model_info(option)}
+
+
+@tool(scope=ASSETS_WRITE, title="Upscale an upload")
+def upscale_asset(
+    asset_id: Annotated[str, Field(description="A picture's id from list_assets or import_stock_photo.")],
+    scale: Annotated[Literal[2, 4], Field(description="How many times wider and taller the result is.")] = 2,
+    model: Annotated[
+        str | None,
+        Field(description="A server model from list_ai_models(task='upscale'); omitted: `server_default`."),
+    ] = None,
+) -> dict[str, Any]:
+    """Upscale a picture in your uploads with an AI server model: the result, `scale` times the size, is saved
+    as a new upload and returned, with the `model` used. Put it in a design with the replace_image operation
+    of edit_design."""
+    from .assets import _asset
+
+    user = current().user
+    asset = _own_picture(user, asset_id)
+    option = choose_model(user, model, UPSCALE)
+    reserve_run(user, option)
+    upscaled = run_model(user, asset, option, UPSCALE, {"scale": scale})
+    return {**_asset(upscaled), "model": model_info(option)}

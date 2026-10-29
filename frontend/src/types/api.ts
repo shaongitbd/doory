@@ -77,6 +77,8 @@ export interface AiConfig {
   /** The operator's wording of the notice under options that send the image away; empty: the editor's own. */
   offsite_notice?: string
   background_removal?: AiTaskOptions
+  /** Absent on servers that predate the upscale task. */
+  upscale?: AiTaskOptions
 }
 
 export interface AiTaskOptions {

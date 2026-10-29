@@ -116,17 +116,18 @@ export function createAiService({ config, userId }: { config?: AiConfig; userId?
       cached.set(task, { at: Date.now(), value })
       return value
     },
-    async run(task, { model, image, assetId, signal }) {
+    async run(task, { model, image, assetId, options, signal }) {
+      const extra = options ? { options } : {}
       if (assetId) {
         try {
-          return assetToRef(await aiApi.run(task, { asset_id: assetId, model }, signal))
+          return assetToRef(await aiApi.run(task, { asset_id: assetId, model, ...extra }, signal))
         } catch (error) {
           // Not this user's asset (a template's picture, say): upload the picture and run on that copy.
           if (!isApiError(error) || error.status !== 404 || error.code === 'ai_model_not_found' || error.code === 'unknown_task') throw error
         }
       }
       const blob = typeof image === 'function' ? await image() : image
-      return assetToRef(await aiApi.run(task, { asset_id: await upload(blob, signal), model }, signal))
+      return assetToRef(await aiApi.run(task, { asset_id: await upload(blob, signal), model, ...extra }, signal))
     },
     remembered: (task) => safeGetItem(storageKey(task)),
     remember: (task, option) => {

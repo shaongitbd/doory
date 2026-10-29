@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 from io import BytesIO
 
 import pytest
 from PIL import Image, ImageOps
 
-from apps.ai import catalog, env, services
+from apps.ai import catalog, env, results, services
+from apps.ai.catalog import device_available as real_device_available
 from apps.ai.errors import AIProviderError, ModelNotAvailable, QuotaReached, RunsOnDevice, UnsupportedAsset
 from apps.ai.models import AICall, Audience
+from apps.ai.results import SourceImage, from_image
+from apps.ai.tasks import TASKS, InvalidOptions
 from apps.assets.models import Asset
 from apps.assets.services import create_asset
 from apps.assets.tests.helpers import SAFE_SVG
 
 from .conftest import make_provider
-from .fakes import Y_KEY, image_answer, png
+from .fakes import Y_KEY, image_answer, json_answer, png
 
 pytestmark = pytest.mark.django_db
 
@@ -115,7 +119,7 @@ def test_options_users_may_not_use_are_not_found(fake, user, other, photo, x, se
     with pytest.raises(ModelNotAvailable):
         services.run(user, TASK, photo, "not-a-uuid:")
     with pytest.raises(ModelNotAvailable):
-        services.run(user, "upscale", photo, f"{x.id}:")
+        services.run(user, "erase-object", photo, f"{x.id}:")
     x.audience = Audience.STAFF
     x.save()
     with pytest.raises(ModelNotAvailable):
@@ -222,7 +226,7 @@ def test_an_unreachable_doory_env_provider_offers_the_servers_default(user, sett
         ({"STYLE": "magic"}, "Unknown API style"),
         ({"STYLE_CONFIG": "{"}, "not valid JSON"),
         ({"STYLE_CONFIG": '{"nope": 1}'}, "no setting nope"),
-        ({"TASKS": "upscale"}, "unknown task"),
+        ({"TASKS": "erase-object"}, "unknown task"),
         ({"AUTH_HEADER": "Bad Header"}, "not a valid HTTP header"),
         ({"SENDS_OFFSITE": "maybe"}, "true or false"),
         ({"TIMEOUT_SECONDS": "999"}, "between 1 and 300"),
@@ -279,3 +283,97 @@ def test_results_are_regular_assets(fake, user, photo, x):
     assert (
         stored.mime == "image/png" and stored.thumbnail and stored.size == len(stored.file.open("rb").read())
     )
+
+
+# -- upscale -------------------------------------------------------------------------------------------------
+
+UPSCALE = "upscale"
+
+
+@pytest.fixture
+def hosted(fake):
+    """A provider like a hosted upscaler: JSON with a data: URL in, base64 out, always three times larger."""
+    return make_provider(
+        fake.url,
+        "json",
+        name="Hosted",
+        tasks=[UPSCALE],
+        style_config={
+            "path": "/v1/images/generations",
+            "send_as": "data-url",
+            "file_field": "image_url",
+            "option_fields": {"scale": ""},
+            "response_path": "data.0.b64_json",
+        },
+    )
+
+
+@pytest.mark.parametrize("scale, size", [(2, (128, 64)), (4, (256, 128))])
+def test_upscale_makes_the_result_the_size_asked_for(fake, user, photo, hosted, scale, size):
+    result = services.run(user, UPSCALE, photo, f"{hosted.id}:", {"scale": scale})
+    assert (result.width, result.height) == size  # the provider's 192 x 96, scaled
+    assert result.name == "photo.png (upscaled)" and result.meta["ai"]["task"] == UPSCALE
+    with result.file.open("rb") as handle:
+        assert Image.open(handle).size == size
+    assert "scale" not in fake.requests[-1].json  # left out by option_fields
+
+
+@pytest.mark.parametrize("options", [{"scale": 3}, {"scale": "2"}, {"scale": True}, {"factor": 2}])
+def test_upscale_options_are_checked_before_any_call(fake, user, photo, hosted, options):
+    with pytest.raises(InvalidOptions):
+        services.run(user, UPSCALE, photo, f"{hosted.id}:", options)
+    assert fake.requests == []
+
+
+def test_an_upscale_too_large_to_keep_is_refused_before_the_call(fake, user, photo, hosted, monkeypatch):
+    monkeypatch.setattr(results, "MAX_DIMENSION", 200)
+    with pytest.raises(AIProviderError) as caught:
+        services.run(user, UPSCALE, photo, f"{hosted.id}:", {"scale": 4})
+    assert caught.value.code == "too_large" and fake.requests == []
+    assert AICall.objects.get().status == "refused"
+    assert services.run(user, UPSCALE, photo, f"{hosted.id}:", {"scale": 2}).width == 128
+
+
+def test_an_upscale_of_another_shape_is_refused(fake, user, photo, hosted):
+    fake.routes[("POST", "/v1/images/generations")] = lambda request: json_answer(
+        {"data": [{"b64_json": base64.b64encode(png(Image.new("RGB", (100, 100)))).decode()}]}
+    )
+    with pytest.raises(AIProviderError, match="shape"):
+        services.run(user, UPSCALE, photo, f"{hosted.id}:", {"scale": 2})
+
+
+def test_a_result_too_large_for_an_upload_as_png_is_kept_as_webp(user, settings):
+    source = SourceImage(png(Image.new("RGB", (64, 32))), "image/png", 64, 32)
+    answer = png(Image.radial_gradient("L").convert("RGB").resize((128, 64)))
+    as_png = from_image(TASKS[UPSCALE], source, answer, {"scale": 2})
+    assert as_png[:4] == b"\x89PNG"
+    settings.MAX_UPLOAD_BYTES = len(as_png) - 1
+    as_webp = from_image(TASKS[UPSCALE], source, answer, {"scale": 2})
+    assert as_webp[:4] == b"RIFF" and as_webp[8:12] == b"WEBP"
+    stored = create_asset(user, as_webp, name="big")
+    assert (stored.mime, stored.width, stored.height) == ("image/webp", 128, 64)
+
+
+def test_a_result_too_large_even_as_webp_is_refused(settings):
+    source = SourceImage(png(Image.new("RGB", (64, 32))), "image/png", 64, 32)
+    answer = png(Image.effect_noise((128, 64), 64).convert("RGB"))
+    settings.MAX_UPLOAD_BYTES = 64
+    with pytest.raises(AIProviderError) as caught:
+        from_image(TASKS[UPSCALE], source, answer, {"scale": 2})
+    assert caught.value.code == "too_large"
+
+
+def test_a_same_size_result_too_large_for_an_upload_stays_png(settings):
+    source = SourceImage(png(Image.new("RGB", (64, 32))), "image/png", 64, 32)
+    answer = png(Image.radial_gradient("L").convert("RGBA").resize((64, 32)))
+    settings.MAX_UPLOAD_BYTES = 64
+    cut_out = from_image(TASKS["background-removal"], source, answer)
+    assert cut_out[:4] == b"\x89PNG"
+
+
+def test_upscale_is_offered_on_the_device_without_a_model(monkeypatch):
+    monkeypatch.setattr(catalog, "device_available", real_device_available)
+    monkeypatch.setattr(catalog, "best_installed", lambda task: None)
+    assert catalog.device_available(UPSCALE) is True
+    assert [o.id for o in catalog.public_options(UPSCALE)] == ["device"]
+    assert catalog.ai_config()["upscale"]["default"] == "device"

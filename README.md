@@ -46,7 +46,7 @@ reports are very welcome.
 |---|---|
 | **Text** | Headings, curved text, effects, font pairings, lists, an open-licensed font catalogue and your own fonts |
 | **Elements** | Shapes, lines and arrows, about 27,500 icons, emoji and illustrations, stickers, QR codes |
-| **Photos** | Upload, crop, masks and filters, background removal that runs in the browser, 2×–4× upscaling with a pure-code resampler, stock photo search with an Unsplash or Pexels key |
+| **Photos** | Upload, crop, masks and filters, background removal that runs in the browser, 2×–4× upscaling with a pure-code resampler (or an AI model on a server you connect), stock photo search with an Unsplash or Pexels key |
 | **Layout** | Layers, groups, alignment guides, snapping, rulers, several pages per design (each its own size), resize to another format |
 | **Motion and sound** | 27 enter and exit animations, 12 emphasis animations, 16 page transitions, 24 music loops and 88 sound effects (CC0), Freesound search with a key (CC0 by default), voiceover recording |
 | **Present** | Present mode with speaker notes, timing, auto-advance and a second presenter window |

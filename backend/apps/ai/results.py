@@ -1,21 +1,25 @@
 """Turning what a provider answered into a safe PNG: decoded with Pillow under the upload limits (no
-decompression bombs), checked against the source's size, a mask applied to the source, alpha required where
-the task promises it."""
+decompression bombs), checked against the size the task asks for, a mask applied to the source, alpha required
+where the task promises it. A resized result too large for an upload as PNG is kept as WebP instead."""
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from io import BytesIO
+from typing import Any
 
+from django.conf import settings
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from apps.core.images import MAX_DIMENSION, MAX_PIXELS, ImageBusy, decode_slot
 
 from .errors import AIProviderError
-from .tasks import Task
+from .tasks import Task, result_size
 
 RESULT_FORMATS = ["PNG", "WEBP", "JPEG", "GIF", "AVIF"]
 ASPECT_TOLERANCE = 0.01
+WEBP_QUALITIES = (90, 80, 70)
 
 
 @dataclass(frozen=True)
@@ -33,13 +37,17 @@ class SourceImage:
         return f"image.{ext.get(self.mime, self.mime.rsplit('/', 1)[-1] or 'bin')}"
 
 
+def fits(width: int, height: int) -> bool:
+    """Whether an image of this size may be decoded and stored (the upload limits)."""
+    return 0 < width <= MAX_DIMENSION and 0 < height <= MAX_DIMENSION and width * height <= MAX_PIXELS
+
+
 def _probe(data: bytes, *, what: str = "result") -> Image.Image:
     if not data:
         raise AIProviderError("not_image", f"The server's {what} is empty.")
     try:
         probe = Image.open(BytesIO(data), formats=RESULT_FORMATS)
-        width, height = probe.size
-        if not (0 < width <= MAX_DIMENSION and 0 < height <= MAX_DIMENSION) or width * height > MAX_PIXELS:
+        if not fits(*probe.size):
             raise AIProviderError("not_image", f"The server's {what} is too large an image.")
         return probe
     except AIProviderError:
@@ -109,12 +117,36 @@ def _png(image: Image.Image) -> bytes:
     return out.getvalue()
 
 
-def from_image(task: Task, source: SourceImage, data: bytes) -> bytes:
-    """The provider's finished image, as PNG."""
+def _encode(task: Task, image: Image.Image) -> bytes:
+    """`image` as PNG. For a task that changes the size (a large upscaled photo), WebP at falling quality
+    when the PNG is larger than an upload may be; a same-size result (a cut-out) stays lossless."""
+    data = _png(image)
+    if len(data) <= settings.MAX_UPLOAD_BYTES or task.same_size:
+        return data
+    for quality in WEBP_QUALITIES:
+        out = BytesIO()
+        image.save(out, "WEBP", quality=quality, method=4)
+        if out.tell() <= settings.MAX_UPLOAD_BYTES:
+            return out.getvalue()
+    raise AIProviderError(
+        "too_large", "The result is too large to store, even compressed. Choose a smaller scale."
+    )
+
+
+def from_image(
+    task: Task, source: SourceImage, data: bytes, options: Mapping[str, Any] | None = None
+) -> bytes:
+    """The provider's finished image, as PNG (WebP when too large for an upload), at the size the task and
+    its `options` ask for."""
     try:
         probe = _probe(data, what="result")
         width, height = probe.size
-        with decode_slot(width * height):
+        size = result_size(task, source.width, source.height, options or {})
+        if size is not None and not fits(*size):
+            raise AIProviderError("too_large", "The result would be too large an image.")
+        # When the result is scaled, one slot covers it and the scaled copy.
+        pixels = width * height + (size[0] * size[1] if size not in (None, (width, height)) else 0)
+        with decode_slot(pixels):
             result = _load(probe)
             if task.output == "image-alpha":
                 if not _has_alpha(result):
@@ -122,9 +154,9 @@ def from_image(task: Task, source: SourceImage, data: bytes) -> bytes:
                 result = result.convert("RGBA")
             elif result.mode not in ("RGB", "RGBA", "L", "LA"):
                 result = result.convert("RGBA" if _has_alpha(result) else "RGB")
-            if task.same_size:
-                result = _fit(result, source.width, source.height, any_aspect=False)
-            return _png(result)
+            if size is not None:
+                result = _fit(result, *size, any_aspect=False)
+            return _encode(task, result)
     except ImageBusy as exc:
         raise _busy(exc) from exc
 

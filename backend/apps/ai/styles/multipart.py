@@ -11,7 +11,18 @@ class MultipartStyle(ApiStyle):
     label = "Multipart → image"
     help = (
         'Settings: path (e.g. "/remove"), file_field (default "file"), model_field (default "model"; '
-        "empty: not sent), extra_fields (fixed form fields), extra_headers."
+        "empty: not sent), options_field, option_fields (task option → field name; empty: not sent), "
+        "extra_fields (fixed form fields), extra_headers."
     )
-    keys = frozenset({"path", "file_field", "model_field", "options_field", "extra_fields", "extra_headers"})
+    keys = frozenset(
+        {
+            "path",
+            "file_field",
+            "model_field",
+            "options_field",
+            "option_fields",
+            "extra_fields",
+            "extra_headers",
+        }
+    )
     fixed = {"body": "multipart", "send_as": "file", "response": "image", "response_format": "binary"}

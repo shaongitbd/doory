@@ -28,9 +28,10 @@ heights the server reports for new or changed text are estimates until the desig
 Pictures must be in the user's uploads (list_assets, import_stock_photo) or the element catalogue
 (search_elements) before they can be placed. Backgrounds of pictures are removed with remove_asset_background,
 the remove_background option of import_stock_photo and upload_image_from_url, or the remove_background
-operation of edit_design; list_ai_models shows the server models (tell the user before using one with
-`sends_offsite`). Fonts come from search_fonts. Every edit keeps the previous state as a version
-(list_versions, restore_version), so mistakes can be undone; trashed designs come back with restore_design.
+operation of edit_design; upscale_asset makes a larger copy of a picture with a server model. list_ai_models
+shows the server models of each task (tell the user before using one with `sends_offsite`). Fonts come from
+search_fonts. Every edit keeps the previous state as a version (list_versions, restore_version), so mistakes
+can be undone; trashed designs come back with restore_design.
 Designs open in someone's editor change live in front of them. Give the user the design's editor_url to open
 it. Share links (create_share_link) let anyone with the URL in, so create one only when the user asks for
 it."""

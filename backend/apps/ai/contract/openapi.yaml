@@ -12,9 +12,12 @@ info:
     * Authentication is optional. When the operator sets an auth header in Doory (for example
       `Authorization: Bearer …` or `X-Api-Key: …`), Doory sends it on every request unchanged.
     * Doory does not follow redirects; answer directly.
-    * Tasks are named by id. The first one is `background-removal`: an image in, the same image with a
-      transparent background out, at the same size (a result of the same aspect ratio is scaled to it).
-      More tasks may be added later; a server lists the tasks each model supports.
+    * Tasks are named by id; a server lists the tasks each model supports. More tasks may be added later.
+      * `background-removal`: an image in, the same image with a transparent background out, at the same
+        size (a result of the same aspect ratio is scaled to it).
+      * `upscale`: an image in, a larger one out. With the option `scale` (2 or 4), Doory scales a result of
+        the same aspect ratio to exactly that many times the source's size; without it, the result keeps its
+        size.
 servers:
   - url: https://ai.example.com
 paths:
@@ -50,7 +53,7 @@ paths:
           schema:
             type: string
             pattern: "^[a-z0-9-]+$"
-            examples: [background-removal]
+            examples: [background-removal, upscale]
       requestBody:
         required: true
         content:
@@ -68,7 +71,9 @@ paths:
                   description: A model id from `/v1/models`. Absent or empty means the server's default.
                 options:
                   type: string
-                  description: Task options as a JSON object (none are defined for background-removal yet).
+                  description: |
+                    Task options as a JSON object: `{"scale": 2}` or `{"scale": 4}` for upscale, none for
+                    background-removal.
             encoding:
               image:
                 contentType: image/png, image/jpeg, image/webp

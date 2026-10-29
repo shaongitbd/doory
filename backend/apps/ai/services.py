@@ -1,5 +1,6 @@
 """Running a task through a provider: `run` turns a user's asset into a new asset (for background removal, the
-same image with a transparent background), with permissions, quotas, a result cache and a log of every call.
+same image with a transparent background; for upscale, a larger one), with permissions, quotas, a result cache
+and a log of every call.
 """
 
 from __future__ import annotations
@@ -30,10 +31,10 @@ from .catalog import Option
 from .env import EnvProvider
 from .errors import AIProviderError, ModelNotAvailable, QuotaReached, RunsOnDevice, UnsupportedAsset
 from .models import AICall, Provider, ProviderModel
-from .results import SourceImage, decode_source
+from .results import SourceImage, decode_source, fits
 from .serializers import USER_PROVIDER_MAX_TIMEOUT
 from .styles import Connection, get_style
-from .tasks import TASKS, Task, validate_options
+from .tasks import TASKS, Task, result_size, validate_options
 
 SENT_AS_IS = ("image/png", "image/jpeg", "image/webp")
 PREVIEW_SIDE = 256
@@ -96,13 +97,17 @@ def track_in_flight(user, max_in_flight: int = MAX_IN_FLIGHT_PER_USER, timeout: 
 
 
 def call(conn: Connection, task: Task, model: str, source: SourceImage, options: dict[str, Any]) -> Outcome:
-    """One request to the provider and its result as PNG (AIProviderError otherwise)."""
+    """One request to the provider and its result as PNG, or WebP when too large for an upload
+    (AIProviderError otherwise)."""
     if len(source.data) > conn.max_image_bytes:
         raise refused(AIProviderError("too_large", "The image is too large for this option."))
+    size = result_size(task, source.width, source.height, options)
+    if size is not None and not fits(*size):
+        raise refused(AIProviderError("too_large", "The result would be too large. Choose a smaller scale."))
     style = get_style(conn.style)
     request = style.build(conn, task, model, source, options)
     response = catalog.sender(conn)(request, answer_limit(conn))
-    png = style.parse(conn, task, response, source)
+    png = style.parse(conn, task, response, source, options)
     return Outcome(png=png, bytes_in=len(request.body), bytes_out=len(response.body))
 
 

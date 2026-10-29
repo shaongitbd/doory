@@ -42,14 +42,10 @@ def fake():
 
 
 def make_provider(fake, *, name="Server X", sends_offsite=False, **fields) -> Provider:
+    fields.setdefault("style_config", {"path": "/api/remove"})
+    fields.setdefault("tasks", ["background-removal"])
     return Provider.objects.create(
-        name=name,
-        base_url=fake.url,
-        style="multipart",
-        style_config={"path": "/api/remove"},
-        tasks=["background-removal"],
-        sends_offsite=sends_offsite,
-        **fields,
+        name=name, base_url=fake.url, style="multipart", sends_offsite=sends_offsite, **fields
     )
 
 
@@ -158,6 +154,27 @@ def test_the_daily_quota_is_checked_before_any_work(as_caller, user, fake):
     with pytest.raises(ToolError, match="today's calls"):
         ai.remove_asset_background(str(picture(user, "Other").pk))
     assert len(fake.requests) == 1
+
+
+# upscale_asset
+
+
+def test_upscale_asset_runs_the_real_path(as_caller, user, fake):
+    upscaler = make_provider(fake, name="Upscaler", tasks=["upscale"], style_config={"path": "/upscale"})
+    hero = picture(user)
+    listed = ai.list_ai_models(task="upscale")
+    assert listed["server_default"] == f"{upscaler.pk}:"
+    result = ai.upscale_asset(str(hero.pk), scale=4)
+    bigger = Asset.objects.get(pk=result["asset_id"], owner=user)
+    assert (bigger.width, bigger.height) == (320, 160) and bigger.name == "Hero (upscaled)"
+    assert fake.requests[-1].form["scale"] == (None, b"4")
+    assert result["model"]["id"] == f"{upscaler.pk}:"
+
+
+def test_upscale_asset_needs_a_server_model_for_upscaling(as_caller, user, provider, fake):
+    with pytest.raises(ToolError, match="No AI server"):
+        ai.upscale_asset(str(picture(user).pk))
+    assert fake.requests == []
 
 
 # Imports with remove_background

@@ -47,10 +47,14 @@ class StyleConfig:
     method: Literal["POST", "PUT"] = "POST"
     path: str = ""  # appended to the base URL; may contain {task} and {model}
     body: Literal["multipart", "json"] = "multipart"
-    send_as: Literal["file", "base64"] = "file"  # how the image goes into a multipart body (JSON: base64)
+    #: How the image is sent: a file upload (multipart only), base64, or a `data:` URL of the base64. A JSON
+    #: body never has a file: there it is base64 unless set to data-url.
+    send_as: Literal["file", "base64", "data-url"] = "file"
     file_field: str = "file"
     model_field: str = "model"  # empty: the model is not sent
     options_field: str = ""  # empty: each task option is its own field; else one JSON field
+    #: Task option → the field it is sent as; an empty name leaves that option out of the request.
+    option_fields: Mapping[str, str] = field(default_factory=dict)
     extra_fields: Mapping[str, Any] = field(default_factory=dict)
     extra_headers: Mapping[str, str] = field(default_factory=dict)
     response: Literal["image", "mask", "auto"] = "image"  # auto: an image, or JSON with `response_path`
@@ -194,6 +198,23 @@ def _fields(value: Any) -> dict[str, Any]:
     return out
 
 
+def _option_fields(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ConfigError("option_fields must be an object.")
+    if len(value) > MAX_FIELDS:
+        raise ConfigError(f"option_fields may have at most {MAX_FIELDS} entries.")
+    out: dict[str, str] = {}
+    for key, item in value.items():
+        _field_name(key, "An option name in option_fields")
+        name = _field_name(item, f"option_fields.{key}", allow_empty=True)
+        if name and _is_auth_like(name):
+            raise ConfigError(
+                f"Field {name!r} looks like an authentication field; use the provider's secret field instead."
+            )
+        out[key] = name
+    return out
+
+
 def check_header_name(value: Any, name: str = "The header name") -> str:
     text = _text(value, name, limit=MAX_FIELD_NAME)
     if not _TOKEN.match(text):
@@ -266,10 +287,11 @@ READERS: dict[str, Callable[[Any], dict[str, Any]]] = {
     "method": lambda v: {"method": _choice(v, "method", ("POST", "PUT"))},
     "path": lambda v: {"path": _path(v)},
     "body": lambda v: {"body": _choice(v, "body", ("multipart", "json"))},
-    "send_as": lambda v: {"send_as": _choice(v, "send_as", ("file", "base64"))},
+    "send_as": lambda v: {"send_as": _choice(v, "send_as", ("file", "base64", "data-url"))},
     "file_field": lambda v: {"file_field": _field_name(v, "file_field")},
     "model_field": lambda v: {"model_field": _field_name(v, "model_field", allow_empty=True)},
     "options_field": lambda v: {"options_field": _field_name(v, "options_field", allow_empty=True)},
+    "option_fields": lambda v: {"option_fields": _option_fields(v)},
     "extra_fields": lambda v: {"extra_fields": _fields(v)},
     "extra_headers": lambda v: {"extra_headers": _headers(v)},
     "response_path": lambda v: {"response_path": _json_path(v)},
@@ -303,6 +325,12 @@ class ApiStyle:
         config = replace(StyleConfig(), **values)
         if config.body == "json" and config.send_as == "file":
             config = replace(config, send_as="base64")
+        taken = {config.file_field, config.model_field, config.options_field, *config.extra_fields} - {""}
+        for option, name in config.option_fields.items():
+            if name in taken:
+                raise ConfigError(
+                    f"option_fields.{option} sends the option as {name!r}, a field already in use."
+                )
         return config
 
     # -- requests ----------------------------------------------------------------------------------------
@@ -316,6 +344,9 @@ class ApiStyle:
         values: dict[str, Any] = dict(config.extra_fields)
         if model and config.model_field:
             values[config.model_field] = model
+        if config.option_fields:
+            renamed = {config.option_fields.get(key, key): value for key, value in options.items()}
+            options = {key: value for key, value in renamed.items() if key}
         if options:
             if config.options_field:
                 values[config.options_field] = dict(options)
@@ -333,6 +364,8 @@ class ApiStyle:
             accept = "image/png, application/json;q=0.9"
         headers = {**config.extra_headers, **connection.auth_headers(), "Accept": accept}
         encoded = base64.b64encode(image.data).decode("ascii")
+        if config.send_as == "data-url":
+            encoded = f"data:{image.mime};base64,{encoded}"
         if config.body == "json":
             body = json.dumps({**values, config.file_field: encoded}).encode()
             headers["Content-Type"] = "application/json"
@@ -351,8 +384,16 @@ class ApiStyle:
 
     # -- answers -----------------------------------------------------------------------------------------
 
-    def parse(self, connection: Connection, task: Task, response: HttpResponse, image: SourceImage) -> bytes:
-        """The finished PNG from the provider's answer."""
+    def parse(
+        self,
+        connection: Connection,
+        task: Task,
+        response: HttpResponse,
+        image: SourceImage,
+        options: Mapping[str, Any] | None = None,
+    ) -> bytes:
+        """The finished image (see `results.from_image`) from the provider's answer to a request made with the
+        task `options`."""
         expect_ok(response)
         config = connection.config
         as_json = config.response_format == "json" or (
@@ -368,7 +409,7 @@ class ApiStyle:
             raise AIProviderError("not_image", "The server answered with text instead of an image.")
         if config.response == "mask":
             return from_mask(task, image, data)
-        return from_image(task, image, data)
+        return from_image(task, image, data, options)
 
     def list_models(self, connection: Connection, send: Send) -> list[RemoteModel]:
         raise AIProviderError("not_supported", "This API style cannot list models; enter them by hand.")

@@ -65,6 +65,17 @@ describe('AI service of the account adapter', () => {
     expect(ref).toMatchObject({ id: 'cut', url: '/media/cut.png', thumbUrl: '/media/cut.webp' })
   })
 
+  it("sends the task's options when there are some", async () => {
+    const bodies: unknown[] = []
+    captureFetch((request) => {
+      bodies.push(JSON.parse(String(request.body)))
+      return json(asset('big'), 201)
+    })
+    const ai = createAiService({ config: CONFIG })
+    await ai.run('upscale', { model: 'env-2:', image: new Blob(['x'], { type: 'image/png' }), assetId: 'a1', options: { scale: 4 } })
+    expect(bodies).toEqual([{ asset_id: 'a1', model: 'env-2:', options: { scale: 4 } }])
+  })
+
   it('uploads the picture first when it has no asset of this user', async () => {
     const calls = captureFetch((request) => {
       if (request.url.pathname === '/api/v1/assets/') return json(asset('copy'), 201)

@@ -8,7 +8,7 @@ import type { ArrowHead, DocField, DocTextFit, ImageFilterSpec, MaskShape, Objec
 import type { AssetRef } from '@/types/adapter'
 import type { EditorEngine } from '../editor'
 import { BACKGROUND_REMOVAL_TASK, BackgroundRemovalError, DEVICE_OPTION, removeBackground as runRemoval, type BgRemovalPhase } from '../bgRemoval'
-import { UpscaleError, fitsOutput, maxOutputPixels, targetSize, upscaleImage as runUpscale, type CropRect, type UpscaleMethod, type UpscaleProgress } from '../upscale'
+import { UPSCALE_TASK, UpscaleError, fitsOutput, maxOutputPixels, targetSize, upscaleImage as runUpscale, type CropRect, type UpscaleMethod, type UpscaleProgress } from '../upscale'
 import { MAX_UPLOAD_BYTES } from '../assets'
 import { DoryLine } from '../objects/DoryLine'
 import { asDory } from '../objects/dory'
@@ -473,32 +473,43 @@ export class StyleApi {
   }
 
   /**
-   * Increases the resolution of the whole selected photo with the pure-code upscaler and swaps the
-   * result in, keeping the frame and the visible crop. Resolves `false` when cancelled, when the
-   * selection moved while it ran, or when the selection is an SVG or a video clip.
+   * Increases the resolution of the whole selected photo and swaps the result in, keeping the frame and
+   * the visible crop. `option` picks how: `device` (the default) runs the pure-code upscaler here, any
+   * other option id runs the AI upscale task on a server through the adapter's AI service. Resolves
+   * `false` when cancelled, when the selection moved while it ran, or when the selection is an SVG or a
+   * video clip.
    */
-  async upscale(options: { scale: number; method?: UpscaleMethod; detail?: number }, onProgress?: UpscaleProgress, signal?: AbortSignal): Promise<boolean> {
+  async upscale(options: { scale: number; method?: UpscaleMethod; detail?: number; option?: string }, onProgress?: UpscaleProgress, signal?: AbortSignal): Promise<boolean> {
     const img = this.images()[0]
     if (!img || !this.canUpscale() || this.engine.readOnly || asDory(img).locked || signal?.aborted) return false
     const source = this.selectedImageSource()
     if (!source) return false
+    const { option = DEVICE_OPTION, ...local } = options
+    const ai = option === DEVICE_OPTION ? null : this.engine.adapter.services.ai
+    if (option !== DEVICE_OPTION && !ai) throw new UpscaleError(t.errors.upscale)
     const target = targetSize(source.width, source.height, options.scale)
-    // Refuse up front what this device cannot hold, rather than failing after the work.
-    if (!fitsOutput(target, maxOutputPixels())) throw new UpscaleError(t.dialog.upscaleTooLarge)
+    // Refuse up front what cannot be held (on this device, or by the server's upload limits), rather than
+    // failing after the work.
+    if (!fitsOutput(target, ai ? undefined : maxOutputPixels())) throw new UpscaleError(t.dialog.upscaleTooLarge)
     const stale = (): boolean => signal?.aborted === true || this.images()[0] !== img
-    let result: Blob
+    let ref: AssetRef
     try {
-      const blob = await (await fetch(img.getSrc(), { signal })).blob()
-      result = await runUpscale(blob, { ...options, maxBytes: MAX_UPLOAD_BYTES }, onProgress, signal)
+      const getImage = async () => (await fetch(img.getSrc(), { signal })).blob()
+      if (ai) {
+        ref = await ai.run(UPSCALE_TASK, { model: option, image: getImage, assetId: asDory(img).assetId, options: { scale: options.scale }, signal })
+      } else {
+        const result = await runUpscale(await getImage(), { ...local, maxBytes: MAX_UPLOAD_BYTES }, onProgress, signal)
+        if (stale()) return false
+        const ext = result.type === 'image/webp' ? 'webp' : 'png'
+        ref = await this.engine.assets.upload(result, `upscaled-${target.width}x${target.height}.${ext}`)
+      }
     } catch (error) {
       // Cancel is not a failure: the engine has stopped its work and the design stays as it was.
       if (signal?.aborted) return false
       throw error
     }
     if (stale()) return false
-    const ext = result.type === 'image/webp' ? 'webp' : 'png'
-    const ref = await this.engine.assets.upload(result, `upscaled-${target.width}x${target.height}.${ext}`)
-    if (stale()) return false
+    // A server's result is scaled to exactly the size asked for, like the one made here.
     const crop = source.crop ? scaledCrop(source.crop, source.width, source.height, options.scale) : null
     await this.engine.insert.replaceSelectedImage(ref, t.history.upscale, crop ?? undefined)
     return true

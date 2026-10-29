@@ -1,7 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '@/lib/api'
 import { createBlankDocument } from '@/lib/document'
+import type { AiService } from '@/types/adapter'
+import type { AiOption } from '@/types/api'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { EditorProvider } from '../EditorProvider'
 import { EditorEngine } from '../engine/editor'
@@ -12,10 +15,26 @@ import { UpscaleDialog } from './UpscaleDialog'
 // jsdom has no worker or OffscreenCanvas; the dialog only needs to know that this browser can run it.
 vi.mock('../engine/upscale/support', async (importOriginal) => ({ ...(await importOriginal<typeof import('../engine/upscale/support')>()), isUpscaleSupported: () => true }))
 
-type Run = (options: { scale: number; method?: UpscaleMethod; detail?: number }, onProgress?: (percent: number) => void, signal?: AbortSignal) => Promise<boolean>
+type Run = (options: { scale: number; method?: UpscaleMethod; detail?: number; option?: string }, onProgress?: (percent: number) => void, signal?: AbortSignal) => Promise<boolean>
 
-function setup(run: Run, source: { width: number; height: number; crop: CropRect | null } = { width: 4000, height: 3000, crop: null }) {
+const SERVER: AiOption = { id: 'env-1:', label: 'AI upscale', task: 'upscale', kind: 'server', provider_name: 'Upscaler', owner: 'operator', sends_offsite: false }
+const EXTERNAL: AiOption = { id: 'env-2:', label: 'External AI', task: 'upscale', kind: 'server', provider_name: 'Provider Z', owner: 'operator', sends_offsite: true }
+const DEVICE_LISTED: AiOption = { id: 'device', label: 'On this device', task: 'upscale', kind: 'device', provider_name: '', owner: 'device', sends_offsite: false }
+
+function fakeAi(models: AiOption[], { remembered = null, defaultId = null }: { remembered?: string | null; defaultId?: string | null } = {}) {
+  const ai: AiService & { remember: ReturnType<typeof vi.fn> } = {
+    options: vi.fn(async () => ({ default: defaultId, models })),
+    run: vi.fn(),
+    remembered: vi.fn(() => remembered),
+    remember: vi.fn<(task: string, option: string) => void>(),
+    offsiteNotice: '',
+  }
+  return ai
+}
+
+function setup(run: Run, source: { width: number; height: number; crop: CropRect | null } = { width: 4000, height: 3000, crop: null }, ai: AiService | null = null) {
   const handle = createMemoryAdapter()
+  handle.adapter.services.ai = ai
   const engine = new EditorEngine({ adapter: handle.adapter, document: createBlankDocument(800, 600), meta: { id: 'd', title: 'T', mode: 'guest' }, ephemeral: true })
   vi.spyOn(engine.style, 'selectedImageSource').mockReturnValue(source)
   const upscale = vi.spyOn(engine.style, 'upscale').mockImplementation(run)
@@ -126,5 +145,82 @@ describe('UpscaleDialog', () => {
     expect(signal?.aborted).toBe(true)
     expect(ctx.closeDialog).toHaveBeenCalledTimes(1)
     expect(ctx.toast).not.toHaveBeenCalled()
+  })
+})
+
+describe('UpscaleDialog: server options', () => {
+  let engine: EditorEngine | null = null
+  afterEach(() => engine?.dispose())
+
+  it('offers no choice when the site has no server option', async () => {
+    const ai = fakeAi([DEVICE_LISTED])
+    const ctx = setup(() => Promise.resolve(true), undefined, ai)
+    engine = ctx.engine
+    await waitFor(() => expect(ai.options).toHaveBeenCalledWith('upscale'))
+    expect(screen.queryByRole('radiogroup', { name: t.dialog.upscaleMethod })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: t.dialog.upscaleButton }))
+    expect(ctx.upscale).toHaveBeenCalledWith({ scale: 2 }, expect.any(Function), expect.any(AbortSignal))
+    expect(ai.remember).not.toHaveBeenCalled()
+  })
+
+  it('starts on this device even when the server names a server option as its default', async () => {
+    const ai = fakeAi([DEVICE_LISTED, SERVER], { defaultId: SERVER.id })
+    const ctx = setup(() => Promise.resolve(true), undefined, ai)
+    engine = ctx.engine
+    const group = await screen.findByRole('radiogroup', { name: t.dialog.upscaleMethod })
+    expect(within(group).getAllByRole('radio')).toHaveLength(2)
+    expect(within(group).getByRole('radio', { name: new RegExp(t.dialog.upscaleDevice) })).toBeChecked()
+    expect(screen.getByText(t.dialog.upscaleNote)).toBeInTheDocument()
+  })
+
+  it('runs the picked server option with the scale and remembers it', async () => {
+    const ai = fakeAi([SERVER])
+    const ctx = setup(() => new Promise<boolean>(() => undefined), { width: 1000, height: 800, crop: null }, ai)
+    engine = ctx.engine
+    await userEvent.click(await screen.findByRole('radio', { name: new RegExp(SERVER.label) }))
+    expect(screen.getByText(t.dialog.upscaleServerNote)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: '4×' }))
+    await userEvent.click(screen.getByRole('button', { name: t.dialog.upscaleButton }))
+    expect(ctx.upscale).toHaveBeenCalledWith({ scale: 4, option: SERVER.id }, expect.any(Function), expect.any(AbortSignal))
+    expect(ai.remember).toHaveBeenCalledWith('upscale', SERVER.id)
+    expect(screen.getByText(t.dialog.upscaleServerWorking)).toBeInTheDocument()
+  })
+
+  it('starts on the option picked last time and shows the notice of one that sends the image away', async () => {
+    const ai = fakeAi([SERVER, EXTERNAL], { remembered: EXTERNAL.id })
+    const ctx = setup(() => Promise.resolve(true), undefined, ai)
+    engine = ctx.engine
+    expect(await screen.findByRole('radio', { name: new RegExp(EXTERNAL.label) })).toBeChecked()
+    expect(screen.getByTestId('upscale-offsite')).toHaveTextContent(t.bgRemoval.offsite)
+  })
+
+  it('lets a server make what this device cannot hold', async () => {
+    Object.defineProperty(navigator, 'deviceMemory', { configurable: true, value: 4 })
+    try {
+      const ai = fakeAi([SERVER])
+      const ctx = setup(() => Promise.resolve(true), undefined, ai)
+      engine = ctx.engine
+      expect(screen.getByRole('button', { name: t.dialog.upscaleButton })).toBeDisabled()
+      await userEvent.click(await screen.findByRole('radio', { name: new RegExp(SERVER.label) }))
+      expect(screen.queryByText(t.dialog.upscaleTooLarge)).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: t.dialog.upscaleButton })).toBeEnabled()
+    } finally {
+      Reflect.deleteProperty(navigator, 'deviceMemory')
+    }
+  })
+
+  it("says in the dialog's words what went wrong on the server", async () => {
+    const ai = fakeAi([SERVER], { remembered: SERVER.id })
+    const run = vi
+      .fn<Run>()
+      .mockRejectedValueOnce(new ApiError({ status: 429, code: 'ai_quota', message: 'Quota.', retryAfter: 120 }))
+      .mockRejectedValueOnce(new ApiError({ status: 502, code: 'ai_bad_response', message: 'Bad.' }))
+    const ctx = setup(run, { width: 1000, height: 800, crop: null }, ai)
+    engine = ctx.engine
+    expect(await screen.findByRole('radio', { name: new RegExp(SERVER.label) })).toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: t.dialog.upscaleButton }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(t.dialog.upscaleQuota(t.bgRemoval.wait(120)))
+    await userEvent.click(screen.getByRole('button', { name: t.dialog.upscaleRetry }))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(t.bgRemoval.errors.badResponse))
   })
 })

@@ -168,6 +168,63 @@ def test_custom_style_mask_in_json(fake, user, photo):
     assert_cut_out(services.run(user, TASK, photo, f"{provider.id}:"), photo)
 
 
+def test_json_style_can_send_the_image_as_a_data_url(fake, user, photo):
+    provider = make_provider(
+        fake.url,
+        "json",
+        tasks=["upscale"],
+        style_config={
+            "path": "/v1/images/generations",
+            "send_as": "data-url",
+            "file_field": "image_url",
+            "extra_fields": {"model": "up-1", "response_format": "b64_json"},
+            "model_field": "",
+            "response_path": "data.0.b64_json",
+        },
+    )
+    result = services.run(user, "upscale", photo, f"{provider.id}:")
+    sent = fake.requests[-1].json
+    assert set(sent) == {"image_url", "model", "response_format"}
+    prefix, _, encoded = sent["image_url"].partition(",")
+    assert prefix == "data:image/png;base64" and base64.b64decode(encoded)[:4] == b"\x89PNG"
+    assert (result.width, result.height) == (192, 96)  # no scale asked: the provider's own size is kept
+
+
+def test_custom_style_sends_a_data_url_in_a_multipart_field(fake, user, photo):
+    fake.routes[("POST", "/up")] = lambda request: image_answer(
+        cutout(base64.b64decode(request.form["image"][1].decode().partition(",")[2]))
+    )
+    provider = make_provider(
+        fake.url, "custom", style_config={"path": "/up", "send_as": "data-url", "file_field": "image"}
+    )
+    assert_cut_out(services.run(user, TASK, photo, f"{provider.id}:"), photo)
+    assert fake.requests[-1].form["image"][0] is None  # a text field, not a file
+
+
+def test_option_fields_rename_task_options_or_leave_them_out(fake, user, photo):
+    renamed = make_provider(
+        fake.url,
+        "multipart",
+        tasks=["upscale"],
+        style_config={"path": "/upscale", "option_fields": {"scale": "factor"}},
+    )
+    result = services.run(user, "upscale", photo, f"{renamed.id}:", {"scale": 4})
+    form = fake.requests[-1].form
+    assert form["factor"] == (None, b"4") and "scale" not in form
+    assert (result.width, result.height) == (256, 128)
+    left_out = make_provider(
+        fake.url,
+        "multipart",
+        tasks=["upscale"],
+        style_config={"path": "/upscale", "option_fields": {"scale": ""}},
+    )
+    result = services.run(user, "upscale", photo, f"{left_out.id}:", {"scale": 4})
+    form = fake.requests[-1].form
+    assert "scale" not in form and "factor" not in form
+    # The server enlarged twice (its default); the result is scaled to the four times asked for.
+    assert (result.width, result.height) == (256, 128)
+
+
 def test_a_jpeg_source_is_sent_as_is_and_a_gif_as_png(fake, user):
     provider = make_provider(fake.url, "multipart", style_config={"path": "/api/remove"})
     jpeg = create_asset(user, image_bytes("JPEG", size=(40, 20)), name="photo.png")
@@ -194,6 +251,13 @@ def test_a_jpeg_source_is_sent_as_is_and_a_gif_as_png(fake, user):
         ("json", {"response_path": "data..x"}, "dot path"),
         ("custom", {"response": "xml:a"}, "response must be"),
         ("custom", {"send_as": "url"}, "send_as"),
+        ("json", {"send_as": "link"}, "send_as"),
+        ("multipart", {"option_fields": ["scale"]}, "option_fields must be an object"),
+        ("multipart", {"option_fields": {"scale": "a b"}}, "option_fields.scale"),
+        ("json", {"file_field": "image_url", "option_fields": {"scale": "image_url"}}, "already in use"),
+        ("json", {"option_fields": {"scale": "model"}}, "already in use"),
+        ("json", {"extra_fields": {"factor": 2}, "option_fields": {"scale": "factor"}}, "already in use"),
+        ("doory", {"option_fields": {"scale": "factor"}}, "no setting option_fields"),
         ("doory", {"path": "/x"}, "no setting path"),
         ("mask", [], "JSON object"),
     ],
@@ -327,6 +391,7 @@ def test_a_binary_style_answering_text_is_not_an_image(fake, user, photo):
         ({"extra_headers": {"token": "abc"}}, "authentication header"),
         ({"extra_fields": {"api_key": "val"}}, "authentication field"),
         ({"extra_fields": {"secret": "val"}}, "authentication field"),
+        ({"option_fields": {"scale": "api_key"}}, "authentication field"),
         ({"path": "/v1/remove?key=secret123"}, "authentication parameter"),
         ({"path": "/v1/remove?token=abc"}, "authentication parameter"),
         ({"path": "/v1/remove?%6Bey=abc"}, "authentication parameter"),

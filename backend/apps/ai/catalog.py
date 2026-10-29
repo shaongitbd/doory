@@ -84,6 +84,8 @@ def user_providers_allowed(user) -> bool:
 def device_available(task: str) -> bool:
     if task == "background-removal":
         return background_removal_model() is not None
+    if task == "upscale":  # the editor's own resampler, with no model to install
+        return True
     return best_installed(task) is not None
 
 

@@ -33,7 +33,11 @@ class TaskOptionsSerializer(serializers.Serializer):
 class TaskRequestSerializer(serializers.Serializer):
     asset_id = serializers.UUIDField()
     model = serializers.CharField(max_length=300, help_text="An option id from GET /api/v1/ai/models/.")
-    options = serializers.DictField(required=False, default=dict, help_text="Task options (none for now).")
+    options = serializers.DictField(
+        required=False,
+        default=dict,
+        help_text='Task options: {"scale": 2 or 4} for upscale, none for background-removal.',
+    )
 
 
 class SanitizedCharField(serializers.CharField):

@@ -132,6 +132,9 @@ _CONFIG_SCHEMA = inline_serializer(
                     help_text="The options every signed-in user has; "
                     "GET /api/v1/ai/models/ lists those of the signed-in user."
                 ),
+                "upscale": TaskOptionsSerializer(
+                    help_text="As background_removal; `device` is the editor's own resampler."
+                ),
             },
         ),
     },

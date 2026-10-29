@@ -99,6 +99,52 @@ describe('StyleApi.upscale', () => {
     engine.dispose()
   })
 
+  it('runs a server option through the AI service, with the scale, and keeps the crop', async () => {
+    const { engine, handle, img } = await setup()
+    asDory(img).assetId = 'a1'
+    img.set({ cropX: 10, cropY: 5, width: 100, height: 50, scaleX: 2, scaleY: 2 })
+    const run = vi.fn(async () => {
+      restore()
+      restore = installImageStub({ width: 800, height: 400 })
+      return { id: 'big', url: '/media/big.png', thumbUrl: '/media/big.webp', width: 800, height: 400, name: 'photo (upscaled)', kind: 'image' as const }
+    })
+    handle.adapter.services.ai = { options: vi.fn(), run, remembered: () => null, remember: vi.fn() }
+    const uploadsBefore = handle.uploads.length
+    expect(await engine.style.upscale({ scale: 4, option: 'env-1:' })).toBe(true)
+    expect(run).toHaveBeenCalledWith('upscale', expect.objectContaining({ model: 'env-1:', assetId: 'a1', options: { scale: 4 } }))
+    expect(upscaleImage).not.toHaveBeenCalled()
+    expect(handle.uploads).toHaveLength(uploadsBefore)
+    expect(asDory(img).assetId).toBe('big')
+    expect({ x: img.cropX, y: img.cropY, width: img.width, height: img.height }).toEqual({ x: 40, y: 20, width: 400, height: 200 })
+    engine.dispose()
+  })
+
+  it('lets the server take a result too large for this device', async () => {
+    restore()
+    restore = installImageStub({ width: 3000, height: 2000 })
+    Object.defineProperty(navigator, 'deviceMemory', { configurable: true, value: 4 })
+    try {
+      const { engine, handle } = await setup()
+      const run = vi.fn(() => new Promise<never>(() => undefined))
+      handle.adapter.services.ai = { options: vi.fn(), run, remembered: () => null, remember: vi.fn() }
+      const controller = new AbortController()
+      const pending = engine.style.upscale({ scale: 2, option: 'env-1:' }, undefined, controller.signal)
+      await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1))
+      controller.abort()
+      engine.dispose()
+      void pending
+    } finally {
+      Reflect.deleteProperty(navigator, 'deviceMemory')
+    }
+  })
+
+  it('refuses a server option when there is no AI service', async () => {
+    const { engine } = await setup()
+    await expect(engine.style.upscale({ scale: 2, option: 'env-1:' })).rejects.toThrow(t.errors.upscale)
+    expect(fetch).not.toHaveBeenCalled()
+    engine.dispose()
+  })
+
   it('leaves an SVG alone without fetching or starting the worker', async () => {
     const { engine } = await setup('/media/assets/logo.svg?v=2')
     expect(engine.style.canUpscale()).toBe(false)

@@ -6,6 +6,10 @@
   `{"data": {"result_b64": …}}`
 * a mask server: `POST /mask` → a black and white mask of another size
 * a Doory-compatible server: `GET /v1/models`, `POST /v1/{task}`
+* an upscaler (multipart → PNG): `POST /upscale`, file field `file`, the factor in the form field `factor`
+  (default 2)
+* a hosted upscaler (JSON → base64): `POST /v1/images/generations`, JSON `{"image_url": <data: URL>}`,
+  answers `{"data": [{"b64_json": …}]}` at three times the size, whatever was asked
 """
 
 from __future__ import annotations
@@ -75,6 +79,11 @@ def mask(data: bytes, size: tuple[int, int] | None = None) -> bytes:
     return png(image)
 
 
+def enlarged(data: bytes, factor: int) -> bytes:
+    image = Image.open(BytesIO(data)).convert("RGB")
+    return png(image.resize((image.width * factor, image.height * factor), Image.Resampling.NEAREST))
+
+
 def image_answer(data: bytes) -> Answer:
     return 200, {"Content-Type": "image/png"}, data
 
@@ -104,6 +113,19 @@ def provider_z(request: Received) -> Answer:
 
 def mask_server(request: Received) -> Answer:
     return image_answer(mask(request.form["file"][1]))
+
+
+def upscaler(request: Received) -> Answer:
+    factor = int(request.form.get("factor", (None, b"2"))[1])
+    return image_answer(enlarged(request.form["file"][1], factor))
+
+
+def hosted_upscaler(request: Received) -> Answer:
+    url = (request.json or {}).get("image_url", "")
+    if not url.startswith("data:image/") or ";base64," not in url:
+        return json_answer({"error": "image_url must be a URL or a data: URL"}, 400)
+    result = enlarged(base64.b64decode(url.partition(",")[2]), 3)
+    return json_answer({"data": [{"b64_json": base64.b64encode(result).decode()}]})
 
 
 DOORY_MODELS = {
@@ -139,6 +161,8 @@ class FakeServer:
             ("POST", "/mask"): mask_server,
             ("GET", "/v1/models"): doory_models,
             ("POST", "/v1/background-removal"): doory_task,
+            ("POST", "/upscale"): upscaler,
+            ("POST", "/v1/images/generations"): hosted_upscaler,
         }
         server = self
 

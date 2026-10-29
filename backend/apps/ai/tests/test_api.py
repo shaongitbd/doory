@@ -134,7 +134,7 @@ def test_running_a_task_on_somebody_elses_asset_is_not_found(other_api, x, photo
 @pytest.mark.parametrize(
     "path, body, status, code",
     [
-        ("/api/v1/ai/upscale/", {"model": "x"}, 404, "unknown_task"),
+        ("/api/v1/ai/erase-object/", {"model": "x"}, 404, "unknown_task"),
         (f"/api/v1/ai/{TASK}/", {"model": "nope:"}, 404, "ai_model_not_found"),
         (f"/api/v1/ai/{TASK}/", {"model": "X", "options": {"a": 1}}, 400, "invalid_options"),
         (f"/api/v1/ai/{TASK}/", {}, 400, "validation_error"),
@@ -211,6 +211,19 @@ def test_a_second_task_has_the_same_endpoint(api, fake, photo, register_task):
         "/api/v1/ai/test-invert/", {"asset_id": str(photo.pk), "model": f"{provider.id}:"}, format="json"
     )
     assert response.status_code == 201 and response.json()["name"] == "photo.png (inverted)"
+
+
+def test_upscale_runs_on_the_same_endpoint_with_its_options(api, fake, photo):
+    provider = make_provider(fake.url, "multipart", tasks=["upscale"], style_config={"path": "/upscale"})
+    url, model = "/api/v1/ai/upscale/", f"{provider.id}:"
+    body = {"asset_id": str(photo.pk), "model": model, "options": {"scale": 4}}
+    response = api.post(url, body, format="json")
+    assert response.status_code == 201
+    assert (response.json()["width"], response.json()["height"]) == (256, 128)
+    assert fake.requests[-1].form["scale"] == (None, b"4")
+    refused = api.post(url, {**body, "options": {"scale": 8}}, format="json")
+    assert refused.status_code == 400 and refused.json()["error"]["code"] == "invalid_options"
+    assert len(fake.requests) == 1
 
 
 # -- the contract --------------------------------------------------------------------------------------------
@@ -345,7 +358,7 @@ def test_an_invalid_secrets_key_refuses_the_secret_instead_of_failing(byos, sett
         {"style": "custom", "style_config": {"response": "xml:a"}},
         {"auth_header": "Host"},
         {"secret": "a\nb"},
-        {"tasks": ["upscale"]},
+        {"tasks": ["erase-object"]},
         {"tasks": []},
         {"timeout_seconds": 301},
     ],
@@ -450,7 +463,7 @@ def test_models_put_validates(byos, api):
     pk = create(api).json()["id"]
     twice = [{"task": TASK, "remote_name": "a"}, {"task": TASK, "remote_name": "a"}]
     assert api.put(f"/api/v1/ai/providers/{pk}/models/", {"models": twice}, format="json").status_code == 400
-    unknown = [{"task": "upscale", "remote_name": "a"}]
+    unknown = [{"task": "erase-object", "remote_name": "a"}]
     assert (
         api.put(f"/api/v1/ai/providers/{pk}/models/", {"models": unknown}, format="json").status_code == 400
     )
