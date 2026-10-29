@@ -73,7 +73,15 @@ def test_the_mcp_handshake_works(issued):
 
 def test_tools_are_listed_with_schemas(issued):
     tools = {tool["name"]: tool for tool in rpc(issued.plaintext, "tools/list").json()["result"]["tools"]}
-    assert {"list_designs", "get_design", "create_design", "edit_design", "search_fonts"} <= set(tools)
+    assert {
+        "list_designs",
+        "get_design",
+        "create_design",
+        "edit_design",
+        "search_fonts",
+        "export_project_backup",
+        "import_project_backup",
+    } <= set(tools)
     assert tools["list_designs"]["annotations"]["readOnlyHint"] is True
     ops = json.dumps(tools["edit_design"]["inputSchema"])
     assert "add_text" in ops and "set_background" in ops

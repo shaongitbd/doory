@@ -33,13 +33,26 @@ operation of edit_design; list_ai_models shows the server models (tell the user 
 (list_versions, restore_version), so mistakes can be undone; trashed designs come back with restore_design.
 Designs open in someone's editor change live in front of them. Give the user the design's editor_url to open
 it. Share links (create_share_link) let anyone with the URL in, so create one only when the user asks for
-it."""
+it. Editable `.doory` files move between Doory installations with export_project_backup and
+import_project_backup."""
 
 
 def _register() -> None:
     # Importing the modules runs their @tool and @resource decorators.
     from . import resources  # noqa: F401
-    from .tools import ai, assets, brand, catalog, comments, designs, export, history, organize, sharing  # noqa: F401
+    from .tools import (  # noqa: F401
+        ai,
+        assets,
+        brand,
+        catalog,
+        comments,
+        designs,
+        export,
+        history,
+        organize,
+        project_backups,
+        sharing,
+    )
 
 
 def _transport_security() -> TransportSecuritySettings:

@@ -69,8 +69,11 @@ They can also handle comments, brand kits, share links and earlier versions, and
 WebP or AVIF images, or several pages as a ZIP, optionally [optimized](../integrations/image-optimization.md),
 or as SVG files, a PDF or a print PDF with bleed and crop marks, or as an MP4, WebM or GIF video if the server
 makes videos (`export_design`, with the options in [image-export.md](image-export.md#image-options) and
-[Video](image-export.md#video)). Designs are also available as MCP resources (`doory://designs/{id}`), and the server offers
-two prompts.
+[Video](image-export.md#video)). `export_project_backup` returns a short-lived link to an editable `.doory`
+backup; `import_project_backup` restores a base64-encoded backup with new design and upload ids. Import needs
+both **Edit designs** and **Add uploads**, and the encoded file must fit `MCP_MAX_REQUEST_BYTES`; larger local
+backups can be restored in the editor. Designs are also available as MCP resources
+(`doory://designs/{id}`), and the server offers two prompts.
 
 Some actions are protected:
 
