@@ -3,7 +3,7 @@
  * image always displays exactly the framed region, so what you see is what you get. All maths happens in the
  * image's own axes (rotation and flips are honoured), then maps to Fabric's `cropX/cropY/width/height`.
  *
- * Pure helpers (`frameToCrop`, `cropToFrame`, `clampCrop`, `fitAspect`) carry the geometry and are unit tested.
+ * Pure helpers (`frameToCrop`, `cropToFrame`, `clampCrop`, `trimCrop`, `fitAspect`) carry the geometry and are unit tested.
  */
 import { type FabricImage, type FabricObject, Point, Rect } from 'fabric'
 import type { PageCanvas } from './pageCanvas'
@@ -78,6 +78,13 @@ export function clampCrop(g: CropGeometry, c: CropParams, minSize = 8): CropPara
   const width = clamp(c.width, Math.min(minSize, g.natW), g.natW)
   const height = clamp(c.height, Math.min(minSize, g.natH), g.natH)
   return { width, height, cropX: clamp(c.cropX, 0, g.natW - width), cropY: clamp(c.cropY, 0, g.natH - height) }
+}
+
+/** The part of the region that lies inside the image, so a resize past an edge stops at that edge. */
+export function trimCrop(g: CropGeometry, c: CropParams): CropParams {
+  const cropX = Math.max(0, c.cropX)
+  const cropY = Math.max(0, c.cropY)
+  return { cropX, cropY, width: Math.min(g.natW, c.cropX + c.width) - cropX, height: Math.min(g.natH, c.cropY + c.height) - cropY }
 }
 
 /** Largest region with aspect `ratio` (w/h) that fits in the image, centred on `around`. */
@@ -213,10 +220,10 @@ export class CropSession {
       canvas.on(name, handler)
       this.cleanups.push(() => canvas.off(name, handler))
     }
-    on('object:moving', () => this.sync())
-    on('object:scaling', () => this.sync())
+    on('object:moving', () => this.sync(false))
+    on('object:scaling', () => this.sync(true))
     on('object:modified', () => {
-      this.sync()
+      this.sync(false)
       this.bakeFrame()
     })
     const cleared = (): void => {
@@ -240,8 +247,10 @@ export class CropSession {
   }
 
   /** Clamps the frame to the image, applies the aspect lock and mirrors the result onto the real image. */
-  private sync(): void {
-    let params = clampCrop(this.geometry, frameToCrop(this.geometry, this.currentFrame()))
+  private sync(resizing: boolean): void {
+    const wanted = frameToCrop(this.geometry, this.currentFrame())
+    // A moved frame slides back inside the image and keeps its size; a resized one is cut at the edge.
+    let params = clampCrop(this.geometry, resizing ? trimCrop(this.geometry, wanted) : wanted)
     if (this.ratio) params = fitAspect(this.geometry, params, this.ratio)
     this.placeFrame(cropToFrame(this.geometry, params))
     this.writeImage(params)

@@ -2,7 +2,7 @@ import { FabricImage, type FabricObject } from 'fabric'
 import { createBlankDocument } from '@/lib/document'
 import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { installImageStub } from '../test/imageStub'
-import { type CropGeometry, clampCrop, cropToFrame, fitAspect, frameToCrop } from './crop'
+import { type CropGeometry, clampCrop, cropToFrame, fitAspect, frameToCrop, trimCrop } from './crop'
 import { EditorEngine } from './editor'
 
 const base: CropGeometry = { natW: 400, natH: 200, sx: 0.5, sy: 0.5, angle: 0, flipX: false, flipY: false, ghostCenter: { x: 300, y: 200 } }
@@ -50,6 +50,11 @@ describe('crop geometry', () => {
     expect(clampCrop(base, { cropX: -50, cropY: 190, width: 100, height: 50 })).toEqual({ cropX: 0, cropY: 150, width: 100, height: 50 })
     expect(clampCrop(base, { cropX: 0, cropY: 0, width: 9999, height: 9999 })).toMatchObject({ width: 400, height: 200 })
     expect(clampCrop(base, { cropX: 0, cropY: 0, width: 0, height: 0 }).width).toBe(8)
+  })
+
+  it('trims the parts of a region that lie outside the image', () => {
+    expect(trimCrop(base, { cropX: -50, cropY: 150, width: 200, height: 100 })).toEqual({ cropX: 0, cropY: 150, width: 150, height: 50 })
+    expect(trimCrop(base, { cropX: 10, cropY: 20, width: 100, height: 50 })).toEqual({ cropX: 10, cropY: 20, width: 100, height: 50 })
   })
 
   it('fits an aspect ratio inside the image around the current centre', () => {
@@ -101,12 +106,16 @@ describe('crop session', () => {
     const frame = view.canvas.getActiveObject() as FabricObject
     // Alt held, so snapping stays out of the way.
     const e = new MouseEvent('mousemove', { altKey: true })
-    const drag = (patch: { scaleX?: number; scaleY?: number }): void => {
+    const drag = (patch: { scaleX?: number; scaleY?: number; left?: number }): void => {
       frame.set(patch)
       view.canvas.fire('object:scaling', { target: frame, e } as never)
     }
+    const move = (left: number): void => {
+      frame.set({ left })
+      view.canvas.fire('object:moving', { target: frame, e } as never)
+    }
     const release = (): void => void view.canvas.fire('object:modified', { target: frame } as never)
-    return { engine, img, drag, release }
+    return { engine, img, frame, drag, move, release }
   }
 
   it('crops one side without moving the other', async () => {
@@ -118,6 +127,32 @@ describe('crop session', () => {
     release()
     expect(img.width).toBeCloseTo(100)
     expect(img.height).toBeCloseTo(60)
+    engine.dispose()
+  })
+
+  it('stops a resize at the edge of the image without moving the other side', async () => {
+    const { engine, img, frame, drag, release } = await setup()
+    drag({ scaleX: 0.5 })
+    release()
+    expect(img.cropX).toBeCloseTo(50)
+    expect(img.cropX + img.width).toBeCloseTo(150)
+    // Fabric's left handle keeps the right edge where it is.
+    const right = frame.getCenterPoint().x + frame.width / 2
+    drag({ scaleX: 2, left: right - frame.width })
+    release()
+    expect(img.cropX).toBeCloseTo(0)
+    expect(img.cropX + img.width).toBeCloseTo(150)
+    engine.dispose()
+  })
+
+  it('keeps the size when the frame is moved past the edge of the image', async () => {
+    const { engine, img, frame, drag, move, release } = await setup()
+    drag({ scaleX: 0.5 })
+    release()
+    move(frame.left - frame.width)
+    release()
+    expect(img.cropX).toBeCloseTo(0)
+    expect(img.width).toBeCloseTo(100)
     engine.dispose()
   })
 })
