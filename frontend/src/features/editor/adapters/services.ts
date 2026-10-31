@@ -157,6 +157,7 @@ export function createAccountServices(designId: string | null, beforeVersion: ()
     brand: {
       list: () => brandApi.list(),
       save: (kit) => (kit.id ? brandApi.update(kit.id, brandInput(kit)) : brandApi.create(brandInput(kit))),
+      remove: (id) => brandApi.remove(id),
     },
     stock: {
       providers: () => stockApi.providers(),

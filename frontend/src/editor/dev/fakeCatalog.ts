@@ -148,6 +148,9 @@ export function createAccountFakes(getDocument: () => DoryDocument, comments: No
         kits = kits.some((k) => k.id === saved.id) ? kits.map((k) => (k.id === saved.id ? saved : k)) : [...kits, saved]
         return saved
       },
+      async remove(id) {
+        kits = kits.filter((k) => k.id !== id)
+      },
     },
     sharing: {
       async list() {

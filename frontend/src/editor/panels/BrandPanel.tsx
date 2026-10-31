@@ -1,4 +1,4 @@
-import { ImagePlus, Plus, Type, X } from 'lucide-react'
+import { ImagePlus, Pencil, Plus, Type, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { BrandFont, BrandKit } from '@/types/api'
 import { useEditor, useEditorState, useSelection } from '../context'
@@ -12,16 +12,18 @@ import { fontStack, primaryFamily } from '../engine/text/fontStack'
 import { useResolvedSrc } from '../hooks/useResolvedSrc'
 import { t } from '../strings'
 import { FontPicker } from '../toolbar/FontPicker'
-import { Button } from '../ui/Button'
+import { Button, IconButton } from '../ui/Button'
 import { ColorPicker } from '../ui/ColorPicker'
 import { Popover } from '../ui/Popover'
 import { Skeleton } from '../ui/Skeleton'
 import { BRAND_ROLES, MAX_BRAND_COLORS, MAX_BRAND_LOGOS, assetToRef, emptyKit, fontOf, pickKit, refToAsset, upsertKit, withColor, withFont, withLogo, withoutColor, withoutLogo } from './brandOps'
 import { setBrandPalette } from './brandPalette'
+import { DeleteControl } from './CommentParts'
 import { CategoryMenu, type CategoryEntry } from './library'
 import styles from './Brand.module.css'
 
 type Brand = NonNullable<ReturnType<typeof useEditor>['adapter']['services']['brand']>
+type Rename = { kind: 'idle' } | { kind: 'renaming'; draft: string }
 
 /** Guests: what a brand kit is, and the way to an account. */
 function BrandGate({ onDone }: { onDone: () => void }) {
@@ -148,12 +150,13 @@ function Kit({ brand }: { brand: Brand }) {
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [rename, setRename] = useState<Rename>({ kind: 'idle' })
 
   const kit = (kits && (kits.find((k) => k.id === kitId) ?? pickKit(kits))) ?? null
 
   useEffect(() => {
-    if (kit) setBrandPalette(kit)
-  }, [kit])
+    if (kits) setBrandPalette(kit)
+  }, [kits, kit])
 
   // The kit's fonts are shown in their own faces (an uploaded font is not loaded until something uses it).
   useEffect(() => {
@@ -171,6 +174,25 @@ function Kit({ brand }: { brand: Brand }) {
     } catch {
       setError(t.brand.saveFailed)
       return null
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const renameTo = async (target: BrandKit, draft: string): Promise<void> => {
+    if (!draft.trim()) return
+    if (await save({ ...target, name: draft.trim() })) setRename({ kind: 'idle' })
+  }
+
+  const remove = async (target: BrandKit): Promise<void> => {
+    setSaving(true)
+    setError(null)
+    try {
+      await brand.remove(target.id)
+      resource.update((cur) => cur.filter((k) => k.id !== target.id))
+      setKitId(null)
+    } catch {
+      setError(t.brand.deleteFailed)
     } finally {
       setSaving(false)
     }
@@ -227,6 +249,7 @@ function Kit({ brand }: { brand: Brand }) {
           activeId={creating ? '+new' : (kit?.id ?? '')}
           testId="brand-kit-menu"
           onSelect={(id) => {
+            setRename({ kind: 'idle' })
             if (id === '+new') setCreating(true)
             else {
               setCreating(false)
@@ -251,6 +274,24 @@ function Kit({ brand }: { brand: Brand }) {
 
       {kit && !creating ? (
         <>
+          {rename.kind === 'renaming' ? (
+            <div className={styles.nameRow}>
+              <input className={styles.nameInput} value={rename.draft} maxLength={80} autoFocus aria-label={t.brand.kitName} data-testid="brand-kit-rename-input" onChange={(e) => setRename({ kind: 'renaming', draft: e.target.value })} onKeyDown={(e) => (e.key === 'Enter' ? void renameTo(kit, rename.draft) : e.key === 'Escape' && setRename({ kind: 'idle' }))} />
+              <Button variant="primary" disabled={!rename.draft.trim() || saving} onClick={() => void renameTo(kit, rename.draft)} data-testid="brand-kit-rename-save">
+                {t.brand.saveName}
+              </Button>
+              <Button variant="ghost" onClick={() => setRename({ kind: 'idle' })}>
+                {t.dialog.cancel}
+              </Button>
+            </div>
+          ) : (
+            <div className={styles.actions}>
+              <IconButton label={t.brand.renameKit} size="sm" onClick={() => setRename({ kind: 'renaming', draft: kit.name })} data-testid="brand-kit-rename">
+                <Pencil size={14} aria-hidden="true" />
+              </IconButton>
+              <DeleteControl label={t.brand.deleteKit} confirmLabel={t.brand.deleteKit} onConfirm={() => void remove(kit)} confirmTestId="brand-kit-delete-confirm" />
+            </div>
+          )}
           <section className={styles.section}>
             <div className={styles.head}>
               <h3 className={styles.heading}>{t.brand.colors}</h3>

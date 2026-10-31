@@ -177,6 +177,11 @@
   border-color: var(--ed-accent);
   box-shadow: var(--focus-ring);
 }
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .addBtn {
   display: inline-flex;
   align-items: center;

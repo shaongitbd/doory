@@ -179,7 +179,7 @@ export interface EditorServices {
     remove(id: string): Promise<void>
   }
   /** null when unavailable (e.g. guests). The editor then shows a "sign up to use this" prompt. */
-  brand: { list(): Promise<BrandKit[]>; save(kit: BrandKit): Promise<BrandKit> } | null
+  brand: { list(): Promise<BrandKit[]>; save(kit: BrandKit): Promise<BrandKit>; remove(id: string): Promise<void> } | null
   stock: {
     providers(): Promise<StockProviders>
     /** `page` is a page number, or the cursor an `all` search returned; `provider` is a name or `all`. */
