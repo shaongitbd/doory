@@ -1,0 +1,48 @@
+name: Security
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependencies and secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Audit Python dependencies
+        run: |
+          pip install --quiet pip-audit
+          pip-audit -r backend/requirements.txt --progress-spinner off
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Audit npm dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      - name: Scan for vulnerabilities and committed secrets
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
