@@ -11,7 +11,7 @@ name: doory
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-doory}
@@ -228,7 +228,7 @@ services:
 
   # Optional: shares live rooms between several realtime workers or replicas. Nothing is stored in it.
   redis:
-    image: redis:7.2-alpine
+    image: redis:7.2-alpine@sha256:2c933526722b4126a61d5c170f766dc159adf97682f0b1cbbc27b1666ba96d84
     profiles: ["redis"]
     restart: unless-stopped
     command: ["redis-server", "--save", "", "--appendonly", "no"]
