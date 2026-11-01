@@ -78,7 +78,7 @@ def process_image_upload(file_obj, *, max_bytes: int, max_pixels: int = MAX_PIXE
     data = _read(file_obj, max_bytes)
     try:
         probe = Image.open(BytesIO(data), formats=list(_FORMATS))
-        # MPO (phones, cameras): a JPEG with more pictures after it, such as a depth map. Its first one counts.
+        # MPO (phones, cameras): a JPEG with more pictures after it, such as a depth map. The first counts.
         fmt = "JPEG" if probe.format == "MPO" else probe.format
         width, height = probe.size
         if (
