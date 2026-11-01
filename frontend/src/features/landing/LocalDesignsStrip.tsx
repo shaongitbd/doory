@@ -26,7 +26,7 @@ function LocalCard({ design, onDelete }: { design: LocalDesignSummary; onDelete(
   )
 }
 
-function RestoreProjectButton() {
+function RestoreProjectButton({ quiet = false }: { quiet?: boolean }) {
   const input = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -34,7 +34,7 @@ function RestoreProjectButton() {
 
   return (
     <>
-      <Button variant="secondary" loading={restoring} leftIcon={<ArchiveRestore size={17} aria-hidden="true" />} onClick={() => input.current?.click()}>
+      <Button variant={quiet ? 'ghost' : 'secondary'} size={quiet ? 'sm' : 'md'} loading={restoring} leftIcon={<ArchiveRestore size={17} aria-hidden="true" />} onClick={() => input.current?.click()}>
         Restore project
       </Button>
       <input
@@ -89,16 +89,12 @@ export function LocalDesignsStrip() {
 
   if (designs.length === 0) {
     return (
-      <section className={`${styles.section} ${styles.restoreOnly}`} aria-labelledby="restore-project-title">
-        <div className={`${styles.panel} ${styles.restorePanel}`}>
-          <div>
-            <p className={styles.eyebrow}>saved somewhere safe?</p>
-            <h2 id="restore-project-title" className={styles.restoreHeading}>Open a project backup</h2>
-            <p className={styles.lead}>Restore an editable <code>.doory</code> file as a new design in this browser.</p>
-          </div>
-          <RestoreProjectButton />
-        </div>
-      </section>
+      <p className={styles.restoreLine}>
+        <span>
+          Have a <code>.doory</code> backup?
+        </span>
+        <RestoreProjectButton quiet />
+      </p>
     )
   }
 

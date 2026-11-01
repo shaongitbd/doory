@@ -201,7 +201,7 @@ describe('"Your local designs" strip', () => {
     renderApp('/')
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('heading', { name: 'Pick up where you left off' })).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Open a project backup' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /backup/i })).toBeNull()
     expect(screen.getByRole('button', { name: 'Restore project' })).toBeInTheDocument()
   })
 

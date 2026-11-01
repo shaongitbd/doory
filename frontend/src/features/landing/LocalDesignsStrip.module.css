@@ -27,27 +27,20 @@
   gap: var(--space-6);
 }
 
-.restoreOnly {
-  padding-top: 0;
-}
-
-.restorePanel {
+.restoreLine {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-6);
-  padding-block: var(--space-6);
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-10);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
-.restoreHeading {
-  margin: var(--space-2) 0 var(--space-1);
-  font-size: clamp(1.35rem, 3vw, 1.75rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.restorePanel code {
-  font-size: 0.9em;
+.restoreLine code {
+  font-size: 0.95em;
 }
 
 .eyebrow {
@@ -216,8 +209,7 @@
     padding: var(--space-6);
   }
 
-  .headerRow,
-  .restorePanel {
+  .headerRow {
     align-items: flex-start;
     flex-direction: column;
   }
