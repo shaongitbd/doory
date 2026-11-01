@@ -78,7 +78,8 @@ def process_image_upload(file_obj, *, max_bytes: int, max_pixels: int = MAX_PIXE
     data = _read(file_obj, max_bytes)
     try:
         probe = Image.open(BytesIO(data), formats=list(_FORMATS))
-        fmt = probe.format
+        # MPO (phones, cameras): a JPEG with more pictures after it, such as a depth map. Its first one counts.
+        fmt = "JPEG" if probe.format == "MPO" else probe.format
         width, height = probe.size
         if (
             width < 1
@@ -142,7 +143,7 @@ def _reencode_avif(img: Image.Image) -> bytes:
 def _normalise(img: Image.Image, fmt: str, data: bytes, width: int, height: int) -> ProcessedImage:
     """The upload as it will be stored: its own bytes when nothing needs stripping, else a clean copy."""
     mime, ext = _FORMATS[fmt]
-    animated = getattr(img, "n_frames", 1) > 1
+    animated = fmt != "JPEG" and getattr(img, "n_frames", 1) > 1
     has_exif = bool(img.info.get("exif")) or bool(img.getexif())
     has_metadata = has_exif or bool(img.info.get("xmp"))
     if fmt == "AVIF":

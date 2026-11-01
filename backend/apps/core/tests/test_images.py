@@ -24,6 +24,29 @@ def test_accepts_png_jpeg_webp_gif():
         assert out.mime == mime and (out.width, out.height) == (40, 20)
 
 
+def _mpo() -> BytesIO:
+    """Two pictures in one MPO file, the first with Exif: a GPS position and an orientation that turns it."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    exif.get_ifd(0x8825)[1] = "N"
+    first, second = Image.new("RGB", (40, 20), (200, 30, 60)), Image.new("RGB", (40, 20), (0, 0, 0))
+    buf = BytesIO()
+    first.save(buf, "MPO", save_all=True, append_images=[second], exif=exif)
+    return BytesIO(buf.getvalue())
+
+
+def test_an_mpo_photo_is_stored_as_a_plain_jpeg_of_its_first_picture():
+    source = _mpo()
+    assert Image.open(BytesIO(source.getvalue())).format == "MPO"
+    out = process_image_upload(source, max_bytes=1_000_000)
+    assert (out.mime, out.ext) == ("image/jpeg", "jpg")
+    stored = Image.open(BytesIO(out.data))
+    assert stored.format == "JPEG" and getattr(stored, "n_frames", 1) == 1
+    assert not stored.getexif() and b"GPS" not in out.data
+    assert stored.size == (20, 40)  # the orientation was applied
+    assert stored.convert("RGB").getpixel((10, 20))[0] > 150  # the first picture, not the black second one
+
+
 def test_rejects_garbage_and_non_images_even_with_image_names():
     with pytest.raises(ImageError):
         process_image_upload(BytesIO(b"<svg/>"), max_bytes=1000)
