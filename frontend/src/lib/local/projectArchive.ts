@@ -11,6 +11,9 @@ const MAX_EXPANDED_BYTES = 1024 * 1024 * 1024
 const MAX_ENTRIES = 5002
 const MAX_MANIFEST_BYTES = 10 * 1024 * 1024
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+/** What an upload may be: a restored file skips the upload's own checks, so its type is held to the same list. */
+const FILE_TYPE = /^(image\/(png|jpeg|webp|gif|avif|svg\+xml)|audio\/[a-z0-9.+-]+(;.*)?)$/i
+const THUMBNAIL_TYPE = /^image\/(png|jpeg|webp)$/i
 
 interface ArchivedAsset {
   id: string
@@ -89,6 +92,7 @@ function parseAsset(value: unknown): ArchivedAsset {
     value.name.length > 500 ||
     typeof value.mime !== 'string' ||
     value.mime.length > 200 ||
+    !FILE_TYPE.test(value.mime) ||
     !finiteNumber(value.width) ||
     !finiteNumber(value.height)
   ) {
@@ -115,7 +119,7 @@ function parseManifest(value: unknown): ProjectManifest {
   if (new Set(assets.map((asset) => asset.id)).size !== assets.length) throw new ProjectArchiveError('This project backup contains duplicate assets.')
   let thumbnail: ProjectManifest['thumbnail']
   if (value.thumbnail !== undefined) {
-    if (!record(value.thumbnail) || value.thumbnail.path !== THUMBNAIL || typeof value.thumbnail.mime !== 'string' || value.thumbnail.mime.length > 200) {
+    if (!record(value.thumbnail) || value.thumbnail.path !== THUMBNAIL || typeof value.thumbnail.mime !== 'string' || !THUMBNAIL_TYPE.test(value.thumbnail.mime)) {
       throw new ProjectArchiveError('This project backup has invalid thumbnail information.')
     }
     thumbnail = { path: THUMBNAIL, mime: value.thumbnail.mime }

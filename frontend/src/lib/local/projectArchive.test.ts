@@ -55,6 +55,17 @@ describe('local project backups', () => {
     await expect(exportLocalProject(design.id, repo)).rejects.toThrow(/missing from browser storage/)
   })
 
+  it('takes only the file types an upload may have', async () => {
+    const repo = repository()
+    const document = createBlankDocument(10, 10)
+    document.pages[0].objects = [{ id: 'page', type: 'image', src: `idb://${ASSET_ID}` }]
+    const manifest = { format: 'doory-project', version: 1, title: 'Page', document, assets: [{ id: ASSET_ID, path: `assets/${ASSET_ID}`, name: 'page.html', mime: 'text/html', width: 1, height: 1 }] }
+    const archive = zipSync({ 'project.json': strToU8(JSON.stringify(manifest)), [`assets/${ASSET_ID}`]: strToU8('<script>') })
+    const bytes = archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength) as ArrayBuffer
+    await expect(importLocalProject(new Blob([bytes]), repo)).rejects.toThrow(/invalid asset information/)
+    expect(await repo.listAssets()).toEqual([])
+  })
+
   it('rejects malformed archives and unsupported backup versions without writing anything', async () => {
     const repo = repository()
     await expect(importLocalProject(blob(['not a zip']), repo)).rejects.toBeInstanceOf(ProjectArchiveError)
