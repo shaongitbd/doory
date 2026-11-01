@@ -87,9 +87,17 @@ export class DoryLine extends FabricObject {
     return super.toObject(['arrowStart', 'arrowEnd', ...propertiesToInclude] as never[]) as unknown as T
   }
 
+  /** The line and its heads. `COMMON_PARTS` must be an item of its own: Fabric swaps that item for the line's style. */
   override _toSVG(): string[] {
     const half = this.width / 2
-    return [`<line x1="${-half}" y1="0" x2="${half}" y2="0" COMMON_PARTS />\n`]
+    return [`<line x1="${-half}" y1="0" x2="${half}" y2="0" `, 'COMMON_PARTS', ' />\n', this.headSvg(this.arrowStart, -half, 180), this.headSvg(this.arrowEnd, half, 0)]
+  }
+
+  private headSvg(kind: ArrowHead, x: number, angle: number): string {
+    if (kind === 'none') return ''
+    const { d, fill } = arrowHeadPath(kind, arrowHeadSize(this.strokeWidth))
+    const color = util.string.escapeXml(typeof this.stroke === 'string' ? this.stroke : '#000000')
+    return `<path d="${d}" transform="translate(${x} 0) rotate(${angle})" fill="${fill ? color : 'none'}" stroke="${color}" stroke-width="${this.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${this.opacity}" />\n`
   }
 }
 
