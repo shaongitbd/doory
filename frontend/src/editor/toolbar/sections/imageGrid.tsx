@@ -143,12 +143,15 @@ function GridGapControl({ gap }: { gap: number }) {
   )
 }
 
-function GridCellControls({ cells }: { cells: SelectedGridCell[] }) {
+function GridCellControls({ cells, occupiedCellIds }: { cells: SelectedGridCell[]; occupiedCellIds: string[] }) {
   const editor = useEditor()
   return (
     <div style={{ display: 'grid', gap: 6, width: 288 }} role="list" aria-label={t.imageGrid.manageCells}>
       {cells.map((cell, index) => {
         const position = index + 1
+        // An empty cell can only be given a picture: there is nothing to move or remove.
+        const filled = occupiedCellIds.includes(cell.gridCellId)
+        const fillLabel = filled ? t.imageGrid.replaceImageInCell(position) : t.imageGrid.addImageToCell(position)
         const buttonStyle = { width: 30, height: 30, padding: 0, display: 'inline-grid', placeItems: 'center' } as const
         return (
           <div key={cell.gridCellId} role="listitem" style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', alignItems: 'center', gap: 4 }}>
@@ -157,8 +160,8 @@ function GridCellControls({ cells }: { cells: SelectedGridCell[] }) {
               type="button"
               className={`${ed.btn} ${ed.ghost}`}
               style={buttonStyle}
-              aria-label={t.imageGrid.replaceImageInCell(position)}
-              title={t.imageGrid.replaceImageInCell(position)}
+              aria-label={fillLabel}
+              title={fillLabel}
               onClick={() => void editor.imageGrids.replaceCell(cell.gridCellId)}
             >
               <ImagePlus size={15} aria-hidden="true" />
@@ -169,7 +172,7 @@ function GridCellControls({ cells }: { cells: SelectedGridCell[] }) {
               style={buttonStyle}
               aria-label={`${t.imageGrid.moveImageEarlier}: ${t.imageGrid.cell(position)}`}
               title={t.imageGrid.moveImageEarlier}
-              disabled={index === 0}
+              disabled={!filled || index === 0}
               onClick={() => void editor.imageGrids.moveCell(cell.gridCellId, -1)}
             >
               <ArrowLeft size={15} aria-hidden="true" />
@@ -180,7 +183,7 @@ function GridCellControls({ cells }: { cells: SelectedGridCell[] }) {
               style={buttonStyle}
               aria-label={`${t.imageGrid.moveImageLater}: ${t.imageGrid.cell(position)}`}
               title={t.imageGrid.moveImageLater}
-              disabled={index === cells.length - 1}
+              disabled={!filled || index === cells.length - 1}
               onClick={() => void editor.imageGrids.moveCell(cell.gridCellId, 1)}
             >
               <ArrowRight size={15} aria-hidden="true" />
@@ -191,6 +194,7 @@ function GridCellControls({ cells }: { cells: SelectedGridCell[] }) {
               style={buttonStyle}
               aria-label={`${t.imageGrid.removeImage}: ${t.imageGrid.cell(position)}`}
               title={t.imageGrid.removeImage}
+              disabled={!filled}
               onClick={() => void editor.imageGrids.clearCell(cell.gridCellId)}
             >
               <Trash2 size={15} aria-hidden="true" />
@@ -215,7 +219,7 @@ export function ImageGridSection() {
         <GridGapControl gap={grid.gap} />
       </PopoverTool>
       <PopoverTool label={t.imageGrid.manageCells} trigger={<span className={ed.textButton}>{t.imageGrid.cells(grid.cellCount)}</span>} width={312} testId="ed-grid-cells">
-        <GridCellControls cells={grid.cells} />
+        <GridCellControls cells={grid.cells} occupiedCellIds={grid.occupiedCellIds} />
       </PopoverTool>
     </>
   )
