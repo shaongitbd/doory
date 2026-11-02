@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useEditor, useEditorState, useEditorStateShallow } from '../context'
 import { pageSize } from '../engine/docOps'
 import { imageFilesFrom } from '../engine/files'
+import { endImageAssetDrag, hasImageAssetDrag, readImageAssetDrag } from '../drawers/imageAssetDrag'
 import { DEFAULT_METRICS, type CanvasWindow, type StackMetrics, computeCanvasWindow, computeStack, pageAtViewportCenter, slotLeft, visiblePageIds, windowContains } from '../engine/layout'
 import { getPageSize, pageSizes, widestPage } from '../engine/pageSizes'
 import { wheelZoom } from '../engine/zoom'
@@ -363,15 +364,64 @@ export function Workspace({ stripOpen, onToggleStrip }: WorkspaceProps) {
     }
   }
 
+  const clearImageAssetDrop = useCallback(() => {
+    for (const view of editor.allViews()) view.setImageAssetDrop(null)
+  }, [editor])
+
+  const finishImageAssetDrag = useCallback(() => {
+    clearImageAssetDrop()
+    endImageAssetDrag()
+  }, [clearImageAssetDrop])
+
+  useEffect(() => {
+    document.addEventListener('dragend', finishImageAssetDrag)
+    return () => {
+      document.removeEventListener('dragend', finishImageAssetDrag)
+      finishImageAssetDrag()
+    }
+  }, [finishImageAssetDrag])
+
+  const imageAssetTargetAt = (clientX: number, clientY: number): { pageId: string; gridId: string; gridCellId: string } | null => {
+    const pageId = editor.view.pageAt(clientX, clientY)
+    const point = pageId ? editor.view.clientToPage(pageId, clientX, clientY) : null
+    let target: { pageId: string; gridId: string; gridCellId: string } | null = null
+    for (const view of editor.allViews()) {
+      const hit = pageId === view.pageId ? view.setImageAssetDrop(point) : view.setImageAssetDrop(null)
+      if (hit) target = { pageId: view.pageId, ...hit }
+    }
+    return target
+  }
+
   const onDragOver = (e: React.DragEvent): void => {
-    if (readOnly || !e.dataTransfer.types.includes('Files')) return
+    if (readOnly) return
+    if (hasImageAssetDrag(e.dataTransfer)) {
+      setDropping(false)
+      if (!imageAssetTargetAt(e.clientX, e.clientY)) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+      return
+    }
+    if (!e.dataTransfer.types.includes('Files')) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
     setDropping(true)
   }
   const onDrop = (e: React.DragEvent): void => {
     setDropping(false)
-    if (readOnly) return
+    if (readOnly) {
+      if (hasImageAssetDrag(e.dataTransfer)) finishImageAssetDrag()
+      else clearImageAssetDrop()
+      return
+    }
+    if (hasImageAssetDrag(e.dataTransfer)) {
+      e.preventDefault()
+      const asset = readImageAssetDrag(e.dataTransfer)
+      const target = asset ? imageAssetTargetAt(e.clientX, e.clientY) : null
+      finishImageAssetDrag()
+      if (!asset || !target) return
+      void editor.imageGrids.fillCellWith(target.pageId, target.gridId, target.gridCellId, asset)
+      return
+    }
     const files = imageFilesFrom(e.dataTransfer)
     if (files.length === 0) return
     e.preventDefault()
@@ -392,7 +442,11 @@ export function Workspace({ stripOpen, onToggleStrip }: WorkspaceProps) {
         data-workspace-bg
         onPointerDown={onBackgroundPointerDown}
         onDragOver={onDragOver}
-        onDragLeave={() => setDropping(false)}
+        onDragLeave={(event) => {
+          if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+          setDropping(false)
+          clearImageAssetDrop()
+        }}
         onDrop={onDrop}
         onContextMenu={(e) => {
           if (e.target === e.currentTarget) e.preventDefault()

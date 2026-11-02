@@ -208,7 +208,7 @@ export async function readOnly(page: Page): Promise<boolean> {
 
 export async function openTool(page: Page, id: string): Promise<void> {
   const button = page.locator(`[data-testid="ed-add-entry-${id}"]`)
-  if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click()
+  if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click()
 }
 
 export async function addShape(page: Page, id: 'rect' | 'ellipse' | 'triangle' | 'star'): Promise<void> {

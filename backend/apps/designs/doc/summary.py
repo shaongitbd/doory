@@ -10,7 +10,7 @@ from typing import Any
 
 from .builders import primary_family
 from .fields import read_field, read_fit
-from .kinds import object_kind
+from .kinds import finite_number, image_grid_spec, object_kind
 from .ops import box
 
 TEXT_PREVIEW = 500
@@ -78,6 +78,30 @@ def summarize_object(obj: dict) -> dict:
             out["mask"] = obj["maskShape"]
     elif kind == "qr":
         out["qr_text"] = (obj.get("qr") or {}).get("text")
+    elif kind == "image-grid":
+        spec = image_grid_spec(obj)
+        assert spec is not None
+        gap = finite_number(spec.get("gap"))
+        if gap is None:
+            gap = 8
+        gap = min(64, max(0, round(gap, 3)))
+        cell_ids = {cell["gridCellId"] for cell in spec["cells"]}
+        children = obj.get("objects") if isinstance(obj.get("objects"), list) else []
+        out.update(
+            {
+                "layout": spec["layoutId"],
+                "gap": gap,
+                "cells": len(spec["cells"]),
+                "filled_cells": [
+                    child.get("gridCellId")
+                    for child in children
+                    if isinstance(child, dict)
+                    and isinstance(child.get("gridCellId"), str)
+                    and child["gridCellId"] in cell_ids
+                    and object_kind(child) == "image"
+                ],
+            }
+        )
     elif kind == "group":
         children = obj.get("objects") if isinstance(obj.get("objects"), list) else []
         out["children"] = len(children)

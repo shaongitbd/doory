@@ -16,6 +16,7 @@ import { ArrangeApi } from './api/arrange'
 import { ClipboardApi } from './api/clipboard'
 import { CropApi } from './api/crop'
 import { InsertApi } from './api/insert'
+import { ImageGridApi, type CanvasImageFrame } from './api/imageGrids'
 import { PagesApi } from './api/pages'
 import { StyleApi } from './api/style'
 import { ViewApi, type ViewportController } from './api/view'
@@ -113,6 +114,7 @@ export class EditorEngine implements PageCanvasHost {
   readonly snapshots: PageSnapshots
   readonly history: History<HistoryState>
   readonly insert: InsertApi
+  readonly imageGrids: ImageGridApi
   readonly arrange: ArrangeApi
   readonly style: StyleApi
   readonly pages: PagesApi
@@ -160,6 +162,7 @@ export class EditorEngine implements PageCanvasHost {
     applyThemeDefaults(this.themeValue)
 
     this.insert = new InsertApi(this)
+    this.imageGrids = new ImageGridApi(this)
     this.arrange = new ArrangeApi(this)
     this.style = new StyleApi(this)
     this.pages = new PagesApi(this)
@@ -688,6 +691,18 @@ export class EditorEngine implements PageCanvasHost {
 
   onPlaceholderActivate(pageId: string, id: string): void {
     void this.insert.fillPlaceholder(pageId, id)
+  }
+
+  onImageGridCellActivate(pageId: string, gridId: string, gridCellId: string): void {
+    void this.imageGrids.fillCell(pageId, gridId, gridCellId)
+  }
+
+  onImageGridCellSwap(pageId: string, gridId: string, fromCellId: string, toCellId: string): void {
+    this.imageGrids.swapCells(pageId, gridId, fromCellId, toCellId)
+  }
+
+  onImageGridImageDrop(pageId: string, sourceId: string, gridId: string, gridCellId: string, sourceFrame: CanvasImageFrame): void {
+    this.imageGrids.consumeCanvasImage(pageId, sourceId, gridId, gridCellId, sourceFrame)
   }
 
   onToolDone(): void {

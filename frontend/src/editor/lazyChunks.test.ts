@@ -61,6 +61,8 @@ const LAZY: Record<string, string> = {
   '/src/editor/panels/VideosPanel.tsx': 'videos panel',
   '/src/editor/workspace/TimelineClips.tsx': 'video rows of the timeline',
   '/src/editor/toolbar/sections/clip.tsx': 'video clip toolbar',
+  '/src/editor/toolbar/sections/imageGrid.tsx': 'image grid toolbar',
+  '/src/editor/drawers/GridTab.tsx': 'image grid preset drawer',
   '/src/editor/panels/CommentsPanel.tsx': 'comments panel',
   '/src/editor/panels/CommentsIcon.tsx': 'comments count in the top bar',
   '/src/editor/workspace/CommentPins.tsx': 'comment pins on the pages',

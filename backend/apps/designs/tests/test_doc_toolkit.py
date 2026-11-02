@@ -19,6 +19,49 @@ OPS = TypeAdapter(list[Operation])
 PAGE = Page(800, 600)
 
 
+def image_grid(object_id: str = "grid") -> dict:
+    return {
+        "id": object_id,
+        "type": "group",
+        "left": 100,
+        "top": 100,
+        "width": 240,
+        "height": 120,
+        "scaleX": 1,
+        "scaleY": 1,
+        "imageGrid": {
+            "version": 1,
+            "layoutId": "two-columns",
+            "gap": 8,
+            "cells": [
+                {"gridCellId": "cell-1", "x": 0, "y": 0, "width": 0.5, "height": 1},
+                {"gridCellId": "cell-2", "x": 0.5, "y": 0, "width": 0.5, "height": 1},
+            ],
+        },
+        "objects": [
+            {
+                "id": f"{object_id}-empty",
+                "type": "rect",
+                "gridCellId": "cell-1",
+                "left": -60,
+                "top": 0,
+                "width": 116,
+                "height": 120,
+            },
+            {
+                "id": f"{object_id}-photo",
+                "type": "image",
+                "gridCellId": "cell-2",
+                "src": "/media/assets/u/grid-photo.png",
+                "left": 60,
+                "top": 0,
+                "width": 116,
+                "height": 120,
+            },
+        ],
+    }
+
+
 class Resolver:
     def __init__(self):
         self.images = {
@@ -526,6 +569,67 @@ def test_replace_image_refuses_non_images_and_ambiguous_sources():
         OPS.validate_python(
             [{"op": "replace_image", "object_id": "img", "asset_id": "asset-1", "focal": [1.5, 0]}]
         )
+
+
+def test_image_grids_have_a_semantic_kind_and_summary():
+    grid = image_grid()
+    assert object_kind(grid) == "image-grid"
+    document = valid(make_doc(objects=[grid]))
+    summary = summarize_document(document)["pages"][0]["objects"][0]
+    assert summary == {
+        "id": "grid",
+        "kind": "image-grid",
+        "x": 100,
+        "y": 100,
+        "width": 240,
+        "height": 120,
+        "layout": "two-columns",
+        "gap": 8,
+        "cells": 2,
+        "filled_cells": ["cell-2"],
+    }
+
+    malformed = image_grid("malformed")
+    malformed["imageGrid"]["cells"][1]["x"] = 0.25  # overlaps cell 1
+    assert object_kind(malformed) == "group"
+
+    oversized_coordinate = image_grid("oversized-coordinate")
+    oversized_coordinate["imageGrid"]["cells"][0]["x"] = 10**1_000
+    assert object_kind(oversized_coordinate) == "group"
+
+    oversized_gap = image_grid("oversized-gap")
+    oversized_gap["imageGrid"]["gap"] = 10**1_000
+    oversized_summary = summarize_document(valid(make_doc(objects=[oversized_gap])))["pages"][0]["objects"][0]
+    assert oversized_summary["kind"] == "image-grid"
+    assert oversized_summary["gap"] == 8
+
+
+def test_a_grid_child_with_an_odd_cell_id_does_not_break_the_summary():
+    grid = image_grid()
+    grid["objects"][0]["gridCellId"] = ["cell-1"]
+    summary = summarize_document(make_doc(objects=[grid]))["pages"][0]["objects"][0]
+    assert summary["filled_cells"] == ["cell-2"]
+
+
+def test_image_grids_cannot_be_grouped_or_ungrouped():
+    shape = builders.build_shape(PAGE, shape="rect", width=100, height=80)
+    shape["id"] = "shape"
+    document = make_doc(
+        objects=[
+            image_grid(),
+            shape,
+        ]
+    )
+    with pytest.raises(EditError, match="Image grids cannot be grouped"):
+        run(document, {"op": "group_objects", "object_ids": ["grid", "shape"]})
+    with pytest.raises(EditError, match="Image grids cannot be ungrouped"):
+        run(document, {"op": "ungroup", "object_id": "grid"})
+    with pytest.raises(EditError, match="only be resized in the editor"):
+        run(document, {"op": "update_object", "object_id": "grid", "width": 320})
+
+    moved = run(document, {"op": "update_object", "object_id": "grid", "x": 250, "angle": 15}).document
+    grid = moved["pages"][0]["objects"][0]
+    assert box(grid)["x"] == 250 and grid["angle"] == 15
 
 
 def test_objects_can_be_grouped_and_ungrouped_where_they_are():

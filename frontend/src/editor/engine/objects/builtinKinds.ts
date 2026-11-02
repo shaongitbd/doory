@@ -2,7 +2,7 @@
  * Built-in object kinds, registered through the same public registry third parties use.
  * Importing this module registers them (idempotent).
  */
-import { type FabricImage, type FabricObject, IText } from 'fabric'
+import { type FabricImage, type FabricObject, Group, IText } from 'fabric'
 import type { DocObject } from '@/types/document'
 import { applyColorMap } from './elements'
 import { applyCurve } from './curvedText'
@@ -16,6 +16,8 @@ import { readTextFit, refitTextbox, validFitFontSize } from './textStyle'
 import { qrDataUrl } from './qr'
 import { t } from '../../strings'
 import { CLIP_PROPS, isClip } from '../../clips/model'
+import { readImageGridSpec } from '../../grids/model'
+import { reconcileImageGridChildren } from './imageGrid'
 
 
 const TEXT_TYPES = new Set(['textbox', 'itext', 'text'])
@@ -59,6 +61,21 @@ export function registerBuiltinKinds(): void {
     dehydrate(out) {
       delete out.src
       delete out.docSrc
+    },
+  })
+
+  registerObjectKind({
+    id: 'image-grid',
+    label: t.kinds['image-grid'],
+    priority: 95,
+    matches: (o) => typeOf(o) === 'group' && readImageGridSpec(o.imageGrid) !== null,
+    extraProps: ['imageGrid', 'gridCellId'],
+    hydrate(obj) {
+      if (!(obj instanceof Group)) return
+      const spec = readImageGridSpec(asDory(obj).imageGrid)
+      if (!spec) return
+      asDory(obj).imageGrid = spec
+      reconcileImageGridChildren(obj, spec)
     },
   })
 

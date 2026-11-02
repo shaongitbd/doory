@@ -9,6 +9,7 @@
 import {
   ActiveSelection,
   Canvas,
+  FabricImage,
   type FabricObject,
   Group,
   IText,
@@ -27,8 +28,18 @@ import { buildBackground, installBackground } from './objects/background'
 import { bakeInPlace, isScaled } from './objects/bake'
 import { refitCurve } from './objects/curvedText'
 import { customizeControls } from './objects/controls'
+import {
+  gridCellObject,
+  imageGridCellAtPoint,
+  imageGridCellPolygon,
+  imageGridSpecOf,
+  isEmptyGridCell,
+  isImageGrid,
+  normalizeImageGridTransform,
+} from './objects/imageGrid'
 import { anchorFrames, carriedPictures, clampSlotImage, followFrames, type FrameAnchor, slotOf, strokeSlotOutline } from './objects/slot'
 import { applyLock, asDory, ensureId } from './objects/dory'
+import { kindOfLive } from './objects/kinds'
 import { reapplyCase, refitTextbox, syncDirection } from './objects/textStyle'
 import { type CanvasTheme, applyThemeToCanvas, selectionStyle } from './objects/theme'
 import { type Deferred, mergeObject, planPage } from './remoteSync'
@@ -36,6 +47,7 @@ import { type LoadContext, deserializeObjects, serializePage } from './serializa
 import { type ResizeDrag, type SnapGuide, type SpacingHint, computeResizeSnap, computeSnap } from './snapping'
 import { continueList, renumber } from './text/lists'
 import { t as strings } from '../strings'
+import type { CanvasImageFrame } from './api/imageGrids'
 
 export type ToolId = 'select' | 'hand' | 'text'
 
@@ -70,6 +82,9 @@ export interface PageCanvasHost {
   onContextMenu(pageId: string, clientX: number, clientY: number): void
   onEditingChange(pageId: string, editing: boolean): void
   onPlaceholderActivate(pageId: string, id: string): void
+  onImageGridCellActivate(pageId: string, gridId: string, gridCellId: string): void
+  onImageGridCellSwap(pageId: string, gridId: string, fromCellId: string, toCellId: string): void
+  onImageGridImageDrop(pageId: string, sourceId: string, gridId: string, gridCellId: string, sourceFrame: CanvasImageFrame): void
   onToolDone(): void
   /** The user tried to edit the text of an object somebody else is editing. */
   onEditBlocked(pageId: string, id: string): void
@@ -88,6 +103,37 @@ const EMPTY_OVERLAY: OverlayState = { guides: [], spacing: [], hover: null, rule
 const NUDGE_CLICK_SLOP = 6
 /** Breathing room between a text and its selection border, so the last glyph never pokes out of it. */
 const TEXT_PADDING = 6
+
+function canDropIntoImageGrid(obj: FabricObject): obj is FabricImage {
+  if (!(obj instanceof FabricImage) || kindOfLive(obj) !== 'image') return false
+  const data = asDory(obj)
+  return !data.gridCellId && !data.slot && !data.maskShape && data.maskRadius === undefined && !obj.clipPath
+}
+
+interface GridCellPress {
+  group: Group
+  gridCellId: string
+  clientX: number
+  clientY: number
+  dragging: boolean
+  overCellId: string | null
+}
+
+interface GridImageDrag {
+  sourceId: string
+  sourceFrame: CanvasImageFrame
+  target: GridDropTarget | null
+}
+
+interface GridDropTarget {
+  group: Group
+  gridCellId: string
+}
+
+export interface ImageGridDropTarget {
+  gridId: string
+  gridCellId: string
+}
 
 export function objectRect(o: FabricObject): Rect {
   const r = o.getBoundingRect()
@@ -122,6 +168,12 @@ export class PageCanvas {
   private pendingRemote = 0
   /** Objects whose text somebody else is editing right now. */
   private editLocks: ReadonlySet<string> = new Set()
+  /** A semantic grid entered by double-click; its children remain layout-owned rather than freely selectable. */
+  private editingGrid: Group | null = null
+  private gridCellPress: GridCellPress | null = null
+  private gridImageDrag: GridImageDrag | null = null
+  /** A library thumbnail being dragged over a grid cell from outside Fabric's canvas events. */
+  private imageAssetDrop: GridDropTarget | null = null
 
   constructor(
     private readonly host: PageCanvasHost,
@@ -196,6 +248,17 @@ export class PageCanvas {
     this.drawOverlay()
   }
 
+  /** Updates the grid cell highlighted for an image dragged from the asset library. */
+  setImageAssetDrop(point: { x: number; y: number } | null): ImageGridDropTarget | null {
+    const next = point && !this.host.readOnly ? this.imageGridDropAt(point) : null
+    const changed = this.imageAssetDrop?.group !== next?.group || this.imageAssetDrop?.gridCellId !== next?.gridCellId
+    this.imageAssetDrop = next
+    if (changed) this.drawOverlay()
+    if (!next) return null
+    const gridId = asDory(next.group).id
+    return gridId ? { gridId, gridCellId: next.gridCellId } : null
+  }
+
   setTheme(theme: CanvasTheme): void {
     applyThemeToCanvas(this.canvas, theme)
     this.drawOverlay()
@@ -208,6 +271,7 @@ export class PageCanvas {
       o.evented = !readOnly
     }
     if (readOnly) this.canvas.discardActiveObject()
+    if (readOnly) this.setImageAssetDrop(null)
     this.canvas.skipTargetFind = readOnly
     this.canvas.requestRenderAll()
   }
@@ -360,6 +424,7 @@ export class PageCanvas {
     }
     this.loadedPage = this.deferred.size === 0 ? next : { ...next, objects: next.objects.map((o) => this.deferred.get(o.id)?.base ?? o) }
     this.overlay.rulerGuides = next.guides ?? []
+    this.clearInvalidGridInteractions()
     if (discard) {
       const restore = selected.map((id) => this.getById(id)).filter((o): o is FabricObject => !!o)
       if (restore.length > 0) this.quietly(() => this.selectObjects(restore))
@@ -422,6 +487,22 @@ export class PageCanvas {
       const obj = live.get(doc.id)
       if (obj) canvas.moveObjectTo(obj, index)
     })
+    this.clearInvalidGridInteractions()
+  }
+
+  private clearInvalidGridInteractions(): void {
+    const objects = this.canvas.getObjects()
+    if (this.editingGrid && !objects.includes(this.editingGrid)) {
+      this.editingGrid = null
+      this.gridCellPress = null
+    }
+    const drag = this.gridImageDrag
+    const target = drag?.target
+    if (drag && (!this.getById(drag.sourceId) || (target && (!objects.includes(target.group) || !gridCellObject(target.group, target.gridCellId))))) {
+      this.gridImageDrag = null
+    }
+    const asset = this.imageAssetDrop
+    if (asset && (!objects.includes(asset.group) || !gridCellObject(asset.group, asset.gridCellId))) this.imageAssetDrop = null
   }
 
   /** The objects whose text somebody else is editing: they stay selectable and movable but cannot enter text editing. */
@@ -555,12 +636,19 @@ export class PageCanvas {
 
     on('mouse:down:before', () => host.onPointerActivate(pid))
 
-    on('selection:created', () => !this.suppress && host.onSelectionChange(pid))
-    on('selection:updated', () => !this.suppress && host.onSelectionChange(pid))
+    on('selection:created', () => {
+      if (this.editingGrid && c.getActiveObject() !== this.editingGrid) this.leaveGridEditing()
+      if (!this.suppress) host.onSelectionChange(pid)
+    })
+    on('selection:updated', () => {
+      if (this.editingGrid && c.getActiveObject() !== this.editingGrid) this.leaveGridEditing()
+      if (!this.suppress) host.onSelectionChange(pid)
+    })
     on('selection:cleared', () => {
       this.dragCache.end()
       if (!this.suppress) host.onSelectionChange(pid)
       this.leaveGroupEditing()
+      this.leaveGridEditing()
     })
 
     // Pictures that fill a placeholder and travel inside a group or multi-selection take their frames along.
@@ -569,12 +657,30 @@ export class PageCanvas {
       const target = e.transform.target
       const members = target instanceof ActiveSelection ? target.getObjects() : [target]
       this.gesture = new Set(members.map((m) => asDory(m).id ?? '').filter(Boolean))
+      if (canDropIntoImageGrid(target) && this.canvas.getObjects().includes(target)) {
+        const center = target.getCenterPoint()
+        this.gridImageDrag = {
+          sourceId: asDory(target).id ?? '',
+          sourceFrame: {
+            center: { x: center.x, y: center.y },
+            width: target.getScaledWidth(),
+            height: target.getScaledHeight(),
+            angle: target.angle || 0,
+            flipX: target.flipX,
+            flipY: target.flipY,
+          },
+          target: null,
+        }
+      } else {
+        this.gridImageDrag = null
+      }
     })
     on('object:moving', (e) => {
       this.dragCache.ensure()
       this.snapMoving(e.target, e.e)
       clampSlotImage(e.target)
       followFrames(this.frames)
+      this.updateGridImageDrop(e.target, e.e)
       host.onSelectionLive(pid)
     })
     on('object:scaling', (e) => {
@@ -601,9 +707,13 @@ export class PageCanvas {
       this.gesture = new Set()
       this.frames = []
       this.snapRects = null
+      const hadGridDrop = this.gridImageDrag?.target !== null && this.gridImageDrag?.target !== undefined
+      this.gridImageDrag = null
       if (this.overlay.guides.length > 0 || this.overlay.spacing.length > 0) {
         this.overlay.guides = []
         this.overlay.spacing = []
+        this.drawOverlay()
+      } else if (hadGridDrop) {
         this.drawOverlay()
       }
     })
@@ -611,6 +721,22 @@ export class PageCanvas {
     on('object:modified', (e) => {
       if (this.suppress || asDory(e.target).isUi || this.removing.has(e.target)) return
       const target = e.target
+      const imageDrop = this.gridImageDrag
+      if (imageDrop && asDory(target).id === imageDrop.sourceId && imageDrop.target) {
+        this.gridImageDrag = null
+        this.drawOverlay()
+        queueMicrotask(() =>
+          host.onImageGridImageDrop(
+            pid,
+            imageDrop.sourceId,
+            asDory(imageDrop.target!.group).id ?? '',
+            imageDrop.target!.gridCellId,
+            imageDrop.sourceFrame,
+          ),
+        )
+        return
+      }
+      this.gridImageDrag = null
       let label: string = strings.history.edit
       if (target instanceof ActiveSelection) {
         const members = target.getObjects()
@@ -621,7 +747,7 @@ export class PageCanvas {
           let changed = false
           for (const id of ids) {
             const o = this.getById(id)
-            if (o && bakeInPlace(o)) changed = true
+            if (o && (isImageGrid(o) ? normalizeImageGridTransform(o) : bakeInPlace(o))) changed = true
           }
           if (changed) {
             const objs = ids.map((id) => this.getById(id)).filter((o): o is FabricObject => !!o)
@@ -629,6 +755,9 @@ export class PageCanvas {
           }
         }
         label = strings.history.transformSelection
+      } else if (target instanceof Group && isImageGrid(target)) {
+        const resized = normalizeImageGridTransform(target)
+        label = resized ? strings.history.resizeImageGrid : target.angle !== 0 ? strings.history.transform : strings.history.move
       } else {
         const baked = bakeInPlace(target)
         if (!baked && target instanceof IText && asDory(target).fit) refitTextbox(target)
@@ -707,6 +836,7 @@ export class PageCanvas {
     })
 
     on('mouse:down', (e) => this.onMouseDown(e as TPointerEventInfo<MouseEvent>))
+    on('mouse:move', (e) => this.onMouseMove(e as TPointerEventInfo<MouseEvent>))
     on('mouse:up', (e) => this.onMouseUp(e as TPointerEventInfo<MouseEvent>))
     on('mouse:dblclick', (e) => this.onDoubleClick(e as TPointerEventInfo<MouseEvent>))
     on('after:render', () => this.drawOverlay())
@@ -726,6 +856,13 @@ export class PageCanvas {
       return
     }
     if (ev.button !== 0) return
+    if (this.editingGrid && e.target === this.editingGrid) {
+      const hit = imageGridCellAtPoint(this.editingGrid, e.scenePoint)
+      this.gridCellPress = hit
+        ? { group: this.editingGrid, gridCellId: hit.gridCellId, clientX: ev.clientX, clientY: ev.clientY, dragging: false, overCellId: hit.gridCellId }
+        : null
+      return
+    }
     if (host.tool === 'text' && (!e.target || !(e.target instanceof IText))) {
       this.textDrag = { x: e.scenePoint.x, y: e.scenePoint.y }
       return
@@ -742,7 +879,38 @@ export class PageCanvas {
 
   private placeholderClick: { id: string; x: number; y: number } | null = null
 
+  private onMouseMove(e: TPointerEventInfo<MouseEvent>): void {
+    const press = this.gridCellPress
+    if (!press) return
+    const distance = Math.hypot(e.e.clientX - press.clientX, e.e.clientY - press.clientY)
+    if (!press.dragging && distance >= NUDGE_CLICK_SLOP) {
+      const source = gridCellObject(press.group, press.gridCellId)
+      press.dragging = !!source && !isEmptyGridCell(source)
+    }
+    if (!press.dragging) return
+    const hit = imageGridCellAtPoint(press.group, e.scenePoint)
+    const next = hit?.gridCellId ?? null
+    if (next !== press.overCellId) {
+      press.overCellId = next
+      this.drawOverlay()
+    }
+  }
+
   private onMouseUp(e: TPointerEventInfo<MouseEvent>): void {
+    const gridPress = this.gridCellPress
+    if (gridPress) {
+      this.gridCellPress = null
+      const hit = imageGridCellAtPoint(gridPress.group, e.scenePoint)
+      const releasedCell = hit?.gridCellId ?? null
+      const gridId = asDory(gridPress.group).id ?? ''
+      if (gridPress.dragging) {
+        if (releasedCell && releasedCell !== gridPress.gridCellId) {
+          this.host.onImageGridCellSwap(this.pageId, gridId, gridPress.gridCellId, releasedCell)
+        }
+      }
+      this.drawOverlay()
+      return
+    }
     if (this.textDrag) {
       const start = this.textDrag
       this.textDrag = null
@@ -781,6 +949,13 @@ export class PageCanvas {
       this.host.onTextCreate(this.pageId, { x: e.scenePoint.x, y: e.scenePoint.y, width: 0 })
       return
     }
+    if (target instanceof Group && isImageGrid(target)) {
+      if (asDory(target).locked) return // like dropping onto one: a locked grid keeps its pictures
+      this.enterGridEditing(target)
+      const hit = imageGridCellAtPoint(target, e.scenePoint)
+      if (hit) this.host.onImageGridCellActivate(this.pageId, asDory(target).id ?? '', hit.gridCellId)
+      return
+    }
     const lockedId = asDory(target).id
     if (target instanceof IText && lockedId && this.editLocks.has(lockedId)) this.host.onEditBlocked(this.pageId, lockedId)
     if (target instanceof Group && !(target instanceof ActiveSelection)) {
@@ -795,6 +970,39 @@ export class PageCanvas {
 
   private editingGroup: Group | null = null
 
+  private enterGridEditing(group: Group): void {
+    if (asDory(group).locked) return
+    this.leaveGroupEditing()
+    if (this.editingGrid && this.editingGrid !== group) this.leaveGridEditing()
+    this.editingGrid = group
+    group.set({
+      lockMovementX: true,
+      lockMovementY: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockRotation: true,
+      hasControls: false,
+      hoverCursor: 'pointer',
+    })
+    this.canvas.setActiveObject(group)
+    this.canvas.requestRenderAll()
+    this.drawOverlay()
+  }
+
+  private leaveGridEditing(): void {
+    const group = this.editingGrid
+    if (!group) return
+    this.editingGrid = null
+    this.gridCellPress = null
+    this.gridImageDrag = null
+    applyLock(group)
+    customizeControls(group)
+    group.set('hoverCursor', 'move')
+    group.setCoords()
+    this.canvas.requestRenderAll()
+    this.drawOverlay()
+  }
+
   /** Makes the children of a group individually selectable (double-click / layers panel). */
   enterGroup(group: Group): void {
     group.set({ subTargetCheck: true, interactive: true })
@@ -808,6 +1016,27 @@ export class PageCanvas {
     g.set({ subTargetCheck: false, interactive: false })
     g.triggerLayout()
     g.setCoords()
+  }
+
+  private updateGridImageDrop(target: FabricObject, event: TPointerEvent): void {
+    const drag = this.gridImageDrag
+    if (!drag || !canDropIntoImageGrid(target)) return
+    const point = this.canvas.getScenePoint(event)
+    const next = this.imageGridDropAt(point)
+    const changed = drag.target?.group !== next?.group || drag.target?.gridCellId !== next?.gridCellId
+    drag.target = next
+    if (changed) this.drawOverlay()
+  }
+
+  private imageGridDropAt(point: { x: number; y: number }): GridDropTarget | null {
+    const objects = this.canvas.getObjects()
+    for (let index = objects.length - 1; index >= 0; index -= 1) {
+      const candidate = objects[index]
+      if (!isImageGrid(candidate) || candidate.visible === false || asDory(candidate).locked) continue
+      const hit = imageGridCellAtPoint(candidate, point)
+      if (hit) return { group: candidate, gridCellId: hit.gridCellId }
+    }
+    return null
   }
 
   private afterTextInput(t: IText): void {
@@ -1019,6 +1248,7 @@ export class PageCanvas {
 
     this.drawZoneHints(ctx, px)
     this.drawPlaceholders(ctx, px)
+    this.drawImageGrids(ctx, px)
 
     ctx.strokeStyle = theme.guide
     ctx.fillStyle = theme.guide
@@ -1140,6 +1370,63 @@ export class PageCanvas {
     }
   }
 
+  /** Empty cells and drop targets live only on the editor overlay, so exports stay clean. */
+  private drawImageGrids(ctx: CanvasRenderingContext2D, px: number): void {
+    const theme = this.host.theme
+    for (const object of this.canvas.getObjects()) {
+      if (!isImageGrid(object) || object.visible === false) continue
+      const spec = imageGridSpecOf(object)
+      if (!spec) continue
+      const editing = this.editingGrid === object
+      const dragTarget = this.imageAssetDrop ?? this.gridImageDrag?.target
+      const reorderTarget = this.gridCellPress?.dragging ? this.gridCellPress.overCellId : null
+      for (const cell of spec.cells) {
+        const child = gridCellObject(object, cell.gridCellId)
+        const empty = isEmptyGridCell(child)
+        const targeted =
+          (dragTarget?.group === object && dragTarget.gridCellId === cell.gridCellId) ||
+          (this.gridCellPress?.group === object && reorderTarget === cell.gridCellId)
+        if (!empty && !editing && !targeted) continue
+        const polygon = imageGridCellPolygon(object, cell.gridCellId)
+        if (polygon.length !== 4) continue
+        ctx.save()
+        ctx.beginPath()
+        ctx.moveTo(polygon[0].x, polygon[0].y)
+        for (const point of polygon.slice(1)) ctx.lineTo(point.x, point.y)
+        ctx.closePath()
+        if (targeted) {
+          ctx.globalAlpha = 0.18
+          ctx.fillStyle = theme.selection
+          ctx.fill()
+          ctx.globalAlpha = 1
+        } else if (empty) {
+          ctx.globalAlpha = 0.72
+          ctx.fillStyle = theme.surface
+          ctx.fill()
+          ctx.globalAlpha = 1
+        }
+        ctx.strokeStyle = targeted ? theme.selection : theme.muted
+        ctx.lineWidth = (targeted ? 2 : 1.5) * px
+        ctx.setLineDash(targeted ? [] : [7 * px, 5 * px])
+        ctx.stroke()
+        ctx.setLineDash([])
+        if (empty) {
+          const center = polygon.reduce((sum, point) => ({ x: sum.x + point.x / 4, y: sum.y + point.y / 4 }), { x: 0, y: 0 })
+          const arm = 8 * px
+          ctx.strokeStyle = targeted ? theme.selection : theme.muted
+          ctx.lineWidth = 2 * px
+          ctx.beginPath()
+          ctx.moveTo(center.x - arm, center.y)
+          ctx.lineTo(center.x + arm, center.y)
+          ctx.moveTo(center.x, center.y - arm)
+          ctx.lineTo(center.x, center.y + arm)
+          ctx.stroke()
+        }
+        ctx.restore()
+      }
+    }
+  }
+
   /* ---------------------------------------------------------------- lifecycle */
 
   /** Snapshot of the visible bitmap (used when the page unmounts so a placeholder image can stand in). */
@@ -1151,6 +1438,9 @@ export class PageCanvas {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    this.gridCellPress = null
+    this.gridImageDrag = null
+    this.imageAssetDrop = null
     for (const off of this.cleanups) off()
     this.cleanups = []
     this.dragCache.end()

@@ -43,14 +43,13 @@ test.describe('[layout] chrome', () => {
     await expect.poll(async () => String((await pageObjects(page))[0].fill)).toMatch(/rgba\(28, ?21, ?23, ?0\.5\)|#1c151780/)
   })
 
-  test('tools open under their button, close on outside click, Escape and when another tool opens', async ({ page }) => {
+  test('tools stay open while the canvas is used, switch directly and close from inside', async ({ page }) => {
     await openEditor(page, 'doc=blank')
     const text = page.getByTestId('ed-add-entry-text')
     await text.click()
     await expect(page.getByTestId('drawer-text')).toBeVisible()
-    await expect(text).toHaveAttribute('aria-expanded', 'true')
-    // An open drawer has a transparent catcher over the whole window, so a click on
-    // the same button, on another tool or anywhere else only closes it.
+    await expect(text).toHaveAttribute('aria-pressed', 'true')
+    // A docked tool closes when its rail button is pressed again.
     const clickLikeAUser = async (locator: ReturnType<typeof page.getByTestId>): Promise<void> => {
       const box = await locator.boundingBox()
       if (!box) throw new Error('no box')
@@ -59,17 +58,12 @@ test.describe('[layout] chrome', () => {
     await clickLikeAUser(text)
     await expect(page.getByTestId('drawer-text')).toHaveCount(0)
     await text.click()
-    await page.mouse.click(60, 600)
-    await expect(page.getByTestId('drawer-text')).toHaveCount(0)
-    await text.click()
-    await page.keyboard.press('Escape')
-    await expect(page.getByTestId('drawer-text')).toHaveCount(0)
-    await text.click()
-    await clickLikeAUser(page.getByTestId('ed-add-entry-shapes'))
-    await expect(page.getByTestId('drawer-text')).toHaveCount(0)
-    await expect(page.getByTestId('drawer-shapes')).toHaveCount(0)
+    await page.getByRole('img', { name: 'Design canvas, page 1' }).click({ position: { x: 100, y: 100 } })
+    await expect(page.getByTestId('drawer-text')).toBeVisible()
     await page.getByTestId('ed-add-entry-shapes').click()
+    await expect(page.getByTestId('drawer-text')).toHaveCount(0)
     await expect(page.getByTestId('drawer-shapes')).toBeVisible()
+    await page.getByTestId('drawer-shapes').getByRole('button').first().focus()
     await page.keyboard.press('Escape')
     // The docked Sticker sidebar is not a popover: it opens at once and closes with its own button.
     await page.getByTestId('ed-add-entry-elements').click()

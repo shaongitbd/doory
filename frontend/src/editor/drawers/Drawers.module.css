@@ -33,6 +33,58 @@
   box-shadow: var(--focus-ring);
 }
 
+.gridHelp {
+  margin: -4px 0 12px;
+  color: var(--ed-text-dim);
+  font: 400 12px / 1.5 var(--font-sans);
+}
+.gridCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.gridCard {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: 9px;
+  background: var(--ed-surface);
+  color: var(--ed-text-dim);
+  font: 600 11px / 1.2 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--ed-dur),
+    color var(--ed-dur),
+    background var(--ed-dur);
+}
+.gridCard:hover {
+  border-color: var(--ed-accent);
+  background: var(--ed-accent-glow);
+  color: var(--ed-text);
+}
+.gridCard:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.gridPreview {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  background: var(--ed-surface-3);
+}
+.gridPreview rect {
+  fill: var(--ed-text-dim);
+  opacity: 0.72;
+}
+.gridCard:hover .gridPreview rect,
+.gridCard:focus-visible .gridPreview rect {
+  fill: var(--ed-accent);
+  opacity: 0.86;
+}
+
 /* Stock sources (All, Unsplash, Pexels, …): a row of small pills that may wrap. */
 .sources {
   display: flex;

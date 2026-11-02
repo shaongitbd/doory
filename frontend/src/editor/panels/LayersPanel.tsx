@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Clapperboard, Eye, EyeOff, Folder, GripVertical, Image as ImageIcon, Lock, Minus, QrCode, Shapes, Square, Tag, Type, Unlock } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clapperboard, Eye, EyeOff, Folder, GripVertical, Image as ImageIcon, LayoutGrid, Lock, Minus, QrCode, Shapes, Square, Tag, Type, Unlock } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import type { DocObject } from '@/types/document'
 import { useEditor, useEditorState, useEditorStateShallow } from '../context'
@@ -26,7 +26,7 @@ function KindIcon({ obj, kind }: { obj: DocObject; kind: string }) {
   const picture = kind === 'image' || kind === 'video'
   const src = useResolvedSrc(picture && typeof obj.src === 'string' ? obj.src : undefined)
   if (picture && src) return <img className={styles.thumb} src={src} alt="" draggable={false} />
-  const Icon = kind === 'text' ? Type : kind === 'image' ? ImageIcon : kind === 'video' ? Clapperboard : kind === 'line' ? Minus : kind === 'group' ? Folder : kind === 'qr' ? QrCode : kind === 'element' ? Shapes : Square
+  const Icon = kind === 'text' ? Type : kind === 'image' ? ImageIcon : kind === 'image-grid' ? LayoutGrid : kind === 'video' ? Clapperboard : kind === 'line' ? Minus : kind === 'group' ? Folder : kind === 'qr' ? QrCode : kind === 'element' ? Shapes : Square
   const fill = typeof obj.fill === 'string' && kind === 'shape' ? obj.fill : undefined
   return (
     <span className={styles.icon} style={fill ? { color: fill } : undefined}>

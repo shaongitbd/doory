@@ -5,8 +5,9 @@
  * change the wrap width, not the glyph shapes; lines get a handle on each end (see `DoryLine`). The rotate
  * handle floats 28 px above the top edge and shows a rotate glyph.
  */
-import { ActiveSelection, Circle, Ellipse, type FabricObject, IText, Path, Polygon, Polyline, Rect, Textbox, Triangle } from 'fabric'
+import { ActiveSelection, Circle, controlsUtils, Ellipse, type FabricObject, IText, Path, Polygon, Polyline, Rect, Textbox, Triangle } from 'fabric'
 import { DoryLine, installLineControls } from './DoryLine'
+import { asDory } from './dory'
 
 const ROTATE_RADIUS = 7
 export const ROTATE_OFFSET = -28
@@ -52,7 +53,24 @@ export function customizeControls(obj: FabricObject): void {
     installLineControls(obj)
     return
   }
-  const controls = obj.controls as Record<string, { visible: boolean; offsetY: number; sizeX: number; sizeY: number; touchSizeX: number; touchSizeY: number; render: unknown } | undefined>
+  const controls = obj.controls as Record<
+    string,
+    | {
+        visible: boolean
+        offsetY: number
+        sizeX: number
+        sizeY: number
+        touchSizeX: number
+        touchSizeY: number
+        render: unknown
+        actionHandler?: unknown
+        actionName?: string
+        getActionName?: unknown
+      }
+    | undefined
+  >
+  const imageGrid = asDory(obj).imageGrid !== undefined
+  if (imageGrid) obj.set({ lockScalingFlip: true, lockSkewingX: true, lockSkewingY: true })
   // Text: the side handles set the wrap width of a text box (not while it rides a curve), a top or bottom handle
   // would only distort the glyphs. Shapes keep every handle; everything else (photos, groups, stickers) only the corners.
   const sidesOnly = obj instanceof IText
@@ -61,7 +79,16 @@ export function customizeControls(obj: FabricObject): void {
     const control = controls[name]
     if (!control) continue
     if (sidesOnly) control.visible = wrapWidth && (name === 'ml' || name === 'mr')
-    else control.visible = isShape(obj)
+    else control.visible = isShape(obj) || imageGrid
+    if (imageGrid && (name === 'ml' || name === 'mr')) {
+      control.actionHandler = controlsUtils.scalingX
+      control.actionName = 'scaleX'
+      control.getActionName = () => 'scaleX'
+    } else if (imageGrid && (name === 'mt' || name === 'mb')) {
+      control.actionHandler = controlsUtils.scalingY
+      control.actionName = 'scaleY'
+      control.getActionName = () => 'scaleY'
+    }
   }
   const rotate = controls.mtr
   if (rotate) {

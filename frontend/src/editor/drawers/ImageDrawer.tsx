@@ -13,6 +13,7 @@ import { loadable } from '../ui/loadable'
 import { Skeleton } from '../ui/Skeleton'
 import ed from '../chrome/ed.module.css'
 import styles from './Drawers.module.css'
+import { beginImageAssetDrag, endImageAssetDrag } from './imageAssetDrag'
 import { uploadToLibrary } from './uploads'
 
 function toRef(a: Asset): AssetRef {
@@ -21,9 +22,20 @@ function toRef(a: Asset): AssetRef {
 
 function Thumb({ asset, onPlace, onDelete }: { asset: AssetRef; onPlace: () => void; onDelete?: () => void }) {
   const url = useResolvedSrc(asset.thumbUrl || asset.url)
+  const draggable = asset.kind === 'image' || asset.kind === 'svg'
   return (
     <div className={styles.thumbRow}>
-      <button type="button" className={ed.uploadedThumb} data-testid="uploaded-thumb" onClick={onPlace}>
+      <button
+        type="button"
+        className={ed.uploadedThumb}
+        data-testid="uploaded-thumb"
+        draggable={draggable}
+        onClick={onPlace}
+        onDragStart={(event) => {
+          if (!beginImageAssetDrag(event.dataTransfer, asset)) event.preventDefault()
+        }}
+        onDragEnd={endImageAssetDrag}
+      >
         {url ? <img src={url} alt="" draggable={false} /> : <Skeleton width={40} height={40} radius={5} />}
         <span className={ed.uploadedName}>{asset.name}</span>
       </button>
@@ -129,25 +141,84 @@ function UploadsTab({ close }: PanelProps) {
 }
 
 const StockTab = loadable(() => import('./StockTab').then((m) => m.StockTab))
+const GridTab = loadable(() => import('./GridTab').then((m) => m.GridTab))
 
-/** Image drawer: upload photo, plus a stock-photo tab when the server offers one. */
+/** Image drawer: uploaded photos, image-grid layouts, and stock photos when the server offers them. */
 export function ImageDrawer(props: PanelProps) {
   const editor = useEditor()
   const hasStock = editor.adapter.services.stock !== null
-  const [tab, setTab] = useState<'uploads' | 'stock'>('uploads')
+  const [tab, setTab] = useState<'uploads' | 'grids' | 'stock'>('uploads')
+  const moveBetweenTabs = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    const tabs = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+    const current = tabs.indexOf(document.activeElement as HTMLButtonElement)
+    if (current < 0) return
+    e.preventDefault()
+    const offset = e.key === 'ArrowRight' ? 1 : -1
+    const next = tabs[(current + offset + tabs.length) % tabs.length]
+    next?.focus()
+    next?.click()
+  }
   return (
     <>
-      {hasStock ? (
-        <div className={styles.tabs} role="tablist" aria-label={t.imageDrawer.tabs}>
-          <button type="button" role="tab" className={styles.tab} aria-selected={tab === 'uploads'} data-testid="image-tab-uploads" onClick={() => setTab('uploads')}>
-            {t.imageDrawer.uploads}
-          </button>
-          <button type="button" role="tab" className={styles.tab} aria-selected={tab === 'stock'} data-testid="image-tab-stock" onClick={() => setTab('stock')}>
+      <div className={styles.tabs} role="tablist" aria-label={t.imageDrawer.tabs} onKeyDown={moveBetweenTabs}>
+        <button
+          type="button"
+          id="image-tab-uploads"
+          role="tab"
+          className={styles.tab}
+          aria-controls="image-panel-uploads"
+          aria-selected={tab === 'uploads'}
+          tabIndex={tab === 'uploads' ? 0 : -1}
+          data-testid="image-tab-uploads"
+          onClick={() => setTab('uploads')}
+        >
+          {t.imageDrawer.uploads}
+        </button>
+        <button
+          type="button"
+          id="image-tab-grids"
+          role="tab"
+          className={styles.tab}
+          aria-controls="image-panel-grids"
+          aria-selected={tab === 'grids'}
+          tabIndex={tab === 'grids' ? 0 : -1}
+          data-testid="image-tab-grids"
+          onClick={() => setTab('grids')}
+        >
+          {t.imageDrawer.grids}
+        </button>
+        {hasStock ? (
+          <button
+            type="button"
+            id="image-tab-stock"
+            role="tab"
+            className={styles.tab}
+            aria-controls="image-panel-stock"
+            aria-selected={tab === 'stock'}
+            tabIndex={tab === 'stock' ? 0 : -1}
+            data-testid="image-tab-stock"
+            onClick={() => setTab('stock')}
+          >
             {t.imageDrawer.stock}
           </button>
+        ) : null}
+      </div>
+      {tab === 'uploads' ? (
+        <div id="image-panel-uploads" role="tabpanel" aria-labelledby="image-tab-uploads">
+          <UploadsTab {...props} />
         </div>
       ) : null}
-      {tab === 'uploads' || !hasStock ? <UploadsTab {...props} /> : <StockTab {...props} />}
+      {tab === 'grids' ? (
+        <div id="image-panel-grids" role="tabpanel" aria-labelledby="image-tab-grids">
+          <GridTab {...props} />
+        </div>
+      ) : null}
+      {tab === 'stock' && hasStock ? (
+        <div id="image-panel-stock" role="tabpanel" aria-labelledby="image-tab-stock">
+          <StockTab {...props} />
+        </div>
+      ) : null}
     </>
   )
 }

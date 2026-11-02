@@ -11,6 +11,7 @@ import { asDory, ensureId, isLocked } from '../objects/dory'
 import { bakeInPlace } from '../objects/bake'
 import { applyMask } from '../objects/masks'
 import { kindOfLive } from '../objects/kinds'
+import { imageGridSpecOf, isImageGrid, normalizeImageGridTransform } from '../objects/imageGrid'
 import { anchorFrames, carriedPictures, clampSlotImage, coverSlotTransform, followFrames, hasSlot, mirrorSlot, shiftSlot } from '../objects/slot'
 import { getExtraProps } from '../serialization'
 import { coverFrame } from './insert'
@@ -59,6 +60,12 @@ export function findLive(objects: readonly FabricObject[], id: string): FabricOb
     }
   }
   return undefined
+}
+
+/** True when an object is, or contains, a semantic image grid. */
+function containsImageGrid(obj: FabricObject): boolean {
+  if (isImageGrid(obj)) return true
+  return obj instanceof Group && obj.getObjects().some((child) => containsImageGrid(child))
 }
 
 export class ArrangeApi {
@@ -148,7 +155,9 @@ export class ArrangeApi {
     const view = this.view
     if (!view) return
     const objs = view.selectedObjects()
-    if (objs.length < 2) return
+    // Grid cells are addressed through their top-level grid. A generic wrapper would make those operations unreachable,
+    // including when an imported legacy group already contains a grid.
+    if (objs.length < 2 || objs.some((obj) => containsImageGrid(obj))) return
     const canvas = view.canvas
     const order = canvas.getObjects()
     const sorted = [...objs].sort((a, b) => order.indexOf(a) - order.indexOf(b))
@@ -170,6 +179,7 @@ export class ArrangeApi {
     if (!view) return
     const target = view.canvas.getActiveObject()
     if (!(target instanceof Group) || target instanceof ActiveSelection) return
+    if (imageGridSpecOf(target)) return
     const canvas = view.canvas
     const index = canvas.getObjects().indexOf(target)
     canvas.discardActiveObject()
@@ -490,6 +500,7 @@ export class ArrangeApi {
         // Stretching would distort the parts of a group or a drawing, so it is scaled by one factor, like a picture.
         const k = Math.max(pageW / w0, pageH / h0)
         active.set({ scaleX: active.scaleX * k, scaleY: active.scaleY * k })
+        if (active instanceof Group && isImageGrid(active)) normalizeImageGridTransform(active)
       } else {
         active.set({ scaleX: (active.scaleX * pageW) / w0, scaleY: (active.scaleY * pageH) / h0 })
         // A baked shape has a new width and height, so its frame (a placeholder's crop shape) is rebuilt to match.
@@ -522,14 +533,22 @@ export class ArrangeApi {
     const center = active.getCenterPoint()
     this.carrying(active, () => {
       active.set({ scaleX: active.scaleX * sxk, scaleY: active.scaleY * syk })
-      if (!(active instanceof ActiveSelection)) bakeInPlace(active)
+      if (active instanceof Group && isImageGrid(active)) normalizeImageGridTransform(active)
+      else if (!(active instanceof ActiveSelection)) bakeInPlace(active)
       active.setPositionByOrigin(new Point(center.x, center.y), 'center', 'center')
     })
     clampSlotImage(active)
     active.setCoords()
     view.canvas.requestRenderAll()
     // A stretched selection is flattened; its pictures are made to cover their (stretched) frames again.
-    if (active instanceof ActiveSelection) this.withFlat((objs) => objs.forEach(clampSlotImage))
+    if (active instanceof ActiveSelection) {
+      this.withFlat((objs) => {
+        for (const obj of objs) {
+          if (isImageGrid(obj)) normalizeImageGridTransform(obj)
+          clampSlotImage(obj)
+        }
+      })
+    }
     this.done(t.history.resize, 'size')
   }
 

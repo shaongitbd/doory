@@ -79,6 +79,31 @@ describe('ImageDrawer stock photos', () => {
     engine = null
   })
 
+  it('offers grid layouts even when stock photos are not configured', async () => {
+    const setup = await setupEditor()
+    engine = setup.engine
+    ;(engine.adapter.services as { stock: Stock | null }).stock = null
+    const insert = vi.spyOn(engine.imageGrids, 'insert').mockResolvedValue()
+    const close = vi.fn()
+    await act(async () => {
+      render(
+        <EditorProvider engine={engine!} portalRoot={document.body}>
+          <ImageDrawer close={close} />
+        </EditorProvider>,
+      )
+    })
+
+    expect(screen.getByTestId('image-tab-uploads')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByTestId('image-tab-grids')).toBeVisible()
+    expect(screen.queryByTestId('image-tab-stock')).toBeNull()
+
+    await userEvent.click(screen.getByTestId('image-tab-grids'))
+    expect(screen.getByRole('tabpanel', { name: t.imageDrawer.grids })).toBeVisible()
+    await userEvent.click(await screen.findByTestId('grid-preset-two-columns'))
+    expect(insert).toHaveBeenCalledWith('two-columns')
+    expect(close).toHaveBeenCalledOnce()
+  })
+
   it('opens on the All tab, with a badge and credit for every provider', async () => {
     const stock = fakeStock()
     await open(stock)

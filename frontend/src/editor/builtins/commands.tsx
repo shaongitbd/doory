@@ -109,7 +109,16 @@ export function registerBuiltinCommands(): void {
   registerCommand({ id: 'edit.delete', label: t.cmd.editDelete, shortcut: 'Delete|Backspace', group: t.cmdGroup.edit, icon: <Trash2 size={18} />, run: (e) => e.arrange.delete(), enabled: ({ state }) => state.selection.ids.length > 0 && !state.selection.editing })
   registerCommand({ id: 'edit.selectAll', label: t.cmd.editSelectAll, shortcut: 'Mod+A', group: t.cmdGroup.edit, run: (e) => e.selectAll(), enabled: ({ state }) => !state.selection.editing })
   registerCommand({ id: 'edit.deselect', label: t.cmd.editDeselect, shortcut: 'Escape', group: t.cmdGroup.edit, run: (e) => { e.patchUi({ contextMenu: null }); if (e.state.ui.cropping) e.crop.cancel(); else e.clearSelection() }, enabled: ({ state }) => !state.selection.editing })
-  registerCommand({ id: 'edit.group', label: t.cmd.editGroup, shortcut: 'Mod+G', group: t.cmdGroup.edit, icon: <Group size={18} />, run: (e) => e.arrange.group(), enabled: ({ state }) => state.selection.ids.length > 1 })
+  registerCommand({
+    id: 'edit.group',
+    label: t.cmd.editGroup,
+    shortcut: 'Mod+G',
+    group: t.cmdGroup.edit,
+    icon: <Group size={18} />,
+    run: (e) => e.arrange.group(),
+    // A grid owns its cell children. Nesting it in another group would hide those children from grid editing.
+    enabled: ({ state }) => state.selection.ids.length > 1 && !state.selection.kinds.includes('image-grid'),
+  })
   registerCommand({ id: 'edit.ungroup', label: t.cmd.editUngroup, shortcut: 'Mod+Shift+G', group: t.cmdGroup.edit, icon: <Ungroup size={18} />, run: (e) => e.arrange.ungroup(), enabled: ({ state }) => state.selection.ids.length === 1 && state.selection.kinds.includes('group') })
   registerCommand({ id: 'edit.lock', label: t.cmd.editLock, shortcut: 'Mod+L|Alt+Shift+L', group: t.cmdGroup.edit, icon: <Lock size={18} />, run: (e) => e.arrange.toggleLock(), enabled: ({ state }) => state.selection.ids.length > 0 })
   registerCommand({ id: 'arrange.fitToPage', label: t.toolbar.fitToPage, group: t.cmdGroup.edit, icon: <Maximize size={18} />, run: (e) => e.arrange.fitToPage(), enabled: ({ editor }) => editor.arrange.canFitToPage() })

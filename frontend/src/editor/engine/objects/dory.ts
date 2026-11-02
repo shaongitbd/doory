@@ -16,6 +16,7 @@ import type {
   SlotSpec,
   TextCase,
 } from '@/types/document'
+import type { ImageGridSpec } from '../../grids/model'
 
 export interface QrSpec {
   text: string
@@ -39,6 +40,10 @@ export interface DoryProps {
   origFill?: string
   origStroke?: string
   isPlaceholder?: boolean
+  /** Semantic image-grid layout carried by a top-level Fabric group. */
+  imageGrid?: ImageGridSpec
+  /** Stable cell label scoped to the containing image grid. */
+  gridCellId?: string
   /** On a picture that fills a placeholder: the frame it stays inside (see objects/slot.ts). */
   slot?: SlotSpec
   link?: { url: string }

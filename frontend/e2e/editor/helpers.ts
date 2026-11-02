@@ -56,7 +56,7 @@ export type ToolId = 'templates' | 'text' | 'elements' | 'image' | 'shapes' | 'b
 /** Opens a tool of the top bar (a drawer under its button or a docked sidebar) unless it is already open. */
 export async function openTool(page: Page, id: ToolId): Promise<void> {
   const btn = page.locator(`[data-testid="ed-add-entry-${id}"]`)
-  if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click()
+  if ((await btn.getAttribute('aria-pressed')) !== 'true') await btn.click()
 }
 
 export type ShapeId = 'rect' | 'ellipse' | 'triangle' | 'line' | 'star' | 'diamond' | 'divider' | 'frame' | 'rounded' | 'polygon' | 'arrow' | 'qr' | 'placeholder' | 'path-heart' | 'path-speech'

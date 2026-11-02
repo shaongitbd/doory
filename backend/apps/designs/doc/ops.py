@@ -18,7 +18,7 @@ from pydantic import ValidationError as PydanticValidationError
 from . import builders, groups
 from .builders import Page
 from .fields import KIND_TYPES, FieldTag, TextFit, duplicate_keys, read_fit
-from .kinds import object_kind
+from .kinds import contains_image_grid, object_kind
 
 MAX_OPS = 200
 MAX_PAGES = 100  # the default; callers pass the server's `MAX_DESIGN_PAGES`
@@ -793,6 +793,8 @@ class _Editor:
             raise self.fail(
                 "A text box's height follows from its text; change its width or font size instead."
             )
+        if kind == "image-grid" and (width is not None or height is not None):
+            raise self.fail("Image grids can only be resized in the editor.")
         if width is not None or height is not None:
             scale_x = abs(float(obj.get("scaleX", 1) or 1))
             scale_y = abs(float(obj.get("scaleY", 1) or 1))
@@ -872,6 +874,8 @@ class _Editor:
             positions.append(position)
         positions.sort()
         children = [objects[position] for position in positions]  # keep their stacking order
+        if any(contains_image_grid(child) for child in children):
+            raise self.fail("Image grids cannot be grouped with other objects.")
         try:
             grouped = groups.group(children, self.own_id(op.id) or builders.new_id())
         except groups.GroupError as exc:
@@ -886,7 +890,10 @@ class _Editor:
     def ungroup(self, op: Ungroup) -> dict:
         page, position = self.find(op.object_id)
         obj = page["objects"][position]
-        if object_kind(obj) != "group":
+        kind = object_kind(obj)
+        if kind == "image-grid":
+            raise self.fail("Image grids cannot be ungrouped.")
+        if kind != "group":
             raise self.fail("That object is not a group.")
         try:
             children = groups.ungroup(obj)
