@@ -1,3 +1,4 @@
+import { uuid } from '@/lib/uuid'
 import type { AssetRef } from '@/types/adapter'
 
 export const IMAGE_ASSET_DRAG_TYPE = 'application/x-doory-image-asset'
@@ -13,17 +14,10 @@ function imageAsset(asset: AssetRef): boolean {
   return asset.kind === 'image' || asset.kind === 'svg'
 }
 
-function dragToken(): string {
-  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
-  const bytes = new Uint32Array(4)
-  crypto.getRandomValues(bytes)
-  return [...bytes].map((value) => value.toString(16).padStart(8, '0')).join('-')
-}
-
 /** Starts an in-page image-asset drag without exposing a serialised asset reference to arbitrary drop targets. */
 export function beginImageAssetDrag(transfer: DataTransfer, asset: AssetRef): boolean {
   if (!imageAsset(asset)) return false
-  const token = dragToken()
+  const token = uuid()
   try {
     transfer.effectAllowed = 'copy'
     transfer.setData(IMAGE_ASSET_DRAG_TYPE, token)
