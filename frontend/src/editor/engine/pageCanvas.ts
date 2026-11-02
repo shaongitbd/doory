@@ -997,7 +997,7 @@ export class PageCanvas {
     this.gridImageDrag = null
     applyLock(group)
     customizeControls(group)
-    group.set('hoverCursor', 'move')
+    group.set('hoverCursor', null) // back to the canvas's own: the hand and text tools set theirs there
     group.setCoords()
     this.canvas.requestRenderAll()
     this.drawOverlay()

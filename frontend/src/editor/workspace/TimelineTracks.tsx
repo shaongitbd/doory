@@ -4,7 +4,7 @@
  * to each other, and every change goes through `editor.animation.patch`, so a drag is one undo step and reaches
  * collaborators as the property it is. All of it is also reachable by keyboard.
  */
-import { Folder, Image as ImageIcon, LogIn, LogOut, Minus, QrCode, Shapes, Sparkles, Square, Type } from 'lucide-react'
+import { Folder, Image as ImageIcon, LayoutGrid, LogIn, LogOut, Minus, QrCode, Shapes, Sparkles, Square, Type } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useEditor } from '../context'
 import { type AnimSpan, TIME_STEP_MS } from '../animation/model'
@@ -35,7 +35,7 @@ import styles from './Timeline.module.css'
 const SLOT_ICON = { enter: LogIn, exit: LogOut, emphasis: Sparkles } as const
 
 function KindIcon({ kind }: { kind: string }) {
-  const Icon = kind === 'text' ? Type : kind === 'image' ? ImageIcon : kind === 'line' ? Minus : kind === 'group' ? Folder : kind === 'qr' ? QrCode : kind === 'element' ? Shapes : Square
+  const Icon = kind === 'text' ? Type : kind === 'image' ? ImageIcon : kind === 'line' ? Minus : kind === 'group' ? Folder : kind === 'image-grid' ? LayoutGrid : kind === 'qr' ? QrCode : kind === 'element' ? Shapes : Square
   return <Icon size={14} aria-hidden="true" />
 }
 

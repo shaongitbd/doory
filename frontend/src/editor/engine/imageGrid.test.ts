@@ -126,6 +126,29 @@ describe('image grids', () => {
     }
   })
 
+  it('takes a grid with a size that is not a number at the smallest size', async () => {
+    const first = await setup()
+    await first.engine.imageGrids.insert('two-columns')
+    const saved = structuredClone(first.engine.getDocument())
+    saved.pages[0].objects[0].width = 'abc' as unknown as number
+    const reopened = await setup(saved)
+    const grid = reopened.view.canvas.getObjects()[0] as Group
+    expect(Number.isFinite(grid.width)).toBe(true)
+    expect(Number.isFinite(grid.getBoundingRect().width)).toBe(true)
+  })
+
+  it('gives the canvas its own cursor back after a grid has been edited', async () => {
+    const editor = await setup()
+    await editor.engine.imageGrids.insert('two-columns')
+    const grid = selectedGrid(editor)
+    vi.spyOn(editor.engine, 'onImageGridCellActivate').mockImplementation(() => undefined)
+    editor.view.canvas.fire('mouse:dblclick', { target: grid, scenePoint: grid.getCenterPoint() } as never)
+    expect(grid.hoverCursor).toBe('pointer')
+    editor.view.canvas.discardActiveObject()
+    editor.view.canvas.fire('selection:cleared', { deselected: [grid] } as never)
+    expect(grid.hoverCursor).toBeNull()
+  })
+
   it('removes stale children in one go when a document with many of them is loaded', async () => {
     const first = await setup()
     await first.engine.imageGrids.insert('two-columns')

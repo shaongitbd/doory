@@ -16,6 +16,9 @@ export const MIN_IMAGE_GRID_SIZE = 96
  */
 const savedPrecision = (value: number): number => Number(value.toFixed(4))
 
+/** A grid's size, never below the smallest one; a document's odd value (not a finite number) counts as that too. */
+const gridSize = (value: number): number => (Number.isFinite(value) ? Math.max(MIN_IMAGE_GRID_SIZE, value) : MIN_IMAGE_GRID_SIZE)
+
 export interface GridCellHit {
   gridCellId: string
   frame: ImageGridCellFrame
@@ -127,8 +130,8 @@ function positionEmptyCell(rect: Rect, frame: ImageGridCellFrame, width: number,
 
 /** Reflows every child from semantic cell geometry. One child is retained for every cell. */
 export function reflowImageGrid(group: Group, spec: ImageGridSpec, width = group.width, height = group.height): void {
-  const nextWidth = Math.max(MIN_IMAGE_GRID_SIZE, width)
-  const nextHeight = Math.max(MIN_IMAGE_GRID_SIZE, height)
+  const nextWidth = gridSize(width)
+  const nextHeight = gridSize(height)
   const frames = gridCellFrames(spec, nextWidth, nextHeight)
   for (const child of group.getObjects()) {
     const cellId = asDory(child).gridCellId
@@ -148,8 +151,8 @@ export function reflowImageGrid(group: Group, spec: ImageGridSpec, width = group
  */
 export function reconcileImageGridChildren(group: Group, spec: ImageGridSpec): void {
   const center = group.getCenterPoint()
-  const width = Math.max(MIN_IMAGE_GRID_SIZE, group.width)
-  const height = Math.max(MIN_IMAGE_GRID_SIZE, group.height)
+  const width = gridSize(group.width)
+  const height = gridSize(group.height)
   const frames = gridCellFrames(spec, width, height)
   const wanted = new Set(spec.cells.map((cell) => cell.gridCellId))
   const retained = new Set<string>()
@@ -198,8 +201,8 @@ export function normalizeImageGridTransform(group: Group): boolean {
   const scaleY = Math.abs(group.scaleY || 1)
   if (Math.abs(scaleX - 1) < 1e-6 && Math.abs(scaleY - 1) < 1e-6) return false
   const center = group.getCenterPoint()
-  const width = Math.max(MIN_IMAGE_GRID_SIZE, group.width * scaleX)
-  const height = Math.max(MIN_IMAGE_GRID_SIZE, group.height * scaleY)
+  const width = gridSize(group.width * scaleX)
+  const height = gridSize(group.height * scaleY)
   group.set({ scaleX: 1, scaleY: 1 })
   reflowImageGrid(group, spec, width, height)
   group.setPositionByOrigin(center, 'center', 'center')
