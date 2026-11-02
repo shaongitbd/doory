@@ -168,14 +168,14 @@ export class ImageGridApi {
   }
 
   async fillCellWith(pageId: string, gridId: string, gridCellId: string, ref: AssetRef): Promise<void> {
-    if (this.engine.readOnly) return
-    const ctx = this.byId(pageId, gridId)
-    const old = ctx ? gridCellObject(ctx.group, gridCellId) : null
-    if (!ctx || !old) return
+    if (this.engine.readOnly || !this.byId(pageId, gridId)) return
     try {
       const url = await this.engine.assets.resolve(ref.url)
       const image = await createImage({ src: ref.url, url, assetId: ref.id }, new Point(0, 0), { width: 1, height: 1 })
-      if (this.engine.readOnly) {
+      // Looked up after the wait: another fill or a co-editor may have changed the cell meanwhile.
+      const ctx = this.byId(pageId, gridId)
+      const old = ctx ? gridCellObject(ctx.group, gridCellId) : null
+      if (this.engine.readOnly || !ctx || !old) {
         image.dispose()
         return
       }

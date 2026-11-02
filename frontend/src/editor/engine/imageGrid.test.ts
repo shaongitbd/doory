@@ -105,6 +105,70 @@ describe('image grids', () => {
     expect(imageGridSpecOf(duplicate)).toEqual(imageGridSpecOf(restored))
   })
 
+  it('saves a filled grid exactly the same after every load, so a reload never rewrites it', async () => {
+    const first = await setup()
+    await first.engine.imageGrids.insert('three-columns')
+    const grid = selectedGrid(first)
+    await first.engine.imageGrids.fillCellWith(first.pageId, asDory(grid).id!, 'cell-1', await asset(first.engine, 'photo.png'))
+    let saved = structuredClone(first.engine.getDocument())
+    const photo = (saved.pages[0].objects[0].objects as Array<Record<string, unknown>>).find((child) => child.type === 'image')!
+    // The next editors don't have the first one's upload.
+    photo.src = 'https://example.test/photo.png'
+    delete photo.assetId
+    expect(photo.cropX).toBeGreaterThan(0)
+    for (let pass = 0; pass < 3; pass++) {
+      const reopened = await setup(structuredClone(saved))
+      await vi.waitFor(() => expect(reopened.view.canvas.getObjects()).toHaveLength(1))
+      reopened.engine.commit(reopened.pageId, { label: 'Save' })
+      const next = structuredClone(reopened.engine.getDocument())
+      expect(next.pages[0].objects[0].objects).toEqual(saved.pages[0].objects[0].objects)
+      saved = next
+    }
+  })
+
+  it('removes stale children in one go when a document with many of them is loaded', async () => {
+    const first = await setup()
+    await first.engine.imageGrids.insert('two-columns')
+    const saved = structuredClone(first.engine.getDocument())
+    const gridDoc = saved.pages[0].objects[0]
+    const children = gridDoc.objects as Array<Record<string, unknown>>
+    gridDoc.objects = [...children, ...Array.from({ length: 30 }, (_, i) => ({ ...children[0], id: `stale-${i}`, gridCellId: `gone-${i}` }))]
+    const remove = vi.spyOn(Group.prototype, 'remove')
+    const reopened = await setup(saved)
+    expect((reopened.view.canvas.getObjects()[0] as Group).getObjects()).toHaveLength(2)
+    expect(remove.mock.calls.filter((args) => args.length > 0)).toHaveLength(1)
+  })
+
+  it('keeps one picture in a cell when two fills overlap', async () => {
+    const editor = await setup()
+    await editor.engine.imageGrids.insert('two-columns')
+    const grid = selectedGrid(editor)
+    const id = asDory(grid).id!
+    const [a, b] = [await asset(editor.engine, 'a.png'), await asset(editor.engine, 'b.png')]
+    await Promise.all([editor.engine.imageGrids.fillCellWith(editor.pageId, id, 'cell-1', a), editor.engine.imageGrids.fillCellWith(editor.pageId, id, 'cell-1', b)])
+    const cells = grid.getObjects().map((child) => asDory(child).gridCellId)
+    expect(cells.sort()).toEqual(['cell-1', 'cell-2'])
+    expect(new Set(grid.getObjects().map((child) => asDory(child).id)).size).toBe(2)
+    expect(gridCellObject(grid, 'cell-1')).toBeInstanceOf(FabricImage)
+  })
+
+  it('asks for a picture on double-click, but not for a locked grid', async () => {
+    const editor = await setup()
+    await editor.engine.imageGrids.insert('two-columns')
+    const grid = selectedGrid(editor)
+    const activate = vi.spyOn(editor.engine, 'onImageGridCellActivate').mockImplementation(() => undefined)
+    const c = grid.getCenterPoint()
+    const click = () => editor.view.canvas.fire('mouse:dblclick', { target: grid, scenePoint: new Point(c.x - grid.width / 4, c.y) } as never)
+    click()
+    expect(activate).toHaveBeenCalledOnce()
+    activate.mockClear()
+    editor.view.canvas.discardActiveObject()
+    editor.view.selectObjects([grid])
+    editor.engine.arrange.toggleLock()
+    click()
+    expect(activate).not.toHaveBeenCalled()
+  })
+
   it('repairs mismatched grid children and geometry when a merged document is hydrated', async () => {
     const first = await setup()
     await first.engine.imageGrids.insert('two-columns')

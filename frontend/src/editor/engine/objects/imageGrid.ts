@@ -10,6 +10,12 @@ import { asDory, ensureId } from './dory'
 
 export const MIN_IMAGE_GRID_SIZE = 96
 
+/**
+ * A crop as Fabric saves a width: to 4 decimals. A crop worked out to more would come out a little different
+ * from the saved width on every load, and the grid would count as changed (and overwrite a co-editor's edit).
+ */
+const savedPrecision = (value: number): number => Number(value.toFixed(4))
+
 export interface GridCellHit {
   gridCellId: string
   frame: ImageGridCellFrame
@@ -87,8 +93,8 @@ export function fitImageGridCell(img: FabricImage, frame: ImageGridCellFrame, gr
     angle: 0,
     skewX: 0,
     skewY: 0,
-    cropX,
-    cropY,
+    cropX: savedPrecision(cropX),
+    cropY: savedPrecision(cropY),
     width: cropWidth,
     height: cropHeight,
     scaleX: scale,
@@ -148,6 +154,7 @@ export function reconcileImageGridChildren(group: Group, spec: ImageGridSpec): v
   const wanted = new Set(spec.cells.map((cell) => cell.gridCellId))
   const retained = new Set<string>()
   const reusableIds: (string | undefined)[] = []
+  const stale: FabricObject[] = []
 
   for (const child of [...group.getObjects()]) {
     const data = asDory(child)
@@ -155,12 +162,14 @@ export function reconcileImageGridChildren(group: Group, spec: ImageGridSpec): v
     const supported = child instanceof FabricImage || child instanceof Rect
     if (!supported || !cellId || !wanted.has(cellId) || retained.has(cellId)) {
       reusableIds.push(data.id)
-      group.remove(child)
-      child.dispose()
+      stale.push(child)
       continue
     }
     retained.add(cellId)
   }
+  // All at once: the group lays itself out again on every removal, too slow for a document with thousands.
+  if (stale.length > 0) group.remove(...stale)
+  for (const child of stale) child.dispose()
 
   const usedIds = new Set(group.getObjects().map((child) => asDory(child).id).filter((id): id is string => !!id))
   for (const cell of spec.cells) {

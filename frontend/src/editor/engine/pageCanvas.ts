@@ -950,6 +950,7 @@ export class PageCanvas {
       return
     }
     if (target instanceof Group && isImageGrid(target)) {
+      if (asDory(target).locked) return // like dropping onto one: a locked grid keeps its pictures
       this.enterGridEditing(target)
       const hit = imageGridCellAtPoint(target, e.scenePoint)
       if (hit) this.host.onImageGridCellActivate(this.pageId, asDory(target).id ?? '', hit.gridCellId)
