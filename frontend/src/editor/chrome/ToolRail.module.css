@@ -4,15 +4,12 @@
   display: flex;
   gap: 2px;
   background: var(--ed-surface);
-  scrollbar-width: none;
-}
-.rail::-webkit-scrollbar {
-  display: none;
 }
 .rail[data-orientation='vertical'] {
   flex-direction: column;
   align-items: center;
   width: 80px;
+  min-height: 0;
   padding: 10px 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -29,6 +26,10 @@
   overflow-x: auto;
   overflow-y: hidden;
   border-top: 1px solid var(--ed-border);
+  scrollbar-width: none;
+}
+.rail[data-orientation='horizontal']::-webkit-scrollbar {
+  display: none;
 }
 
 .entry {
@@ -38,6 +39,8 @@
   align-items: center;
   gap: 3px;
   width: 72px;
+  /* Leave room for a native scrollbar without changing the rail's outer width. */
+  max-width: 100%;
   padding: 6px 0 7px;
   border: none;
   border-radius: 10px;
