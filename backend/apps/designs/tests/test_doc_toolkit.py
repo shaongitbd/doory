@@ -604,6 +604,13 @@ def test_image_grids_have_a_semantic_kind_and_summary():
     assert oversized_summary["gap"] == 8
 
 
+def test_a_grid_child_with_an_odd_cell_id_does_not_break_the_summary():
+    grid = image_grid()
+    grid["objects"][0]["gridCellId"] = ["cell-1"]
+    summary = summarize_document(make_doc(objects=[grid]))["pages"][0]["objects"][0]
+    assert summary["filled_cells"] == ["cell-2"]
+
+
 def test_image_grids_cannot_be_grouped_or_ungrouped():
     shape = builders.build_shape(PAGE, shape="rect", width=100, height=80)
     shape["id"] = "shape"

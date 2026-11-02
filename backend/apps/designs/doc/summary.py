@@ -96,7 +96,8 @@ def summarize_object(obj: dict) -> dict:
                     child.get("gridCellId")
                     for child in children
                     if isinstance(child, dict)
-                    and child.get("gridCellId") in cell_ids
+                    and isinstance(child.get("gridCellId"), str)
+                    and child["gridCellId"] in cell_ids
                     and object_kind(child) == "image"
                 ],
             }
