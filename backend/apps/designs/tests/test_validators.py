@@ -96,6 +96,13 @@ def test_pages_of_different_sizes_are_accepted():
     assert describe_document(doc).width == doc["width"]
 
 
+def test_duplicate_page_ids_rejected():
+    doc = make_doc(pages=2)
+    doc["pages"][1]["id"] = doc["pages"][0]["id"]
+    with pytest.raises(InvalidDocument):
+        check(doc)
+
+
 def test_page_count_limits():
     check(make_doc(pages=100))
     with pytest.raises(InvalidDocument):
