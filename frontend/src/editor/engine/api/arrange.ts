@@ -573,8 +573,16 @@ export class ArrangeApi {
     const parent = nested.group
     if (parent instanceof Group) {
       view.enterGroup(parent)
-      view.canvas.setActiveObject(nested)
-      view.canvas.requestRenderAll()
+      if (additive) {
+        // Like the top-level path above, Ctrl/Cmd-click toggles one layer in or out of the
+        // selection instead of replacing it; only members of this group can share a selection.
+        const current = view.selectedObjects().filter((o) => o.group === parent)
+        if (current.includes(nested)) view.selectObjects(current.filter((o) => o !== nested))
+        else view.selectObjects([...current, nested])
+      } else {
+        view.canvas.setActiveObject(nested)
+        view.canvas.requestRenderAll()
+      }
       this.engine.refreshSelection()
     }
   }
