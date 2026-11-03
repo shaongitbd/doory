@@ -68,7 +68,13 @@ export type CustomSizeResult =
 
 /** Validates a custom size typed in `unit`; converts to whole pixels at 96 dpi (1 … 20000). */
 export function parseCustomSize(input: { width: string | number; height: string | number; unit: CustomUnit }): CustomSizeResult {
-  const parse = (raw: string | number): number => (typeof raw === 'number' ? raw : Number.parseFloat(raw.replace(',', '.')))
+  // parseFloat alone would silently accept trailing garbage ('1080abc' -> 1080, '12.5.6' -> 12.5),
+  // so the whole string must look like one number first (a decimal comma still counts as a point).
+  const parse = (raw: string | number): number => {
+    if (typeof raw === 'number') return raw
+    const text = raw.replace(',', '.')
+    return /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(text) ? Number.parseFloat(text) : Number.NaN
+  }
   const entries: Array<['width' | 'height', number]> = [
     ['width', parse(input.width)],
     ['height', parse(input.height)],
