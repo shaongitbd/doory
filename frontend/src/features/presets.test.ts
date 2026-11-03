@@ -76,6 +76,14 @@ describe('parseCustomSize', () => {
     expect(parseCustomSize({ width: 'abc', height: 100, unit: 'px' })).toMatchObject({ ok: false })
   })
 
+  it('rejects trailing garbage instead of silently parsing the leading number', () => {
+    expect(parseCustomSize({ width: '1080abc', height: 100, unit: 'px' })).toMatchObject({ ok: false, field: 'width' })
+    expect(parseCustomSize({ width: 100, height: '12.5.6', unit: 'px' })).toMatchObject({ ok: false, field: 'height' })
+    expect(parseCustomSize({ width: '10px', height: 100, unit: 'px' })).toMatchObject({ ok: false, field: 'width' })
+    // The decimal comma is still accepted, as before.
+    expect(parseCustomSize({ width: '8,5', height: '11', unit: 'in' })).toEqual({ ok: true, width: 816, height: 1056, unit: 'in' })
+  })
+
   it('enforces the 1 px minimum and 20 000 px maximum', () => {
     expect(parseCustomSize({ width: 0.001, height: 100, unit: 'mm' })).toMatchObject({ ok: false, field: 'width' })
     expect(parseCustomSize({ width: 20000, height: 20000, unit: 'px' })).toMatchObject({ ok: true })
