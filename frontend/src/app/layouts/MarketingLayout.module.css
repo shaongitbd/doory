@@ -118,8 +118,10 @@
 }
 
 .language {
-  max-width: 82px;
+  flex: none;
+  max-width: 120px;
   min-width: 0;
+  font-size: var(--text-sm);
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);

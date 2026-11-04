@@ -53,8 +53,8 @@ export function MarketingHeader() {
           <HeaderNav orientation="row" />
         </div>
         <div className={styles.actions}>
-          <select aria-label="Language" className={styles.language} value={locale} onChange={event => { void activateLocale(event.target.value as Locale) }}>
-            <option value="en">English</option>
+          <select aria-label={msg("Language")} className={styles.language} value={locale} onChange={event => { void activateLocale(event.target.value as Locale) }}>
+            <option value="en">{msg("English")}</option>
             <option value="zh-CN">简体中文</option>
             <option value="zh-TW">繁體中文</option>
           </select>
