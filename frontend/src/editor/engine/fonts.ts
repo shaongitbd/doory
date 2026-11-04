@@ -87,7 +87,12 @@ export function subsetsToLoad(entry: FontFamilyEx, variant: FontVariantEx, text:
   for (const file of variant.subsets ?? []) {
     if (file.subset === 'latin' || file.url === variant.url) continue
     const range = ranges[file.subset]
-    if (range && rangesCoverText(parseUnicodeRange(range), text)) out.push({ subset: file.subset, url: file.url, range })
+    // Fontsource CJK files are often whole-font slices and intentionally have no CSS range.
+    // The old path silently skipped them, so headless Canvas measured and painted in its fallback.
+    const isUnrangedCjk = !range && /^(chinese|japanese|korean)/.test(file.subset)
+    if ((range && rangesCoverText(parseUnicodeRange(range), text)) || (isUnrangedCjk && /[^\u0000-\u00ff]/u.test(text))) {
+      out.push({ subset: file.subset, url: file.url, range: range ?? '' })
+    }
   }
   return out
 }
