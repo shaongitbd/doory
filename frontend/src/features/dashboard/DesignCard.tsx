@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Copy, ExternalLink, FolderInput, MoreHorizontal, Pencil, Star, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -76,24 +77,19 @@ export function DesignCard({ design, layout, selected, selectionActive, dragIds,
       <div className={styles.menu}>
         <Menu label={`Actions for ${title}`} placement="bottom-end" trigger={<IconButton size="sm" label={`More actions for ${title}`} icon={<MoreHorizontal size={18} />} />}>
           <MenuItem icon={<ExternalLink size={16} />} onSelect={() => actions.open(design)}>
-            Open
-          </MenuItem>
+            {msg("Open")}</MenuItem>
           <MenuItem icon={<Pencil size={16} />} onSelect={() => setRenaming(true)}>
-            Rename
-          </MenuItem>
+            {msg("Rename")}</MenuItem>
           <MenuItem icon={<Copy size={16} />} onSelect={() => actions.duplicate(design)}>
-            Duplicate
-          </MenuItem>
+            {msg("Duplicate")}</MenuItem>
           <MenuItem icon={<Star size={16} />} onSelect={() => actions.toggleStar(design)}>
             {design.starred ? 'Remove star' : 'Star'}
           </MenuItem>
           <MenuItem icon={<FolderInput size={16} />} onSelect={() => onMoveRequest(design)}>
-            Move to folder…
-          </MenuItem>
+            {msg("Move to folder…")}</MenuItem>
           <MenuSeparator />
           <MenuItem icon={<Trash2 size={16} />} danger onSelect={() => actions.trash(design)}>
-            Move to trash
-          </MenuItem>
+            {msg("Move to trash")}</MenuItem>
         </Menu>
       </div>
     </article>

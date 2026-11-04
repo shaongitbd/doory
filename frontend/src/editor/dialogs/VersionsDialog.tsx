@@ -1,3 +1,4 @@
+import { getLocale } from '@/i18n/locale'
 import { RotateCcw, Save } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import type { VersionSummary } from '@/types/api'
@@ -11,7 +12,7 @@ import { Skeleton } from '../ui/Skeleton'
 import dlg from './dialogs.module.css'
 import styles from './Share.module.css'
 
-const when = (iso: string): string => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
+const when = (iso: string): string => new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
 
 /** Version history: named snapshots of the design (and the automatic ones), restorable as one undoable step. */
 export function VersionsDialog() {

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Input } from '@/ui'
@@ -70,15 +71,15 @@ export function LoginForm({ onSuccess, onNavigate, autoFocus = true, lockedEmail
 
   return (
     <div className={styles.stack}>
-      <form className={styles.form} onSubmit={submit} noValidate aria-label="Log in">
+      <form className={styles.form} onSubmit={submit} noValidate aria-label={msg("Log in")}>
         {formError ? (
           <div className={styles.alert} role="alert">
             {formError}
           </div>
         ) : null}
-        <Input label="Email" type="email" name="email" autoComplete="email" inputMode="email" autoFocus={autoFocus && !lockedEmail} readOnly={Boolean(lockedEmail)} value={email} onChange={(event) => setEmail(event.target.value)} error={fieldErrors.email} required />
+        <Input label={msg("Email")} type="email" name="email" autoComplete="email" inputMode="email" autoFocus={autoFocus && !lockedEmail} readOnly={Boolean(lockedEmail)} value={email} onChange={(event) => setEmail(event.target.value)} error={fieldErrors.email} required />
         <PasswordInput
-          label="Password"
+          label={msg("Password")}
           name="password"
           autoComplete="current-password"
           autoFocus={autoFocus && Boolean(lockedEmail)}
@@ -88,13 +89,11 @@ export function LoginForm({ onSuccess, onNavigate, autoFocus = true, lockedEmail
           required
           labelAside={
             <Link to="/forgot-password" className={styles.inlineLink} onClick={onNavigate} {...(lockedEmail ? { target: '_blank', rel: 'noopener' } : {})}>
-              Forgot password?
-            </Link>
+              {msg("Forgot password?")}</Link>
           }
         />
         <Button type="submit" fullWidth loading={busy}>
-          Log in
-        </Button>
+          {msg("Log in")}</Button>
       </form>
       <SignInDivider sso={offerSso} />
       {offerSso ? <SsoButton next={ssoNext} note={lockedEmail ? 'This leaves the page, so changes that aren’t saved yet may be lost.' : undefined} /> : null}
@@ -109,7 +108,7 @@ export function SignInDivider({ sso = true }: { sso?: boolean }) {
   if (!config.google_client_id && !(sso && config.features.oidc_login)) return null
   return (
     <div className={styles.divider} role="separator">
-      <span>or</span>
+      <span>{msg("or")}</span>
     </div>
   )
 }

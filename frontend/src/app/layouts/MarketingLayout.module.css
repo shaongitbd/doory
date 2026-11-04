@@ -117,6 +117,16 @@
   margin-left: auto;
 }
 
+.language {
+  max-width: 82px;
+  min-width: 0;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+}
+
 .hideSmall {
   display: none;
 }

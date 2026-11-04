@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { CloudUpload, TriangleAlert } from 'lucide-react'
 import { Button } from '@/ui'
 import styles from './GuestBanner.module.css'
@@ -21,8 +22,8 @@ export function GuestBanner({ signedIn, memoryOnly, busy, onSave }: GuestBannerP
       {memoryOnly ? (
         <p className={styles.warning} role="status" title={`This browser blocks storage, so closing the tab loses this design. ${signedIn ? 'Save it to your account.' : 'Sign up to keep it.'}`}>
           <TriangleAlert size={16} aria-hidden="true" />
-          <span className={styles.label}>Won’t be kept</span>
-          <span className={styles.srOnly}> · This browser blocks storage, so closing the tab loses this design.</span>
+          <span className={styles.label}>{msg("Won’t be kept")}</span>
+          <span className={styles.srOnly}> {msg("· This browser blocks storage, so closing the tab loses this design.")}</span>
         </p>
       ) : null}
       <Button variant="secondary" size="sm" leftIcon={<CloudUpload size={16} />} onClick={onSave} loading={busy}>

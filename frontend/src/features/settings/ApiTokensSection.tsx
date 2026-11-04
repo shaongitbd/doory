@@ -1,3 +1,5 @@
+import { msg } from '@/i18n/catalog'
+import { getLocale } from '@/i18n/locale'
 import { Check, Copy, KeyRound, Trash2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -12,9 +14,9 @@ import styles from './Settings.module.css'
 
 const DEFAULT_SCOPES = ['designs:read', 'designs:write']
 const EXPIRY_OPTIONS = [
-  { value: '30', label: '30 days' },
-  { value: '90', label: '90 days' },
-  { value: '365', label: '1 year' },
+  { value: '30', label: msg("30 days") },
+  { value: '90', label: msg("90 days") },
+  { value: '365', label: msg("1 year") },
 ]
 
 async function copy(text: string): Promise<boolean> {
@@ -27,7 +29,7 @@ async function copy(text: string): Promise<boolean> {
 }
 
 function when(iso: string | null, fallback: string): string {
-  return iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : fallback
+  return iso ? new Date(iso).toLocaleDateString(getLocale(), { year: 'numeric', month: 'short', day: 'numeric' }) : fallback
 }
 
 export function ApiTokensSection() {
@@ -57,9 +59,9 @@ export function ApiTokensSection() {
     try {
       await tokensApi.revoke(token.id)
       setTokens((list) => (list ?? []).filter((item) => item.id !== token.id))
-      toast({ title: 'Token revoked', description: `${token.name} can no longer reach your designs.` })
+      toast({ title: msg("Token revoked"), description: `${token.name} can no longer reach your designs.` })
     } catch {
-      toast({ title: 'Couldn’t revoke the token', description: 'Please try again.', variant: 'error' })
+      toast({ title: msg("Couldn’t revoke the token"), description: msg("Please try again."), variant: 'error' })
     } finally {
       setBusy(false)
       setRevoking(null)
@@ -69,12 +71,12 @@ export function ApiTokensSection() {
   return (
     <SettingsCard
       id="api-tokens"
-      title="AI assistants (MCP)"
-      description="Let Claude, Cursor or another MCP client create and edit your designs. Each token works like your password for those tools: keep it secret and revoke it when you stop using it."
+      title={msg("AI assistants (MCP)")}
+      description={msg("Let Claude, Cursor or another MCP client create and edit your designs. Each token works like your password for those tools: keep it secret and revoke it when you stop using it.")}
     >
       {issued ? <IssuedToken issued={issued} onDone={() => setIssued(null)} /> : null}
       {user?.is_email_verified === false && config.features.email_verification ? (
-        <p className={styles.hint}>Confirm your email address to create a token. You can resend the link under Email.</p>
+        <p className={styles.hint}>{msg("Confirm your email address to create a token. You can resend the link under Email.")}</p>
       ) : (
         <CreateTokenForm
           scopes={scopes}
@@ -85,27 +87,26 @@ export function ApiTokensSection() {
         />
       )}
       {tokens && tokens.length > 0 ? (
-        <ul className={styles.tokenList} aria-label="Your API tokens">
+        <ul className={styles.tokenList} aria-label={msg("Your API tokens")}>
           {tokens.map((token) => (
             <li key={token.id} className={styles.tokenRow}>
               <div>
                 <p className={styles.tokenName}>
-                  <KeyRound size={14} aria-hidden /> {token.name} <code className={styles.tokenPrefix}>doory_{token.prefix}_…</code>
+                  <KeyRound size={14} aria-hidden /> {token.name} <code className={styles.tokenPrefix}>{msg("doory_")}{token.prefix}_…</code>
                 </p>
                 <p className={styles.hint}>
-                  {token.scopes.join(', ')} · last used {when(token.last_used_at, 'never')} · expires {when(token.expires_at, 'never')}
+                  {token.scopes.join(', ')} {msg("· last used ")}{when(token.last_used_at, 'never')} {msg("· expires ")}{when(token.expires_at, 'never')}
                 </p>
               </div>
               <Button variant="ghost" size="sm" leftIcon={<Trash2 size={14} />} onClick={() => setRevoking(token)} aria-label={`Revoke ${token.name}`}>
-                Revoke
-              </Button>
+                {msg("Revoke")}</Button>
             </li>
           ))}
         </ul>
       ) : null}
       <ConfirmDialog
         open={revoking !== null}
-        title="Revoke this token?"
+        title={msg("Revoke this token?")}
         description={revoking ? `Assistants using “${revoking.name}” will lose access at once.` : undefined}
         confirmLabel="Revoke"
         tone="danger"
@@ -161,26 +162,25 @@ function CreateTokenForm({ scopes, onCreated }: { scopes: ApiTokenScope[]; onCre
           {formError}
         </p>
       ) : null}
-      <Input label="Token name" placeholder="Claude Desktop" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
+      <Input label={msg("Token name")} placeholder={msg("Claude Desktop")} value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
       {scopes.length > 0 ? (
         <fieldset className={styles.fieldset}>
-          <legend className={styles.legend}>Permissions</legend>
+          <legend className={styles.legend}>{msg("Permissions")}</legend>
           {scopes.map((scope) => (
             <Checkbox key={scope.id} label={scope.id} description={scope.description} checked={chosen.includes(scope.id)} onChange={(event) => toggle(scope.id, event.target.checked)} />
           ))}
           {errors.scopes ? <p className={styles.error}>{errors.scopes}</p> : null}
         </fieldset>
       ) : null}
-      <Select label="Expires after" options={EXPIRY_OPTIONS} value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+      <Select label={msg("Expires after")} options={EXPIRY_OPTIONS} value={expiry} onChange={(event) => setExpiry(event.target.value)} />
       {hasPassword ? (
-        <PasswordInput label="Your password" name="current-password" autoComplete="current-password" value={secret} onChange={(event) => setSecret(event.target.value)} error={errors.password} />
+        <PasswordInput label={msg("Your password")} name="current-password" autoComplete="current-password" value={secret} onChange={(event) => setSecret(event.target.value)} error={errors.password} />
       ) : (
-        <Input label="Type your email address to confirm" value={secret} onChange={(event) => setSecret(event.target.value)} error={errors.confirm_email} autoComplete="off" spellCheck={false} />
+        <Input label={msg("Type your email address to confirm")} value={secret} onChange={(event) => setSecret(event.target.value)} error={errors.confirm_email} autoComplete="off" spellCheck={false} />
       )}
       <div>
         <Button type="submit" loading={busy}>
-          Create token
-        </Button>
+          {msg("Create token")}</Button>
       </div>
     </form>
   )
@@ -192,14 +192,13 @@ function IssuedToken({ issued, onDone }: { issued: IssuedApiToken; onDone(): voi
 
   async function copyValue(label: string, text: string) {
     if (await copy(text)) setCopied(label)
-    else toast({ title: 'Couldn’t copy', description: 'Select the text and copy it yourself.', variant: 'error' })
+    else toast({ title: msg("Couldn’t copy"), description: msg("Select the text and copy it yourself."), variant: 'error' })
   }
 
   return (
     <div className={styles.issued} role="status">
       <p>
-        <strong>Copy your new token now.</strong> It won’t be shown again.
-      </p>
+        <strong>{msg("Copy your new token now.")}</strong> {msg("It won’t be shown again.")}</p>
       <div className={styles.inline}>
         <code className={styles.secret}>{issued.token}</code>
         <Button size="sm" variant="secondary" leftIcon={copied === 'token' ? <Check size={14} /> : <Copy size={14} />} onClick={() => void copyValue('token', issued.token)}>
@@ -207,8 +206,7 @@ function IssuedToken({ issued, onDone }: { issued: IssuedApiToken; onDone(): voi
         </Button>
       </div>
       <p className={styles.hint}>
-        Server URL: <code>{mcpUrl()}</code>, with the header <code>Authorization: Bearer &lt;token&gt;</code>. In Claude Code:
-      </p>
+        {msg("Server URL: ")}<code>{mcpUrl()}</code>{msg(", with the header ")}<code>{msg("Authorization: Bearer &lt;token&gt;")}</code>{msg(". In Claude Code:")}</p>
       <div className={styles.inline}>
         <code className={styles.secret}>{claudeCodeCommand(issued.token)}</code>
         <Button size="sm" variant="secondary" leftIcon={copied === 'command' ? <Check size={14} /> : <Copy size={14} />} onClick={() => void copyValue('command', claudeCodeCommand(issued.token))}>
@@ -217,8 +215,7 @@ function IssuedToken({ issued, onDone }: { issued: IssuedApiToken; onDone(): voi
       </div>
       <div>
         <Button size="sm" variant="ghost" onClick={onDone}>
-          Done
-        </Button>
+          {msg("Done")}</Button>
       </div>
     </div>
   )

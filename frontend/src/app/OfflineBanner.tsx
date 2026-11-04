@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { WifiOff } from 'lucide-react'
 import { useOnline } from '@/lib/useOnline'
 import styles from './OfflineBanner.module.css'
@@ -9,7 +10,7 @@ export function OfflineBanner() {
   return (
     <div className={styles.banner} role="status">
       <WifiOff size={16} aria-hidden="true" />
-      <span>You’re offline. Changes to guest designs keep saving in this browser; account designs sync when you’re back.</span>
+      <span>{msg("You’re offline. Changes to guest designs keep saving in this browser; account designs sync when you’re back.")}</span>
     </div>
   )
 }

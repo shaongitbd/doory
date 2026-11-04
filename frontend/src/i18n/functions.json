@@ -1,0 +1,1166 @@
+{
+  "animation.announce.added": {
+    "source": "(preset: string): string => `${preset} animation added`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.announce.pageStyled": {
+    "source": "(n: number): string => (n === 1 ? 'Animated 1 object' : `Animated ${n} objects`)",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.announce.transitionSet": {
+    "source": "(preset: string): string => `Page transition: ${preset}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.panel.preview": {
+    "source": "(name: string): string => `${name}. Hover or focus to preview.`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.panel.selected": {
+    "source": "(n: number): string => (n === 1 ? '1 element selected' : `${n} elements selected`)",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.preview.page": {
+    "source": "(n: number): string => `Preview of page ${n}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.preview.started": {
+    "source": "(n: number): string => `Playing the animations of page ${n}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.bar": {
+    "source": "(slot: string, preset: string, start: string, length: string): string => `${slot}: ${preset}, starts at ${start}, lasts ${length}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.chip": {
+    "source": "(slot: string, preset: string, start: string, end: string): string => `${slot} · ${preset} · ${start} to ${end}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.lane": {
+    "source": "(name: string): string => `Animations of ${name}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.moved": {
+    "source": "(slot: string, start: string): string => `${slot} animation starts at ${start}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.overrun": {
+    "source": "(over: string): string => `Animations run ${over} past the page time`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.selectObject": {
+    "source": "(name: string): string => `Select ${name}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.speedOption": {
+    "source": "(s: number): string => `${s}×`",
+    "file": "editor/animation/strings.ts"
+  },
+  "animation.timeline.time": {
+    "source": "(now: string, total: string): string => `${now} of ${total}`",
+    "file": "editor/animation/strings.ts"
+  },
+  "announce.added": {
+    "source": "(what: string) => `Added ${what}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.deleted": {
+    "source": "(n: number) => `Deleted ${n} ${plural(n, 'layer', 'layers')}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.duplicated": {
+    "source": "(n: number) => `Duplicated ${n} ${plural(n, 'layer', 'layers')}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.pageAdded": {
+    "source": "(n: number) => `Added page ${n}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.pageMoved": {
+    "source": "(n: number) => `Moved page to position ${n}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.pasted": {
+    "source": "(n: number) => `Pasted ${n} ${plural(n, 'object', 'objects')}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.redone": {
+    "source": "(label: string) => `Redid ${label}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.resized": {
+    "source": "(w: number, h: number) => `Design resized to ${w} by ${h}`",
+    "file": "editor/strings.ts"
+  },
+  "announce.selected": {
+    "source": "(n: number) => `${n} ${plural(n, 'object', 'objects')} selected`",
+    "file": "editor/strings.ts"
+  },
+  "announce.undone": {
+    "source": "(label: string) => `Undid ${label}`",
+    "file": "editor/strings.ts"
+  },
+  "audio.announce.added": {
+    "source": "(name: string) => `Added ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.announce.muted": {
+    "source": "(name: string) => `${name} muted`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.announce.removed": {
+    "source": "(name: string) => `Deleted ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.announce.unmuted": {
+    "source": "(name: string) => `${name} unmuted`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.credits.neededHint": {
+    "source": "(license: string) => `${license}: credit the author where you publish`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.credits.summary": {
+    "source": "(n: number) => `${n} ${plural(n, 'sound needs', 'sounds need')} credit when you publish`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.freesound.by": {
+    "source": "(author: string) => `by ${author}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.freesound.count": {
+    "source": "(n: number) => `${n.toLocaleString('en')} ${plural(n, 'sound', 'sounds')}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.freesound.creditHint": {
+    "source": "(license: string) => `${license} · credit needed when you publish`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.freesound.open": {
+    "source": "(title: string) => `Open ${title} on Freesound`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.addLabelDesign": {
+    "source": "(title: string) => `Add ${title} to the design`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.addLabelPage": {
+    "source": "(title: string) => `Add ${title} to this page`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.count": {
+    "source": "(n: number) => `${n} ${plural(n, 'sound', 'sounds')}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.details": {
+    "source": "(bpm: number | undefined, seconds: string, loop: boolean) => [bpm ? `${bpm} BPM` : '', seconds, loop ? 'loops' : ''].filter(Boolean).join(' · ')",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.pause": {
+    "source": "(title: string) => `Pause ${title}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.preview": {
+    "source": "(title: string) => `Play ${title}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.previewing": {
+    "source": "(title: string) => `Previewing ${title}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.library.release": {
+    "source": "(r: string) => `Library ${r}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.presenter.failed": {
+    "source": "(names: string) => `Some sound could not be loaded: ${names}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.record.countdown": {
+    "source": "(n: number) => `Recording starts in ${n}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.record.elapsed": {
+    "source": "(time: string) => `Recorded ${time}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.record.nameFor": {
+    "source": "(n: number) => `Voiceover ${n}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.timeline.bar": {
+    "source": "(name: string, kind: string, scope: string, start: string, length: string) => `${kind} ${name}, ${scope}, starts at ${start}, ${length} long`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.timeline.lane": {
+    "source": "(name: string) => `Audio track ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.collapse": {
+    "source": "(name: string) => `Close the settings of ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.count": {
+    "source": "(n: number) => `${n} ${plural(n, 'track', 'tracks')}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.duplicate": {
+    "source": "(name: string) => `Duplicate ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.expand": {
+    "source": "(name: string) => `Edit ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.mute": {
+    "source": "(name: string) => `Mute ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.orphans": {
+    "source": "(n: number) => `Remove ${n} ${plural(n, 'track', 'tracks')} of deleted pages`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.pageOption": {
+    "source": "(n: number, name?: string) => (name ? `Page ${n} · ${name}` : `Page ${n}`)",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.pause": {
+    "source": "(name: string) => `Pause ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.play": {
+    "source": "(name: string) => `Play ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.remove": {
+    "source": "(name: string) => `Delete ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.scopes.page": {
+    "source": "(n: number) => `Page ${n}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.seconds": {
+    "source": "(s: string) => `${s} s`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.solo": {
+    "source": "(name: string) => `Solo ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.startsAt": {
+    "source": "(time: string) => `Starts at ${time}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.trimmed": {
+    "source": "(from: string, to: string, length: string) => `${from} to ${to} (${length})`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.unmute": {
+    "source": "(name: string) => `Unmute ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.unsolo": {
+    "source": "(name: string) => `Stop solo of ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.tracks.volumeValue": {
+    "source": "(pct: number) => `${pct} %`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.transport.time": {
+    "source": "(now: string, total: string) => `${now} of ${total}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.uploads.addLabel": {
+    "source": "(name: string) => `Add ${name} to the design`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.uploads.decoding": {
+    "source": "(name: string) => `Reading ${name}…`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.uploads.remove": {
+    "source": "(name: string) => `Delete ${name} from your uploads`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.uploads.uploading": {
+    "source": "(n: number) => `Uploading ${n} ${plural(n, 'file', 'files')}…`",
+    "file": "editor/audio/strings.ts"
+  },
+  "audio.waveform.label": {
+    "source": "(name: string) => `Waveform of ${name}`",
+    "file": "editor/audio/strings.ts"
+  },
+  "backgroundPanel.gradientOf": {
+    "source": "(label: string) => `${label} gradient`",
+    "file": "editor/strings.ts"
+  },
+  "backgroundPanel.patternOf": {
+    "source": "(name: string) => `${name} pattern`",
+    "file": "editor/strings.ts"
+  },
+  "backgroundPanel.set": {
+    "source": "(color: string) => `Set background ${color}`",
+    "file": "editor/strings.ts"
+  },
+  "bgRemoval.errors.quota": {
+    "source": "(wait: string | null) => (wait ? `You have used today's removals with this option. It resets ${wait}.` : 'You have used today\\'s removals with this option.')",
+    "file": "editor/strings.ts"
+  },
+  "bgRemoval.errors.throttled": {
+    "source": "(wait: string | null) => (wait ? `Too many removals at once. Try again ${wait}.` : 'Too many removals at once. Try again shortly.')",
+    "file": "editor/strings.ts"
+  },
+  "bgRemoval.ownServerHint": {
+    "source": "(name: string) => (name ? `Your server: ${name}` : 'Your server')",
+    "file": "editor/strings.ts"
+  },
+  "bgRemoval.wait": {
+    "source": "(seconds: number) => {\n      if (seconds < 90) return `in ${seconds} ${plural(seconds, 'second', 'seconds')}`\n      const minutes = Math.round(seconds / 60)\n      if (minutes < 90) return `in ${minutes} ${plural(minutes, 'minute', 'minutes')}`\n      const hours = Math.round(minutes / 60)\n      return `in ${hours} ${plural(hours, 'hour', 'hours')}`\n    }",
+    "file": "editor/strings.ts"
+  },
+  "brand.addLogoToDesign": {
+    "source": "(name: string) => `Add logo ${name} to the design`",
+    "file": "editor/strings.ts"
+  },
+  "brand.applyColor": {
+    "source": "(name: string) => `Apply color ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "brand.chooseFont": {
+    "source": "(role: string) => `Choose the ${role.toLowerCase()} font`",
+    "file": "editor/strings.ts"
+  },
+  "brand.palette": {
+    "source": "(name: string) => `Brand colors · ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "brand.removeColor": {
+    "source": "(name: string) => `Remove color ${name} from the kit`",
+    "file": "editor/strings.ts"
+  },
+  "brand.removeLogo": {
+    "source": "(name: string) => `Remove logo ${name} from the kit`",
+    "file": "editor/strings.ts"
+  },
+  "bulk.create": {
+    "source": "(n: number) => `Create ${n} ${plural(n, 'design', 'designs')}`",
+    "file": "editor/strings.ts"
+  },
+  "bulk.done": {
+    "source": "(n: number) => `${n} ${plural(n, 'design', 'designs')} created`",
+    "file": "editor/strings.ts"
+  },
+  "bulk.failedRow": {
+    "source": "(row: number, error: string) => `Row ${row}: ${error}`",
+    "file": "editor/strings.ts"
+  },
+  "bulk.folderDefault": {
+    "source": "(title: string) => `${title} (bulk)`",
+    "file": "editor/strings.ts"
+  },
+  "bulk.mapField": {
+    "source": "(label: string) => `Column for ${label}`",
+    "file": "editor/strings.ts"
+  },
+  "bulk.preview": {
+    "source": "(shown: number, total: number) => (shown === total ? `Preview (${total} ${plural(total, 'row', 'rows')})` : `Preview (first ${shown} of ${total} rows)`)",
+    "file": "editor/strings.ts"
+  },
+  "bulk.rowErrors": {
+    "source": "(n: number) => `${n} ${plural(n, 'row has', 'rows have')} problems and will be skipped.`",
+    "file": "editor/strings.ts"
+  },
+  "bulk.tooManyRows": {
+    "source": "(max: number) => `At most ${max} rows at a time.`",
+    "file": "editor/strings.ts"
+  },
+  "canvasSize.invalid": {
+    "source": "(min: number, max: number) => `Width and height must be numbers between ${min} and ${max} px.`",
+    "file": "editor/strings.ts"
+  },
+  "canvasSize.pageTitle": {
+    "source": "(n: number) => `Size of page ${n}`",
+    "file": "editor/strings.ts"
+  },
+  "canvasSize.range": {
+    "source": "(min: number, max: number) => `${min}–${max} px`",
+    "file": "editor/strings.ts"
+  },
+  "canvasSize.resized": {
+    "source": "(w: number, h: number) => `Canvas resized to ${w} by ${h}`",
+    "file": "editor/strings.ts"
+  },
+  "chrome.closeTool": {
+    "source": "(name: string) => `Close ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "clips.announce.count": {
+    "source": "(n: number) => `${n} ${plural(n, 'video', 'videos')}`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.stock.add": {
+    "source": "(author: string) => (author ? `Add video by ${author}` : 'Add video')",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.stock.busy": {
+    "source": "(provider: string, wait: number | null) => `${provider} is busy. Try again${wait ? ` in ${wait} s` : ' shortly'}.`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.stock.byOn": {
+    "source": "(author: string, provider: string) => (author ? `${author} on ${provider}` : provider)",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.timeline.bar": {
+    "source": "(name: string, from: string, to: string) => `${name}, plays ${from} to ${to}`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.timeline.row": {
+    "source": "(name: string) => `Video ${name}`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.toolbar.backdropName": {
+    "source": "(name: string) => `${name} (blurred background)`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.toolbar.seconds": {
+    "source": "(s: number) => `${s} s`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.toolbar.speedValue": {
+    "source": "(speed: number) => `${speed}×`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.toolbar.trimRange": {
+    "source": "(from: string, to: string, length: string) => `${from} to ${to} (${length})`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.uploads.add": {
+    "source": "(name: string) => `Add ${name}`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.uploads.notVideo": {
+    "source": "(name: string) => `${name} is not a video.`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.uploads.remove": {
+    "source": "(name: string) => `Delete ${name}`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.uploads.tooLarge": {
+    "source": "(name: string, maxMb: number) => `${name} is larger than ${maxMb} MB.`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.uploads.uploadFailed": {
+    "source": "(name: string) => `${name} could not be uploaded.`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.uploads.uploading": {
+    "source": "(name: string, percent: number) => `Uploading ${name}… ${percent}%`",
+    "file": "editor/clips/strings.ts"
+  },
+  "clips.uploads.zoneHint": {
+    "source": "(maxMb: number) => `MP4, MOV or WebM, up to ${maxMb} MB. Drop files here too.`",
+    "file": "editor/clips/strings.ts"
+  },
+  "cmd.nudge": {
+    "source": "(px: number) => `Nudge ${px} px`",
+    "file": "editor/strings.ts"
+  },
+  "collab.presence.cursorOf": {
+    "source": "(name: string): string => `${name}'s pointer`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.editBlocked": {
+    "source": "(name: string): string => `${name} is editing this text. You can move or style it, but not type in it until they are done.`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.editingText": {
+    "source": "(name: string): string => `${name} is editing this text`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.following": {
+    "source": "(name: string): string => `Following ${name}`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.followStart": {
+    "source": "(name: string): string => `Follow ${name}`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.followStop": {
+    "source": "(name: string): string => `Stop following ${name}`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.joined": {
+    "source": "(name: string): string => `${name} joined`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.left": {
+    "source": "(name: string): string => `${name} left`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.lockTaken": {
+    "source": "(name: string): string => `${name} started editing this text first.`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.morePeople": {
+    "source": "(n: number): string => `${n} more`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.stack": {
+    "source": "(n: number): string => `${people(n)} here`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.presence.stackLabel": {
+    "source": "(names: string): string => `People in this design: ${names}`",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.status.live": {
+    "source": "(n: number): string => (n > 1 ? `Live · ${people(n)}` : 'Live')",
+    "file": "editor/collab/strings.ts"
+  },
+  "collab.status.viewing": {
+    "source": "(n: number): string => (n > 1 ? `Watching live · ${people(n)}` : 'Watching live')",
+    "file": "editor/collab/strings.ts"
+  },
+  "comments.announce.opened": {
+    "source": "(number: number) => `Comment ${number} opened`",
+    "file": "editor/strings.ts"
+  },
+  "comments.charactersLeft": {
+    "source": "(n: number) => `${n} characters left`",
+    "file": "editor/strings.ts"
+  },
+  "comments.failed.rateLimited": {
+    "source": "(seconds: number | null) => (seconds ? `You are commenting very fast. Try again in ${seconds} seconds.` : 'You are commenting very fast. Try again in a moment.')",
+    "file": "editor/strings.ts"
+  },
+  "comments.goToPage": {
+    "source": "(n: number) => `Go to page ${n}`",
+    "file": "editor/strings.ts"
+  },
+  "comments.mode.surface": {
+    "source": "(page: number) => `Add a comment on page ${page}`",
+    "file": "editor/strings.ts"
+  },
+  "comments.page": {
+    "source": "(n: number) => `Page ${n}`",
+    "file": "editor/strings.ts"
+  },
+  "comments.pin.label": {
+    "source": "(number: number, author: string, preview: string, resolved: boolean, replies: number) =>\n        `Comment ${number} by ${author}${resolved ? ', resolved' : ''}${replies > 0 ? `, ${replies === 1 ? '1 reply' : `${replies} replies`}` : ''}: ${preview}`",
+    "file": "editor/strings.ts"
+  },
+  "comments.pin.layer": {
+    "source": "(page: number, count: number) => (count === 1 ? `Comments on page ${page}: 1 thread` : `Comments on page ${page}: ${count} threads`)",
+    "file": "editor/strings.ts"
+  },
+  "comments.pin.replies": {
+    "source": "(n: number) => (n === 1 ? '1 reply' : `${n} replies`)",
+    "file": "editor/strings.ts"
+  },
+  "comments.pin.thread": {
+    "source": "(number: number) => `Comment ${number}`",
+    "file": "editor/strings.ts"
+  },
+  "comments.resolvedCount": {
+    "source": "(n: number) => `Resolved (${n})`",
+    "file": "editor/strings.ts"
+  },
+  "comments.showOnPage": {
+    "source": "(number: number, page: number) => `Show comment ${number} on page ${page}`",
+    "file": "editor/strings.ts"
+  },
+  "ctx.fieldType": {
+    "source": "(type: string) => ({ text: 'Text field', image: 'Image field', color: 'Colour field' })[type] ?? type",
+    "file": "editor/strings.ts"
+  },
+  "ctx.noItalic": {
+    "source": "(family: string) => `${family || 'This font'} has no italic variant`",
+    "file": "editor/strings.ts"
+  },
+  "ctx.rotateTitle": {
+    "source": "(angle: number) => `Rotate (currently ${angle}°)`",
+    "file": "editor/strings.ts"
+  },
+  "ctx.selected": {
+    "source": "(n: number) => `${n} selected`",
+    "file": "editor/strings.ts"
+  },
+  "design.clearGuides": {
+    "source": "(n: number) => `Clear ${n} ${plural(n, 'ruler guide', 'ruler guides')}`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadFiles": {
+    "source": "(count: number, format: string) => `${count} ${format} ${count === 1 ? 'file' : 'files'}`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadFits": {
+    "source": "(platform: string, format: string, size: string, limit: string) => `Fits ${platform}: ${format}, ${size} of ${limit} allowed.`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadNamesExample": {
+    "source": "(name: string) => `e.g. ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadNFiles": {
+    "source": "(count: number) => `Download ${count} files`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadNoServer": {
+    "source": "(format: string) => `The server could not make ${format} just now, so the file is a PNG.`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadNotAccepted": {
+    "source": "(platform: string, formats: string) => `${platform} takes ${formats} only.`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadOptimizerLocal": {
+    "source": "(name: string) => `${name} runs on this server.`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadOptimizerOffsite": {
+    "source": "(name: string) => `${name} sends the image to an outside service, chosen by your admin.`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadOptimizerSkips": {
+    "source": "(name: string, format: string) => `${name} leaves ${format} as it is; the file is still converted on the server.`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadPageOf": {
+    "source": "(page: number, total: number) => `Page ${page} of ${total}`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadPdfSummary": {
+    "source": "(pages: number, print: boolean) => `${pages} ${pages === 1 ? 'page' : 'pages'} · ${print ? 'print' : 'screen'}`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadPerPageSize": {
+    "source": "(size: string) => `≈ ${size} per page`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadPixels": {
+    "source": "(width: number, height: number) => `${width.toLocaleString('en')} × ${height.toLocaleString('en')} px`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadPresetHint": {
+    "source": "(format: string, width: number, height: number) => `${format} · ${width} × ${height}`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadPreviewWith": {
+    "source": "(name: string) => `Preview with ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadPurposes.webHint": {
+    "source": "(format: string) => `${format} · 2× for sharp screens`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadSaved": {
+    "source": "(size: string) => `${size} saved by optimizing`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.downloadTooBig": {
+    "source": "(platform: string, size: string, limit: string) => `${size} is over the ${limit} ${platform} allows. Lower the quality or the size.`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.resizeAllPages": {
+    "source": "(n: number) => `All ${n} pages`",
+    "file": "editor/strings.ts"
+  },
+  "dialog.resizePreviewAlt": {
+    "source": "(when: string, width: number, height: number) => `${when}: the page at ${width} by ${height} px`",
+    "file": "editor/strings.ts"
+  },
+  "drawers.addPairing": {
+    "source": "(name: string) => `Add the ${name} pairing`",
+    "file": "editor/strings.ts"
+  },
+  "elementsPanel.addOf": {
+    "source": "(name: string) => `Add ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "fill.stop": {
+    "source": "(index: number, percent: number) => `Color stop ${index} at ${percent} percent`",
+    "file": "editor/strings.ts"
+  },
+  "fonts.noMatch": {
+    "source": "(q: string) => `No fonts match “${q}”`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.addPhoto": {
+    "source": "(author: string) => `Add photo by ${author}`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.listNames": {
+    "source": "(names: string[]) => (names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`)",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.photoBy": {
+    "source": "(author: string) => `Photo by ${author}`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.photoByOn": {
+    "source": "(author: string, provider: string) => (author ? `Photo by ${author} on ${provider}` : `Photo on ${provider}`)",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.remove": {
+    "source": "(name: string) => `Delete ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.skipped": {
+    "source": "(reasons: string, shown: string) => `${reasons}. Showing ${shown}.`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.skippedReason.busy": {
+    "source": "(provider: string) => `${provider} is busy`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.skippedReason.timeout": {
+    "source": "(provider: string) => `${provider} didn’t answer in time`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.skippedReason.unavailable": {
+    "source": "(provider: string) => `${provider} is unavailable`",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.stockBusy": {
+    "source": "(provider: string, seconds: number | null) => (seconds ? `${provider} is busy. Try again in ${seconds} s.` : `${provider} is busy. Try again shortly.`)",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.stockBusyAll": {
+    "source": "(seconds: number | null) => (seconds ? `Photo search is busy. Try again in ${seconds} s.` : 'Photo search is busy. Try again shortly.')",
+    "file": "editor/strings.ts"
+  },
+  "imageDrawer.uploading": {
+    "source": "(n: number) => `Uploading ${n} ${n === 1 ? 'file' : 'files'}…`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.addImageToCell": {
+    "source": "(position: number) => `Add an image to grid cell ${position}`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.cell": {
+    "source": "(position: number) => `Grid cell ${position}`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.cells": {
+    "source": "(count: number) => `${count} ${count === 1 ? 'cell' : 'cells'}`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.cleared": {
+    "source": "(position: number) => `Image removed from grid cell ${position}`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.filled": {
+    "source": "(position: number) => `Image added to grid cell ${position}`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.gapValue": {
+    "source": "(value: number) => `${value} px gap`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.insert": {
+    "source": "(name: string) => `Add ${name} image grid`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.reordered": {
+    "source": "(from: number, to: number) => `Image moved from grid cell ${from} to ${to}`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.replaced": {
+    "source": "(position: number) => `Image replaced in grid cell ${position}`",
+    "file": "editor/strings.ts"
+  },
+  "imageGrid.replaceImageInCell": {
+    "source": "(position: number) => `Replace the image in grid cell ${position}`",
+    "file": "editor/strings.ts"
+  },
+  "limits.range": {
+    "source": "(min: number, max: number, unit = '') => `Between ${min} and ${max}${unit ? ` ${unit}` : ''}`",
+    "file": "editor/strings.ts"
+  },
+  "notes.counter": {
+    "source": "(used: number, max: number) => `${used} / ${max}`",
+    "file": "editor/strings.ts"
+  },
+  "notes.counterLabel": {
+    "source": "(used: number, max: number) => `${used} of ${max} characters`",
+    "file": "editor/strings.ts"
+  },
+  "notes.downloaded": {
+    "source": "(name: string) => `Saved ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "notes.fileTitle": {
+    "source": "(title: string) => `Speaker notes: ${title}`",
+    "file": "editor/strings.ts"
+  },
+  "notes.forPage": {
+    "source": "(label: string) => `Speaker notes for ${label}`",
+    "file": "editor/strings.ts"
+  },
+  "notes.limit": {
+    "source": "(max: number) => `Notes can have up to ${max} characters.`",
+    "file": "editor/strings.ts"
+  },
+  "notes.pageHeading": {
+    "source": "(n: number, label: string) => `Page ${n}: ${label}`",
+    "file": "editor/strings.ts"
+  },
+  "pageTime.appliedAll": {
+    "source": "(label: string) => `Every page now stays for ${label}`",
+    "file": "editor/strings.ts"
+  },
+  "pageTime.chipReadOnly": {
+    "source": "(label: string) => `Page time ${label}`",
+    "file": "editor/strings.ts"
+  },
+  "pageTime.chipSet": {
+    "source": "(label: string) => `Page time ${label}. Change`",
+    "file": "editor/strings.ts"
+  },
+  "pageTime.hintDefault": {
+    "source": "(label: string) => `No page has a time yet: auto-advance uses ${label} for every page.`",
+    "file": "editor/strings.ts"
+  },
+  "pageTime.hintSet": {
+    "source": "(label: string) => `This page stays for ${label} while auto-advance is on.`",
+    "file": "editor/strings.ts"
+  },
+  "panels.fieldLayer": {
+    "source": "(key: string) => `Template field: ${key}`",
+    "file": "editor/strings.ts"
+  },
+  "panels.uploading": {
+    "source": "(n: number) => `Uploading ${n} ${plural(n, 'file', 'files')}…`",
+    "file": "editor/strings.ts"
+  },
+  "picker.areaValue": {
+    "source": "(saturation: number, brightness: number) => `Saturation ${saturation} percent, brightness ${brightness} percent`",
+    "file": "editor/strings.ts"
+  },
+  "picker.channel": {
+    "source": "(c: string) => `${c.toUpperCase()} channel`",
+    "file": "editor/strings.ts"
+  },
+  "picker.use": {
+    "source": "(c: string) => `Use color ${c}`",
+    "file": "editor/strings.ts"
+  },
+  "presenter.announce": {
+    "source": "(n: number, total: number) => `Page ${n} of ${total}`",
+    "file": "editor/strings.ts"
+  },
+  "presenter.goToPage": {
+    "source": "(n: number) => `Go to page ${n}`",
+    "file": "editor/strings.ts"
+  },
+  "presenter.pageOf": {
+    "source": "(n: number, total: number) => `${n} / ${total}`",
+    "file": "editor/strings.ts"
+  },
+  "presenter.stage": {
+    "source": "(n: number, total: number, name: string) => `Page ${n} of ${total}${name ? `: ${name}` : ''}`",
+    "file": "editor/strings.ts"
+  },
+  "presenter.timeLeft": {
+    "source": "(clock: string) => `${clock} left`",
+    "file": "editor/strings.ts"
+  },
+  "presenterView.pageOfTotal": {
+    "source": "(n: number, total: number) => `Page ${n} of ${total}`",
+    "file": "editor/strings.ts"
+  },
+  "presenterView.pageTitle": {
+    "source": "(title: string) => `Presenter view: ${title}`",
+    "file": "editor/strings.ts"
+  },
+  "presenterView.previewAlt": {
+    "source": "(which: string, n: number, name: string) => `${which}: page ${n}${name ? `, ${name}` : ''}`",
+    "file": "editor/strings.ts"
+  },
+  "presenterView.remaining": {
+    "source": "(clock: string) => `${clock} left`",
+    "file": "editor/strings.ts"
+  },
+  "presenterView.textSize": {
+    "source": "(px: number) => `Text size ${px}`",
+    "file": "editor/strings.ts"
+  },
+  "print.bleedIn": {
+    "source": "(value: string, unit: string) => `= ${value} ${unit}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.previewAlt": {
+    "source": "(bleed: string, marks: boolean) => `Page layout: trim line${bleed ? `, ${bleed} bleed around it` : ''}${marks ? ', crop marks in the margin' : ''}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.problems.font": {
+    "source": "(detail: string) => `A font in this design could not be added to the PDF. ${detail}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.problems.invalid": {
+    "source": "(detail: string) => `The print service did not accept this request. ${detail}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.retryIn": {
+    "source": "(seconds: number) => `Try again in ${seconds} s`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.sheet": {
+    "source": "(width: string, height: string, unit: string, extras: string) => `Each page is ${width} × ${height} ${unit} with ${extras}.`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.sheetMixed": {
+    "source": "(extras: string) => `Each page grows by the ${extras}.`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.summary": {
+    "source": "(pages: number, sizes: readonly string[], more: number) =>\n    `${pages} ${plural(pages, 'page', 'pages')} · ${sizes.length + more} ${plural(sizes.length + more, 'size', 'sizes')}: ${sizes.join(', ')}${more > 0 ? ` and ${more} more` : ''}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "share.expires": {
+    "source": "(when: string) => `Expires ${when}`",
+    "file": "editor/strings.ts"
+  },
+  "stickers.addOfPack": {
+    "source": "(name: string, pack: string) => `Add ${name} from ${pack}`",
+    "file": "editor/strings.ts"
+  },
+  "stickers.itemOf": {
+    "source": "(name: string, pack: string) => `${name} · ${pack}`",
+    "file": "editor/strings.ts"
+  },
+  "stickers.items": {
+    "source": "(n: number) => `${n} ${n === 1 ? 'sticker' : 'stickers'}`",
+    "file": "editor/strings.ts"
+  },
+  "stickers.noMatch": {
+    "source": "(q: string) => `No stickers match “${q}”.`",
+    "file": "editor/strings.ts"
+  },
+  "stickers.noMatchIn": {
+    "source": "(q: string, pack: string) => `Nothing in ${pack} matches “${q}”.`",
+    "file": "editor/strings.ts"
+  },
+  "swatches.gradient": {
+    "source": "(label: string) => `${label} gradient`",
+    "file": "editor/strings.ts"
+  },
+  "swatches.use": {
+    "source": "(c: string) => `Use ${c}`",
+    "file": "editor/strings.ts"
+  },
+  "templates.addAll": {
+    "source": "(n: number) => `Add all ${n} pages`",
+    "file": "editor/strings.ts"
+  },
+  "templates.applied": {
+    "source": "(title: string) => `Applied “${title}”`",
+    "file": "editor/strings.ts"
+  },
+  "templates.noMatch": {
+    "source": "(q: string) => `No templates match “${q}”.`",
+    "file": "editor/strings.ts"
+  },
+  "templates.pageCount": {
+    "source": "(n: number) => `${n} pages`",
+    "file": "editor/strings.ts"
+  },
+  "templates.use": {
+    "source": "(title: string) => `Use template ${title}`",
+    "file": "editor/strings.ts"
+  },
+  "toolbar.multiple": {
+    "source": "(n: number) => `${n} objects selected`",
+    "file": "editor/strings.ts"
+  },
+  "tools.alignHint": {
+    "source": "(current: string, next: string) => `${current} (click for ${next.toLowerCase()})`",
+    "file": "editor/strings.ts"
+  },
+  "tools.arrowheadOf": {
+    "source": "(end: string, head: string) => `${end}: ${head}`",
+    "file": "editor/strings.ts"
+  },
+  "tools.filterOf": {
+    "source": "(label: string) => `${label} filter`",
+    "file": "editor/strings.ts"
+  },
+  "tools.recolorOf": {
+    "source": "(color: string) => `Recolor ${color}`",
+    "file": "editor/strings.ts"
+  },
+  "topbar.suggestedFor": {
+    "source": "(preset: string) => `Suggested for ${preset}`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.deleted": {
+    "source": "(family: string) => `Deleted ${family}`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.deleteFailed": {
+    "source": "(family: string) => `Could not delete ${family}.`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.deleteFont": {
+    "source": "(family: string) => `Delete ${family}`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.deleteTitle": {
+    "source": "(family: string) => `Delete “${family}”?`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.deleteUsed": {
+    "source": "(n: number) => (n === 1 ? 'It is used by 1 text layer in this design.' : `It is used by ${n} text layers in this design.`)",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.allDone": {
+    "source": "(n: number) => (n === 1 ? '1 font uploaded. It is now in Your fonts.' : `${n} fonts uploaded. They are now in Your fonts.`)",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.differentFamilies": {
+    "source": "(names: string) => `These files belong to different families (${names}). Each one is added as its own family unless you enter a family name.`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.progress": {
+    "source": "(percent: number) => `${percent}%`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.remove": {
+    "source": "(name: string) => `Remove ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.tooMany": {
+    "source": "(max: number) => `Only ${max} files can be added at a time. The others were left out.`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.uploadCount": {
+    "source": "(n: number) => (n === 1 ? 'Upload font' : `Upload ${n} fonts`)",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.uploadedAs": {
+    "source": "(family: string, styles: string) => `Added to ${family} (${styles})`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.dialog.useFont": {
+    "source": "(family: string) => `Use ${family}`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.errors.rateLimited": {
+    "source": "(seconds: number | null) => (seconds ? `You are uploading too quickly. Try again in ${seconds} seconds.` : 'You are uploading too quickly. Try again in a moment.')",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.missing.body": {
+    "source": "(families: string, many: boolean, canFix: boolean) => `${families}: text in ${many ? 'these fonts' : 'this font'} is shown in a fallback font.${canFix ? ' Upload the font again, or choose another one.' : ''}`",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.missing.title": {
+    "source": "(n: number) => (n === 1 ? 'A font in this design is not available' : `${n} fonts in this design are not available`)",
+    "file": "editor/strings.ts"
+  },
+  "userFonts.styles": {
+    "source": "(n: number) => (n === 1 ? '1 style' : `${n} styles`)",
+    "file": "editor/strings.ts"
+  },
+  "versions.defaultLabel": {
+    "source": "(when: string) => `Version of ${when}`",
+    "file": "editor/strings.ts"
+  },
+  "versions.pages": {
+    "source": "(n: number) => (n === 1 ? '1 page' : `${n} pages`)",
+    "file": "editor/strings.ts"
+  },
+  "versions.restored": {
+    "source": "(label: string) => `Restored “${label}”`",
+    "file": "editor/strings.ts"
+  },
+  "video.announce": {
+    "source": "(percent: number) => `Making the file: ${percent} %`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.engine.videoFallback": {
+    "source": "(label: string) => `This browser has no H.264 encoder, so the MP4 is made with ${label}. Some players cannot open it. WebM is the better choice here.`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.engine.webcodecs": {
+    "source": "(video: string, audio: string | null) => (audio ? `Made in your browser with ${video} and ${audio}.` : `Made in your browser with ${video}.`)",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.facts": {
+    "source": "(width: number, height: number, length: string, size: string) => `${width} × ${height} px · ${length} · ${size}`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.fpsOption": {
+    "source": "(fps: number) => `${fps} fps`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.frameOf": {
+    "source": "(frame: number, frames: number) => `Frame ${frame} of ${frames}`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.gifSoFar": {
+    "source": "(size: string) => `${size} so far`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.left": {
+    "source": "(time: string) => `${time} left`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.madeWith": {
+    "source": "(video: string, audio: string | null) => (video === 'GIF' ? 'GIF' : audio ? `${video} video, ${audio} sound` : `${video} video, no sound`)",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.minutes": {
+    "source": "(m: number, s: number) => `${m} min ${s} s`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.seconds": {
+    "source": "(s: number) => `${s} s`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.section": {
+    "source": "(format: string) => `${format} settings`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.sizeReadout": {
+    "source": "(width: number, height: number) => `${width} × ${height} px`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.summary": {
+    "source": "(length: string, frames: number, size: string) => `${length} · ${frames} ${plural(frames, 'frame', 'frames')} · about ${size}`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.tookSeconds": {
+    "source": "(seconds: number) => `Made in ${seconds} s`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.warnings.gifLarge": {
+    "source": "(size: string) => `This GIF could be around ${size}, which is slow to open and too big for most places. A smaller size, a lower frame rate or MP4 makes it much smaller.`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "video.warnings.tooLong": {
+    "source": "(limit: string) => `This is longer than the ${limit} a browser can make. Choose fewer pages or a shorter time per page.`",
+    "file": "editor/dialogs/video/strings.ts"
+  },
+  "workspace.canvasLabel": {
+    "source": "(i: number) => `Design canvas, page ${i}`",
+    "file": "editor/strings.ts"
+  },
+  "workspace.page": {
+    "source": "(i: number) => `Page ${i}`",
+    "file": "editor/strings.ts"
+  },
+  "workspace.pageOf": {
+    "source": "(n: number, total: number) => `Page ${n} of ${total}`",
+    "file": "editor/strings.ts"
+  },
+  "workspace.sizeChipLabel": {
+    "source": "(page: number, size: string) => `Page ${page} is ${size}. Change its size`",
+    "file": "editor/strings.ts"
+  },
+  "workspace.snapshotAlt": {
+    "source": "(i: number) => `Preview of page ${i}`",
+    "file": "editor/strings.ts"
+  }
+}

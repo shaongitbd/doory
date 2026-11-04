@@ -1,3 +1,4 @@
+import { getLocale } from '@/i18n/locale'
 import type { CommentT } from '@/types/api'
 import type { CommentViewer } from '@/types/adapter'
 import type { CommentFilterId } from '../store/editorStore'
@@ -155,10 +156,9 @@ export function roundPoint(x: number, y: number): { x: number; y: number } {
   return { x: round(x), y: round(y) }
 }
 
-const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
 /** "Jan 5, 2026, 3:04 PM" in the reader's language; empty for a date that cannot be read. */
 export function formatWhen(iso: string): string {
   const at = new Date(iso)
-  return Number.isNaN(at.getTime()) ? '' : when.format(at)
+  return Number.isNaN(at.getTime()) ? '' : new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(at)
 }

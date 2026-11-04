@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { CheckCircle2, CircleAlert, Download, Plus, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { describeFormError } from '@/features/auth/errors'
@@ -115,11 +116,11 @@ function ConnectionForm({ provider, onSaved, onClose }: { provider: AiProvider |
           {formError}
         </p>
       ) : null}
-      <Input label="Name" placeholder="My model server" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
-      <Input label="Server address" placeholder="https://ai.example.com" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} error={errors.base_url} maxLength={500} autoComplete="off" spellCheck={false} inputMode="url" />
-      <Select label="API style" hint={info.summary} options={AI_STYLES.map((item) => ({ value: item.id, label: item.label }))} value={style} onChange={(event) => setStyle(event.target.value as AiProviderStyle)} error={errors.style} />
+      <Input label={msg("Name")} placeholder={msg("My model server")} value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
+      <Input label={msg("Server address")} placeholder={msg("https://ai.example.com")} value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} error={errors.base_url} maxLength={500} autoComplete="off" spellCheck={false} inputMode="url" />
+      <Select label={msg("API style")} hint={info.summary} options={AI_STYLES.map((item) => ({ value: item.id, label: item.label }))} value={style} onChange={(event) => setStyle(event.target.value as AiProviderStyle)} error={errors.style} />
       <Textarea
-        label="Style settings (JSON)"
+        label={msg("Style settings (JSON)")}
         hint={`Accepts: ${info.settings}`}
         placeholder={JSON.stringify(info.example, null, 2)}
         value={styleConfig}
@@ -129,9 +130,9 @@ function ConnectionForm({ provider, onSaved, onClose }: { provider: AiProvider |
         spellCheck={false}
         className={styles.code}
       />
-      <Input label="Auth header" hint="The header that carries your key, e.g. Authorization or X-Api-Key. Empty: no authentication." placeholder="Authorization" value={authHeader} onChange={(event) => setAuthHeader(event.target.value)} error={errors.auth_header} maxLength={64} autoComplete="off" spellCheck={false} />
+      <Input label={msg("Auth header")} hint={msg("The header that carries your key, e.g. Authorization or X-Api-Key. Empty: no authentication.")} placeholder={msg("Authorization")} value={authHeader} onChange={(event) => setAuthHeader(event.target.value)} error={errors.auth_header} maxLength={64} autoComplete="off" spellCheck={false} />
       <PasswordInput
-        label="Key"
+        label={msg("Key")}
         hint={provider?.has_secret ? 'A key is stored. Leave this empty to keep it.' : 'The header’s value, e.g. “Bearer …”. It is stored encrypted and never shown again.'}
         placeholder={provider?.has_secret ? 'Stored' : ''}
         name="ai-provider-key"
@@ -144,17 +145,17 @@ function ConnectionForm({ provider, onSaved, onClose }: { provider: AiProvider |
         error={errors.secret}
         disabled={clearSecret}
       />
-      {provider?.has_secret ? <Checkbox label="Remove the stored key" checked={clearSecret} onChange={(event) => setClearSecret(event.target.checked)} /> : null}
+      {provider?.has_secret ? <Checkbox label={msg("Remove the stored key")} checked={clearSecret} onChange={(event) => setClearSecret(event.target.checked)} /> : null}
       <fieldset className={styles.fieldset}>
-        <legend className={styles.legend}>Tasks</legend>
+        <legend className={styles.legend}>{msg("Tasks")}</legend>
         {AI_TASKS.map((task) => (
           <Checkbox key={task.id} label={task.label} checked={tasks.includes(task.id)} onChange={(event) => toggleTask(task.id, event.target.checked)} />
         ))}
         {errors.tasks ? <p className={styles.error}>{errors.tasks}</p> : null}
       </fieldset>
-      <Input label="Time limit (seconds)" type="number" min={1} max={MAX_TIMEOUT} value={timeout} onChange={(event) => setTimeoutValue(event.target.value)} error={errors.timeout_seconds} />
-      <Checkbox label="Images leave this site" description="The editor shows a privacy notice under this server’s options." checked={offsite} onChange={(event) => setOffsite(event.target.checked)} />
-      <Switch label="Offer this server in the editor" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+      <Input label={msg("Time limit (seconds)")} type="number" min={1} max={MAX_TIMEOUT} value={timeout} onChange={(event) => setTimeoutValue(event.target.value)} error={errors.timeout_seconds} />
+      <Checkbox label={msg("Images leave this site")} description={msg("The editor shows a privacy notice under this server’s options.")} checked={offsite} onChange={(event) => setOffsite(event.target.checked)} />
+      <Switch label={msg("Offer this server in the editor")} checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
       <div className={styles.inline}>
         <Button type="submit" loading={busy}>
           {provider ? 'Save changes' : 'Add server'}
@@ -212,26 +213,25 @@ function ModelsEditor({ provider, onSaved }: { provider: AiProvider; onSaved(pro
   }
 
   return (
-    <section className={styles.form} aria-label="Models">
-      <p className={styles.tokenName}>Models</p>
+    <section className={styles.form} aria-label={msg("Models")}>
+      <p className={styles.tokenName}>{msg("Models")}</p>
       <p className={styles.hint}>
-        {canLoad ? 'Load the models the server lists, then choose which to offer and how to label them (e.g. Fast, Best).' : 'Enter the model names the server accepts and label them (e.g. Fast, Best).'} Without models the editor offers the server’s default model, named after the server.
-      </p>
+        {canLoad ? 'Load the models the server lists, then choose which to offer and how to label them (e.g. Fast, Best).' : 'Enter the model names the server accepts and label them (e.g. Fast, Best).'} {msg("Without models the editor offers the server’s default model, named after the server.")}</p>
       {error ? (
         <p className={styles.error} role="alert">
           {error}
         </p>
       ) : null}
       {rows.length > 0 ? (
-        <ul className={styles.tokenList} aria-label="Models to offer">
+        <ul className={styles.tokenList} aria-label={msg("Models to offer")}>
           {rows.map((row, index) => (
             <li key={index} className={styles.modelRow}>
               {tasks.length > 1 ? (
-                <Select label="Task" options={tasks.map((task) => ({ value: task, label: taskLabel(task) }))} value={row.task} onChange={(event) => update(index, { task: event.target.value })} selectSize="sm" />
+                <Select label={msg("Task")} options={tasks.map((task) => ({ value: task, label: taskLabel(task) }))} value={row.task} onChange={(event) => update(index, { task: event.target.value })} selectSize="sm" />
               ) : null}
-              <Input label="Model" placeholder="Server default" value={row.remote_name} onChange={(event) => update(index, { remote_name: event.target.value })} maxLength={200} autoComplete="off" spellCheck={false} />
-              <Input label="Label" placeholder="Best" value={row.label} onChange={(event) => update(index, { label: event.target.value })} maxLength={80} autoComplete="off" />
-              <Checkbox label="Offer" checked={row.enabled} onChange={(event) => update(index, { enabled: event.target.checked })} />
+              <Input label={msg("Model")} placeholder={msg("Server default")} value={row.remote_name} onChange={(event) => update(index, { remote_name: event.target.value })} maxLength={200} autoComplete="off" spellCheck={false} />
+              <Input label={msg("Label")} placeholder={msg("Best")} value={row.label} onChange={(event) => update(index, { label: event.target.value })} maxLength={80} autoComplete="off" />
+              <Checkbox label={msg("Offer")} checked={row.enabled} onChange={(event) => update(index, { enabled: event.target.checked })} />
               <IconButton label={`Remove model ${row.label || row.remote_name || index + 1}`} icon={<Trash2 size={14} />} size="sm" onClick={() => setRows((list) => list.filter((_, at) => at !== index))} />
             </li>
           ))}
@@ -240,15 +240,12 @@ function ModelsEditor({ provider, onSaved }: { provider: AiProvider; onSaved(pro
       <div className={styles.inline}>
         {canLoad ? (
           <Button variant="secondary" size="sm" leftIcon={<Download size={14} />} loading={busy === 'load'} disabled={busy !== null} onClick={() => void load()}>
-            Load models
-          </Button>
+            {msg("Load models")}</Button>
         ) : null}
         <Button variant="ghost" size="sm" leftIcon={<Plus size={14} />} disabled={busy !== null} onClick={() => setRows((list) => [...list, { task: tasks[0], remote_name: '', label: '', enabled: true }])}>
-          Add model
-        </Button>
+          {msg("Add model")}</Button>
         <Button size="sm" loading={busy === 'save'} disabled={busy !== null} onClick={() => void save()}>
-          Save models
-        </Button>
+          {msg("Save models")}</Button>
       </div>
     </section>
   )
@@ -273,13 +270,12 @@ function ConnectionTest({ provider }: { provider: AiProvider }) {
   }
 
   return (
-    <section className={styles.form} aria-label="Test connection">
-      <p className={styles.tokenName}>Test connection</p>
-      <p className={styles.hint}>Sends a built-in sample picture with the saved settings and shows what comes back.</p>
+    <section className={styles.form} aria-label={msg("Test connection")}>
+      <p className={styles.tokenName}>{msg("Test connection")}</p>
+      <p className={styles.hint}>{msg("Sends a built-in sample picture with the saved settings and shows what comes back.")}</p>
       <div>
         <Button variant="secondary" size="sm" loading={busy} onClick={() => void run()}>
-          Test connection
-        </Button>
+          {msg("Test connection")}</Button>
       </div>
       {error ? (
         <p className={styles.error} role="alert">
@@ -291,9 +287,9 @@ function ConnectionTest({ provider }: { provider: AiProvider }) {
           {result.ok ? (
             <>
               <p className={styles.tokenName}>
-                <CheckCircle2 size={16} aria-hidden /> It works: answered in {seconds(result.duration_ms)}.
+                <CheckCircle2 size={16} aria-hidden /> {msg("It works: answered in ")}{seconds(result.duration_ms)}.
               </p>
-              {result.preview ? <img className={styles.preview} src={result.preview} alt="The sample picture as the server returned it" /> : null}
+              {result.preview ? <img className={styles.preview} src={result.preview} alt={msg("The sample picture as the server returned it")} /> : null}
             </>
           ) : (
             <p className={styles.error}>

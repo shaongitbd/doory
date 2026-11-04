@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Pencil, Plus, Server, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { aiApi, isApiError } from '@/lib/api'
@@ -79,9 +80,9 @@ export function AiProvidersSection() {
       await aiApi.providers.remove(provider.id)
       setProviders((list) => (list ?? []).filter((item) => item.id !== provider.id))
       if (editing !== null && editing !== 'new' && editing.id === provider.id) setEditing(null)
-      toast({ title: 'Server removed', description: `${provider.name} is no longer offered in the editor.` })
+      toast({ title: msg("Server removed"), description: `${provider.name} is no longer offered in the editor.` })
     } catch {
-      toast({ title: 'Couldn’t remove the server', description: 'Please try again.', variant: 'error' })
+      toast({ title: msg("Couldn’t remove the server"), description: msg("Please try again."), variant: 'error' })
     } finally {
       setBusy(false)
       setRemoving(null)
@@ -91,8 +92,8 @@ export function AiProvidersSection() {
   return (
     <SettingsCard
       id="ai-providers"
-      title="AI providers"
-      description="Connect your own AI server for background removal. Only you can use the servers you add here; the editor offers them under Remove background. Your key is stored encrypted and never shown again."
+      title={msg("AI providers")}
+      description={msg("Connect your own AI server for background removal. Only you can use the servers you add here; the editor offers them under Remove background. Your key is stored encrypted and never shown again.")}
     >
       {loadError ? (
         <p className={styles.error} role="alert">
@@ -115,20 +116,19 @@ export function AiProvidersSection() {
             }}
             disabled={providers === null}
           >
-            Add a server
-          </Button>
+            {msg("Add a server")}</Button>
         </div>
       )}
       {providers && providers.length > 0 ? (
-        <ul className={styles.tokenList} aria-label="Your AI servers">
+        <ul className={styles.tokenList} aria-label={msg("Your AI servers")}>
           {providers.map((provider) => (
             <li key={provider.id} className={styles.tokenRow}>
               <div>
                 <p className={`${styles.tokenName} ${styles.providerName}`}>
                   <Server size={14} aria-hidden /> {provider.name}
                   <Badge>{styleInfo(provider.style).label}</Badge>
-                  {provider.has_secret ? <Badge tone="success">Key stored</Badge> : null}
-                  {provider.enabled ? null : <Badge tone="warning">Off</Badge>}
+                  {provider.has_secret ? <Badge tone="success">{msg("Key stored")}</Badge> : null}
+                  {provider.enabled ? null : <Badge tone="warning">{msg("Off")}</Badge>}
                 </p>
                 <p className={styles.hint}>
                   {host(provider.base_url)} · {modelSummary(provider)}
@@ -136,11 +136,9 @@ export function AiProvidersSection() {
               </div>
               <div className={styles.rowActions}>
                 <Button variant="ghost" size="sm" leftIcon={<Pencil size={14} />} onClick={() => setEditing(provider)} aria-label={`Edit ${provider.name}`}>
-                  Edit
-                </Button>
+                  {msg("Edit")}</Button>
                 <Button variant="ghost" size="sm" leftIcon={<Trash2 size={14} />} onClick={() => setRemoving(provider)} aria-label={`Remove ${provider.name}`}>
-                  Remove
-                </Button>
+                  {msg("Remove")}</Button>
               </div>
             </li>
           ))}
@@ -148,7 +146,7 @@ export function AiProvidersSection() {
       ) : null}
       <ConfirmDialog
         open={removing !== null}
-        title="Remove this server?"
+        title={msg("Remove this server?")}
         description={removing ? `“${removing.name}” and its stored key will be deleted. The editor stops offering it.` : undefined}
         confirmLabel="Remove"
         tone="danger"

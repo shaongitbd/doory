@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { LayoutTemplate, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -11,10 +12,10 @@ import styles from './TemplatesBrowser.module.css'
 type Orientation = 'all' | NonNullable<TemplateQuery['orientation']>
 
 const ORIENTATIONS: Array<{ value: Orientation; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'landscape', label: 'Landscape' },
-  { value: 'portrait', label: 'Portrait' },
-  { value: 'square', label: 'Square' },
+  { value: 'all', label: msg("All") },
+  { value: 'landscape', label: msg("Landscape") },
+  { value: 'portrait', label: msg("Portrait") },
+  { value: 'square', label: msg("Square") },
 ]
 
 function isOrientation(value: string | null): value is NonNullable<TemplateQuery['orientation']> {
@@ -76,22 +77,21 @@ export function TemplatesBrowser() {
         <Input
           className={styles.search}
           wrapperClassName={styles.searchWrap}
-          label="Search templates"
+          label={msg("Search templates")}
           hideLabel
           type="search"
-          placeholder="Search templates"
+          placeholder={msg("Search templates")}
           leftIcon={<Search size={16} />}
           value={text}
           onChange={(event) => setText(event.target.value)}
-          rightSlot={text ? <Button variant="ghost" size="sm" aria-label="Clear search" onClick={() => setText('')} leftIcon={<X size={14} />} /> : undefined}
+          rightSlot={text ? <Button variant="ghost" size="sm" aria-label={msg("Clear search")} onClick={() => setText('')} leftIcon={<X size={14} />} /> : undefined}
         />
-        <SegmentedControl label="Orientation" value={orientation} onChange={(value) => setParam('orientation', value === 'all' ? null : value)} options={ORIENTATIONS} />
+        <SegmentedControl label={msg("Orientation")} value={orientation} onChange={(value) => setParam('orientation', value === 'all' ? null : value)} options={ORIENTATIONS} />
       </div>
 
-      <div className={styles.chips} role="group" aria-label="Categories">
+      <div className={styles.chips} role="group" aria-label={msg("Categories")}>
         <button type="button" className={styles.chip} aria-pressed={!category} onClick={() => setParam('category', null)}>
-          All
-        </button>
+          {msg("All")}</button>
         {categories.isPending
           ? Array.from({ length: 5 }, (_, index) => <Skeleton key={index} width={84} height={34} radius="var(--radius-full)" />)
           : (categories.data ?? [])
@@ -107,7 +107,7 @@ export function TemplatesBrowser() {
 
       <div aria-live="polite" aria-busy={list.isPending}>
         {list.isPending ? (
-          <ul className={styles.masonry} aria-label="Loading templates">
+          <ul className={styles.masonry} aria-label={msg("Loading templates")}>
             {[1.25, 0.8, 1, 1.5, 0.7, 1.1, 0.9, 1.3].map((ratio, index) => (
               <li key={index} className={styles.item}>
                 <Skeleton height={`${Math.round(11 * ratio)}rem`} radius="var(--radius-lg)" />
@@ -115,12 +115,12 @@ export function TemplatesBrowser() {
             ))}
           </ul>
         ) : list.isError ? (
-          <EmptyState icon={<LayoutTemplate size={28} />} title="Templates didn’t load" description="Check your connection and try again." role="alert" action={<Button onClick={() => void list.refetch()}>Try again</Button>} />
+          <EmptyState icon={<LayoutTemplate size={28} />} title={msg("Templates didn’t load")} description={msg("Check your connection and try again.")} role="alert" action={<Button onClick={() => void list.refetch()}>{msg("Try again")}</Button>} />
         ) : templates.length === 0 ? (
           filtered ? (
-            <EmptyState icon={<Search size={28} />} title="No templates match" description="Try different words, or clear the filters to see everything." action={<Button variant="secondary" onClick={clearFilters}>Clear filters</Button>} />
+            <EmptyState icon={<Search size={28} />} title={msg("No templates match")} description={msg("Try different words, or clear the filters to see everything.")} action={<Button variant="secondary" onClick={clearFilters}>{msg("Clear filters")}</Button>} />
           ) : (
-            <EmptyState icon={<LayoutTemplate size={28} />} title="Templates are on their way" description="This Doory server has no templates yet. You can still start from a blank canvas." />
+            <EmptyState icon={<LayoutTemplate size={28} />} title={msg("Templates are on their way")} description={msg("This Doory server has no templates yet. You can still start from a blank canvas.")} />
           )
         ) : (
           <>
@@ -134,8 +134,7 @@ export function TemplatesBrowser() {
             {list.hasNextPage ? (
               <div className={styles.more}>
                 <Button variant="secondary" size="lg" loading={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>
-                  Load more templates
-                </Button>
+                  {msg("Load more templates")}</Button>
               </div>
             ) : null}
           </>

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { FolderInput, Star, Trash2, X } from 'lucide-react'
 import { Button } from '@/ui'
 import styles from './BulkBar.module.css'
@@ -15,27 +16,21 @@ export interface BulkBarProps {
 export function BulkBar({ count, onStar, onUnstar, onMove, onTrash, onClear }: BulkBarProps) {
   if (count === 0) return null
   return (
-    <div className={styles.bar} role="region" aria-label="Selected designs">
+    <div className={styles.bar} role="region" aria-label={msg("Selected designs")}>
       <p className={styles.count} role="status">
-        {count} selected
-      </p>
+        {count} {msg("selected")}</p>
       <div className={styles.actions}>
         <Button size="sm" variant="ghost" leftIcon={<Star size={16} />} onClick={onStar}>
-          Star
-        </Button>
+          {msg("Star")}</Button>
         <Button size="sm" variant="ghost" onClick={onUnstar}>
-          Unstar
-        </Button>
+          {msg("Unstar")}</Button>
         <Button size="sm" variant="ghost" leftIcon={<FolderInput size={16} />} onClick={onMove}>
-          Move
-        </Button>
+          {msg("Move")}</Button>
         <Button size="sm" variant="ghost" leftIcon={<Trash2 size={16} />} onClick={onTrash}>
-          Trash
-        </Button>
+          {msg("Trash")}</Button>
       </div>
       <Button size="sm" variant="secondary" leftIcon={<X size={16} />} onClick={onClear}>
-        Clear
-      </Button>
+        {msg("Clear")}</Button>
     </div>
   )
 }

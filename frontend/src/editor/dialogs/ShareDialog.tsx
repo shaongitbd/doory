@@ -1,3 +1,4 @@
+import { getLocale } from '@/i18n/locale'
 import { Check, Copy, Trash2 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import type { ShareLinkPatch } from '@/types/adapter'
@@ -15,7 +16,7 @@ import { EXPIRIES, type Expiry, SHARE_ROLES, absoluteUrl, expiryDate, linkStatus
 import dlg from './dialogs.module.css'
 import styles from './Share.module.css'
 
-const when = (iso: string): string => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
+const when = (iso: string): string => new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
 
 function LinkRow({ link, now, onChange, onRemove, onCopy }: { link: ShareLink; now: number; onChange: (patch: ShareLinkPatch) => Promise<void>; onRemove: () => Promise<void>; onCopy: (url: string) => Promise<void> }) {
   const url = absoluteUrl(link.url, window.location.origin)

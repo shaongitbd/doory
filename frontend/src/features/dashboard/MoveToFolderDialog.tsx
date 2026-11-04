@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Folder, FolderPlus, Home } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useCreateFolder, useFolders } from '@/lib/api/hooks'
@@ -53,17 +54,17 @@ export function MoveToFolderDialog({ open, count, currentFolder, onClose, onMove
           setName('')
           onMove(folder.id, folder.name)
         },
-        onError: (error) => toast({ title: 'Couldn’t create the folder', description: errorMessage(error), variant: 'error' }),
+        onError: (error) => toast({ title: msg("Couldn’t create the folder"), description: errorMessage(error), variant: 'error' }),
       },
     )
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={count === 1 ? 'Move design' : `Move ${count} designs`} description="Choose a folder." size="sm">
+    <Dialog open={open} onClose={onClose} title={count === 1 ? 'Move design' : `Move ${count} designs`} description={msg("Choose a folder.")} size="sm">
       <div className={styles.list}>
         <button type="button" className={styles.row} disabled={currentFolder === null} onClick={() => onMove(null, 'All designs')}>
           <Home size={18} aria-hidden="true" />
-          <span>All designs (top level)</span>
+          <span>{msg("All designs (top level)")}</span>
         </button>
         {folders.isPending ? <Skeleton height={40} /> : null}
         {rows.map(({ folder, depth }) => (
@@ -73,13 +74,12 @@ export function MoveToFolderDialog({ open, count, currentFolder, onClose, onMove
             <span className={styles.count}>{folder.design_count}</span>
           </button>
         ))}
-        {folders.isError ? <p className={styles.error}>Folders couldn’t be loaded.</p> : null}
+        {folders.isError ? <p className={styles.error}>{msg("Folders couldn’t be loaded.")}</p> : null}
       </div>
       <form className={styles.create} onSubmit={createFolder}>
-        <Input label="New folder" hideLabel placeholder="New folder name" value={name} maxLength={80} onChange={(event) => setName(event.target.value)} leftIcon={<FolderPlus size={16} />} />
+        <Input label={msg("New folder")} hideLabel placeholder={msg("New folder name")} value={name} maxLength={80} onChange={(event) => setName(event.target.value)} leftIcon={<FolderPlus size={16} />} />
         <Button type="submit" variant="secondary" loading={create.isPending} disabled={!name.trim()}>
-          Create and move
-        </Button>
+          {msg("Create and move")}</Button>
       </form>
     </Dialog>
   )

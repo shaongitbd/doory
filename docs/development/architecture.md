@@ -46,6 +46,7 @@ read from the environment must have a row in [configuration.md](../self-hosting/
 | `features/` | Non-editor features: auth, dashboard, templates, settings, brand, uploads, … |
 | `editor/` | The editor: `engine/` (drawing), `panels/`, `toolbar/`, `collab/`, `animation/`, `clips/` (video clips: timing, sources, sound), `presenter/`, `headless/` (the render page used by server-side image export), … |
 | `ui/`, `lib/`, `styles/` | Shared components, helpers and styles |
+| `i18n/` | Browser locale selection and lazily loaded English/Chinese UI catalogs; see [frontend language catalogs](i18n.md) |
 
 Besides `index.html`, the frontend builds two more entry pages: `presenter-view.html` (the second presenter
 window) and `render.html` (server-side image export).

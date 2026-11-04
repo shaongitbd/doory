@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { MailCheck } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -9,7 +10,7 @@ import formStyles from '@/features/auth/AuthForms.module.css'
 import styles from './AuthPage.module.css'
 
 export default function ForgotPasswordPage() {
-  usePageMeta({ title: 'Reset your password', noindex: true })
+  usePageMeta({ title: msg("Reset your password"), noindex: true })
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
@@ -39,10 +40,10 @@ export default function ForgotPasswordPage() {
         <div className={styles.stateIcon} aria-hidden="true">
           <MailCheck size={28} />
         </div>
-        <h1 className={styles.title}>Check your inbox</h1>
-        <p className={styles.lead}>If an account exists for {email.trim()}, we’ve sent a link to choose a new password. It can take a minute to arrive.</p>
+        <h1 className={styles.title}>{msg("Check your inbox")}</h1>
+        <p className={styles.lead}>{msg("If an account exists for ")}{email.trim()}{msg(", we’ve sent a link to choose a new password. It can take a minute to arrive.")}</p>
         <div className={styles.actions}>
-          <Link to="/login">Back to log in</Link>
+          <Link to="/login">{msg("Back to log in")}</Link>
         </div>
       </div>
     )
@@ -51,17 +52,16 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <div className={styles.header}>
-        <h1 className={styles.title}>Forgot your password?</h1>
-        <p className={styles.lead}>Enter your email and we’ll send you a link to reset it.</p>
+        <h1 className={styles.title}>{msg("Forgot your password?")}</h1>
+        <p className={styles.lead}>{msg("Enter your email and we’ll send you a link to reset it.")}</p>
       </div>
       <form className={formStyles.form} onSubmit={submit} noValidate>
-        <Input label="Email" type="email" name="email" autoComplete="email" inputMode="email" autoFocus value={email} onChange={(event) => setEmail(event.target.value)} error={error} required />
+        <Input label={msg("Email")} type="email" name="email" autoComplete="email" inputMode="email" autoFocus value={email} onChange={(event) => setEmail(event.target.value)} error={error} required />
         <Button type="submit" fullWidth loading={busy}>
-          Send reset link
-        </Button>
+          {msg("Send reset link")}</Button>
       </form>
       <p className={styles.footer}>
-        <Link to="/login">Back to log in</Link>
+        <Link to="/login">{msg("Back to log in")}</Link>
       </p>
     </>
   )

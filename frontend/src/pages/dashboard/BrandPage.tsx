@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Palette, Plus, Star, Trash2, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { normalizeHex } from '@/features/brand/colors'
@@ -14,7 +15,7 @@ import { BrandFonts } from './BrandPageFonts'
 const MAX_BRAND_KITS = 20
 
 export default function BrandPage() {
-  usePageTitle('Brand')
+  usePageTitle(msg("Brand"))
   const { toast } = useToast()
   const kits = useBrandKits()
   const save = useSaveBrandKit()
@@ -47,8 +48,8 @@ export default function BrandPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.heading}>
-          <h1 className={styles.title}>Brand kits</h1>
-          <p className={styles.lead}>Keep your colours, fonts and logos in one place and use them in every design.</p>
+          <h1 className={styles.title}>{msg("Brand kits")}</h1>
+          <p className={styles.lead}>{msg("Keep your colours, fonts and logos in one place and use them in every design.")}</p>
         </div>
         <Button
           leftIcon={<Plus size={16} />}
@@ -58,14 +59,13 @@ export default function BrandPage() {
             setEditing(null)
           }}
         >
-          New brand kit
-        </Button>
+          {msg("New brand kit")}</Button>
       </header>
-      {atLimit ? <p className={brandStyles.limit}>You’ve reached the limit of {MAX_BRAND_KITS} brand kits. Delete one to add another.</p> : null}
+      {atLimit ? <p className={brandStyles.limit}>{msg("You’ve reached the limit of ")}{MAX_BRAND_KITS} {msg("brand kits. Delete one to add another.")}</p> : null}
 
       <div aria-live="polite" aria-busy={kits.isPending}>
         {kits.isPending ? (
-          <ul className={brandStyles.grid} aria-label="Loading brand kits">
+          <ul className={brandStyles.grid} aria-label={msg("Loading brand kits")}>
             {[0, 1, 2].map((index) => (
               <li key={index}>
                 <Skeleton height="11rem" radius="var(--radius-lg)" />
@@ -73,13 +73,13 @@ export default function BrandPage() {
             ))}
           </ul>
         ) : kits.isError ? (
-          <EmptyState title="Your brand kits didn’t load" description={errorMessage(kits.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void kits.refetch()}>Try again</Button>} />
+          <EmptyState title={msg("Your brand kits didn’t load")} description={errorMessage(kits.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void kits.refetch()}>{msg("Try again")}</Button>} />
         ) : items.length === 0 ? (
           <EmptyState
             icon={<Palette size={28} />}
-            title="Create your first brand kit"
+            title={msg("Create your first brand kit")}
             description={`Add up to ${MAX_BRAND_COLORS} colours, pick your fonts and attach your logos. Then apply them in the editor with one click.`}
-            action={<Button leftIcon={<Plus size={16} />} onClick={() => { setSaveError(''); setEditing(null) }}>New brand kit</Button>}
+            action={<Button leftIcon={<Plus size={16} />} onClick={() => { setSaveError(''); setEditing(null) }}>{msg("New brand kit")}</Button>}
           />
         ) : (
           <ul className={brandStyles.grid}>
@@ -88,10 +88,10 @@ export default function BrandPage() {
                 <Card className={brandStyles.card}>
                   <div className={brandStyles.cardHeader}>
                     <h2 className={brandStyles.name}>{kit.name}</h2>
-                    {kit.is_default ? <Badge tone="brand">Default</Badge> : null}
+                    {kit.is_default ? <Badge tone="brand">{msg("Default")}</Badge> : null}
                   </div>
                   <ul className={brandStyles.swatches} aria-label={`${kit.name} colours`}>
-                    {kit.colors.length === 0 ? <li className={brandStyles.none}>No colours yet</li> : null}
+                    {kit.colors.length === 0 ? <li className={brandStyles.none}>{msg("No colours yet")}</li> : null}
                     {kit.colors.slice(0, 10).map((color) => (
                       <li key={color.id}>
                         <span className={brandStyles.swatch} style={{ background: normalizeHex(color.hex) ?? 'transparent' }} role="img" aria-label={`${color.name || color.hex} ${color.hex}`} title={color.name ? `${color.name} ${color.hex}` : color.hex} />
@@ -105,8 +105,7 @@ export default function BrandPage() {
                   </p>
                   <div className={brandStyles.actions}>
                     <Button size="sm" variant="secondary" leftIcon={<Pencil size={14} />} onClick={() => { setSaveError(''); setEditing(kit) }}>
-                      Edit
-                    </Button>
+                      {msg("Edit")}</Button>
                     {!kit.is_default ? (
                       <Button
                         size="sm"
@@ -116,16 +115,14 @@ export default function BrandPage() {
                         onClick={() =>
                           save.mutate(
                             { id: kit.id, input: toInput(kit, { is_default: true }) },
-                            { onSuccess: () => toast({ title: `“${kit.name}” is now your default kit`, variant: 'success' }), onError: (error) => toast({ title: 'Couldn’t change the default', description: errorMessage(error), variant: 'error' }) },
+                            { onSuccess: () => toast({ title: `“${kit.name}” is now your default kit`, variant: 'success' }), onError: (error) => toast({ title: msg("Couldn’t change the default"), description: errorMessage(error), variant: 'error' }) },
                           )
                         }
                       >
-                        Make default
-                      </Button>
+                        {msg("Make default")}</Button>
                     ) : null}
                     <Button size="sm" variant="ghost" leftIcon={<Trash2 size={14} />} onClick={() => setDeleting(kit)}>
-                      Delete
-                    </Button>
+                      {msg("Delete")}</Button>
                   </div>
                 </Card>
               </li>
@@ -140,7 +137,7 @@ export default function BrandPage() {
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete “${deleting?.name ?? ''}”?`}
-        description="Designs keep the colours and fonts they already use. Only the saved kit is removed."
+        description={msg("Designs keep the colours and fonts they already use. Only the saved kit is removed.")}
         confirmLabel="Delete kit"
         tone="danger"
         loading={remove.isPending}
@@ -150,9 +147,9 @@ export default function BrandPage() {
           remove.mutate(deleting.id, {
             onSuccess: () => {
               setDeleting(null)
-              toast({ title: 'Brand kit deleted' })
+              toast({ title: msg("Brand kit deleted") })
             },
-            onError: (error) => toast({ title: 'Couldn’t delete the kit', description: errorMessage(error), variant: 'error' }),
+            onError: (error) => toast({ title: msg("Couldn’t delete the kit"), description: errorMessage(error), variant: 'error' }),
           })
         }}
       />
