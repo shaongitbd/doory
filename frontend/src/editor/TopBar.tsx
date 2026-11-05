@@ -1,6 +1,8 @@
 import { ChevronDown, Copy, Download, History, Menu as MenuIcon, Presentation, Share2, SlidersHorizontal, Users } from 'lucide-react'
 import { useContrast } from '@/lib/contrast'
 import { useSizePresets } from '@/lib/sizePresets'
+import { useTranslation } from 'react-i18next'
+import { LanguageDialog } from '@/features/language/LanguageDialog'
 import { getPageSize } from './engine/pageSizes'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useCollabState } from './collab/context'
@@ -84,7 +86,7 @@ function EndTool({ panel, open, onToggle }: { panel: PanelDefinition; open: bool
 }
 
 /** A text button in the bar that opens a menu (File, View). */
-function MenuButton({ label, items, testId, icon, onOpen }: { label: string; items: MenuItem[]; testId: string; icon?: ReactNode; onOpen?: () => void }) {
+function MenuButton({ label, items, testId, icon, onOpen, wrapLabels }: { label: string; items: MenuItem[]; testId: string; icon?: ReactNode; onOpen?: () => void; wrapLabels?: boolean }) {
   const [open, setOpen] = useState(false)
   const anchor = useRef<HTMLButtonElement>(null)
   return (
@@ -102,7 +104,7 @@ function MenuButton({ label, items, testId, icon, onOpen }: { label: string; ite
       >
         {icon ?? label}
       </button>
-      {open ? <Menu label={label} items={items} anchorRef={anchor} onClose={() => setOpen(false)} /> : null}
+      {open ? <Menu label={label} items={items} anchorRef={anchor} onClose={() => setOpen(false)} wrapLabels={wrapLabels} /> : null}
     </>
   )
 }
@@ -245,6 +247,10 @@ function useWidth(ref: React.RefObject<HTMLElement | null>): number {
  * comments and the one Share menu on the right. The tools that add to the design live in the rail (ToolRail).
  */
 export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
+  const { t: translate, i18n: translations } = useTranslation('editor')
+  const { t: common } = useTranslation('common')
+  const [languageOpen, setLanguageOpen] = useState(false)
+  const closeLanguage = useCallback(() => setLanguageOpen(false), [])
   const editor = useEditor()
   const history = useEditorState((s) => s.history)
   const readOnly = useEditorState((s) => s.readOnly)
@@ -301,21 +307,26 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
     ...(readOnly
       ? []
       : [
-          { id: 'rulers', label: t.menu.rulers, checked: ui.rulers, onSelect: () => editor.patchUi({ rulers: !ui.rulers }) },
-          { id: 'grid', label: t.menu.grid, checked: ui.grid, onSelect: () => editor.patchUi({ grid: !ui.grid }) },
-          { id: 'guides', label: t.menu.guides, checked: ui.guides, onSelect: () => editor.patchUi({ guides: !ui.guides }) },
-          { id: 'snap', label: t.menu.snapping, checked: ui.snapping, onSelect: () => editor.patchUi({ snapping: !ui.snapping }) },
-          { id: 'bleed', label: t.menu.bleed, checked: ui.bleed, onSelect: () => editor.patchUi({ bleed: !ui.bleed }) },
-          ...(hasSafeZone ? [{ id: 'safe-zone', label: t.menu.safeZone, checked: ui.safeZone, onSelect: () => editor.patchUi({ safeZone: !ui.safeZone }) }] : []),
-          ...(guideCount > 0 ? [{ id: 'clear-guides', label: t.design.clearGuides(guideCount), onSelect: () => editor.pages.setGuides(editor.state.activePageId, []) }] : []),
+          { id: 'rulers', label: translate('menu.rulers'), checked: ui.rulers, onSelect: () => editor.patchUi({ rulers: !ui.rulers }) },
+          { id: 'grid', label: translate('menu.grid'), checked: ui.grid, onSelect: () => editor.patchUi({ grid: !ui.grid }) },
+          { id: 'guides', label: translate('menu.guides'), checked: ui.guides, onSelect: () => editor.patchUi({ guides: !ui.guides }) },
+          { id: 'snap', label: translate('menu.snapping'), checked: ui.snapping, onSelect: () => editor.patchUi({ snapping: !ui.snapping }) },
+          { id: 'bleed', label: translate('menu.bleed'), checked: ui.bleed, onSelect: () => editor.patchUi({ bleed: !ui.bleed }) },
+          ...(hasSafeZone ? [{ id: 'safe-zone', label: translate('menu.safeZone'), checked: ui.safeZone, onSelect: () => editor.patchUi({ safeZone: !ui.safeZone }) }] : []),
+          ...(guideCount > 0 ? [{ id: 'clear-guides', label: translate('design.clearGuides', { count: guideCount }), onSelect: () => editor.pages.setGuides(editor.state.activePageId, []) }] : []),
           { id: 'v1', separator: true },
         ]),
-    { ...cmd('view.notes'), checked: notesOpen },
-    { ...cmd('view.timeline'), checked: timelineOpen },
-    cmd('view.playPage'),
-    { ...cmd('view.highContrast'), checked: highContrast },
+    // Resolve these labels during render; the legacy registry still holds English labels for other consumers.
+    { ...cmd('view.notes', translate('cmd.viewNotes')), checked: notesOpen },
+    { ...cmd('view.timeline', translate('animation.cmd.timeline')), checked: timelineOpen },
+    cmd('view.playPage', translate('animation.cmd.playPage')),
+    { ...cmd('view.highContrast', translate('cmd.viewHighContrast')), checked: highContrast },
+    { id: 'language', label: common('language.menu'), onSelect: () => {
+      barRef.current?.querySelector<HTMLButtonElement>(narrow ? '[data-testid="ed-more"]' : '[data-testid="ed-menu-view"]')?.focus()
+      setLanguageOpen(true)
+    } },
     { id: 'v2', separator: true },
-    cmd('file.shortcuts'),
+    cmd('file.shortcuts', translate('cmd.fileShortcuts')),
   ]
   /** Phone widths: one menu with a heading per group, and Comments joins it so the bar keeps room for the title. */
   const combinedItems: MenuItem[] = [
@@ -324,7 +335,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
     { id: 'h-file', label: t.topbar.file, heading: true },
     ...fileItems,
     { id: 'c1', separator: true },
-    { id: 'h-view', label: t.topbar.view, heading: true },
+    { id: 'h-view', label: translate('topbar.view'), heading: true },
     ...viewItems,
   ]
 
@@ -337,11 +348,11 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
       <div className={styles.left}>
         {start}
         {narrow ? (
-          <MenuButton label={t.topbar.menu} items={combinedItems} testId="ed-more" icon={<MenuIcon size={18} aria-hidden="true" />} onOpen={() => preloadDialog('download')} />
+          <MenuButton label={translate('topbar.menu')} items={combinedItems} testId="ed-more" icon={<MenuIcon size={18} aria-hidden="true" />} onOpen={() => preloadDialog('download')} wrapLabels={translations.resolvedLanguage !== 'en'} />
         ) : (
-          <nav className={styles.menus} aria-label={t.topbar.menus}>
+          <nav className={styles.menus} aria-label={translate('topbar.menus')}>
             <MenuButton label={t.topbar.file} items={fileItems} testId="ed-menu-file" onOpen={() => preloadDialog('download')} />
-            <MenuButton label={t.topbar.view} items={viewItems} testId="ed-menu-view" />
+            <MenuButton label={translate('topbar.view')} items={viewItems} testId="ed-menu-view" wrapLabels={translations.resolvedLanguage !== 'en'} />
           </nav>
         )}
         {readOnly ? null : (
@@ -376,6 +387,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
         {end ? <div className={styles.end}>{end}</div> : null}
         <ShareMenu onPresent={onPresent} />
       </div>
+      <LanguageDialog open={languageOpen} onClose={closeLanguage} />
     </header>
   )
 }

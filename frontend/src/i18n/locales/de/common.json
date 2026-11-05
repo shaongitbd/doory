@@ -1,0 +1,13 @@
+{
+  "language": {
+    "title": "Sprache",
+    "label": "Sprache der Benutzeroberfläche",
+    "followBrowser": "Browsersprache verwenden",
+    "english": "English",
+    "german": "Deutsch",
+    "description": "Wird in diesem Browser gespeichert. Nur die Sprache der Benutzeroberfläche ändert sich; deine Designs und die eingefügten Beispieltexte bleiben unverändert.",
+    "effective": "Aktuelle Sprache der Benutzeroberfläche: {{language}}",
+    "menu": "Sprache…",
+    "close": "Dialog schließen"
+  }
+}

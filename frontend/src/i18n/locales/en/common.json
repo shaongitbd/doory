@@ -1,0 +1,13 @@
+{
+  "language": {
+    "title": "Language",
+    "label": "UI language",
+    "followBrowser": "Follow browser",
+    "english": "English",
+    "german": "Deutsch",
+    "description": "Saved in this browser. Only the interface language changes; your designs and starter content stay the same.",
+    "effective": "Current UI language: {{language}}",
+    "menu": "Language…",
+    "close": "Close dialog"
+  }
+}

@@ -139,6 +139,21 @@ describe('settings: password', () => {
   })
 })
 
+describe('settings: language', () => {
+  it('changes the interface locally while leaving profile input and the route intact', async () => {
+    const { router } = renderApp('/settings', { user: makeUser() })
+    const card = within(await screen.findByRole('region', { name: 'Language' }))
+    const profile = screen.getByRole('textbox', { name: 'Display name' })
+    const value = (profile as HTMLInputElement).value
+    await userEvent.selectOptions(card.getByRole('combobox', { name: 'UI language' }), 'de')
+    expect(screen.getByRole('region', { name: 'Sprache' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Sprache der Benutzeroberfläche' })).toHaveValue('de')
+    expect(localStorage.getItem('doory.ui.language.v1')).toBe('de')
+    expect(profile).toHaveValue(value)
+    expect(router.state.location.pathname).toBe('/settings')
+  })
+})
+
 describe('settings: accessibility', () => {
   afterEach(() => setContrastPreference('system'))
 

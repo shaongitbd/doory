@@ -30,7 +30,10 @@ const DashboardTemplatesPage = lazy(() => import('@/pages/dashboard/TemplatesPag
 const BrandPage = lazy(() => import('@/pages/dashboard/BrandPage'))
 const UploadsPage = lazy(() => import('@/pages/dashboard/UploadsPage'))
 const TrashPage = lazy(() => import('@/pages/dashboard/TrashPage'))
-const SettingsPage = lazy(() => import('@/pages/dashboard/SettingsPage'))
+const SettingsPage = lazy(async () => {
+  const [{ default: Page }, { UiLanguageProvider }] = await Promise.all([import('@/pages/dashboard/SettingsPage'), import('@/i18n/UiLanguageProvider')])
+  return { default: () => <UiLanguageProvider><Page /></UiLanguageProvider> }
+})
 
 const page = (element: React.ReactNode) => <Suspense fallback={<PageLoader />}>{element}</Suspense>
 

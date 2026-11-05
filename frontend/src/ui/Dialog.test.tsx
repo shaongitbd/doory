@@ -17,6 +17,12 @@ function Harness({ dismissible = true }: { dismissible?: boolean }) {
 }
 
 describe('Dialog', () => {
+  it('allows a translated close label while preserving the default for existing callers', () => {
+    const { rerender } = render(<Dialog open title="Language" onClose={() => undefined} />)
+    expect(screen.getByRole('button', { name: 'Close dialog' })).toBeInTheDocument()
+    rerender(<Dialog open title="Sprache" closeLabel="Dialog schließen" onClose={() => undefined} />)
+    expect(screen.getByRole('button', { name: 'Dialog schließen' })).toBeInTheDocument()
+  })
   it('has dialog semantics and moves focus inside', async () => {
     render(<Harness />)
     await userEvent.click(screen.getByRole('button', { name: 'Open' }))
