@@ -109,6 +109,22 @@ def test_edit_design_places_uploads_and_catalogue_graphics(as_caller, user, desi
     assert version.label == "Before edits by Claude"
 
 
+def test_edit_design_uses_installed_font_weights(as_caller, design):
+    make_family("Inter", variants=((300, "normal", "latin"), (600, "normal", "latin")))
+    added = designs.edit_design(
+        str(design.pk),
+        [{"op": "add_text", "text": "Akash", "font_family": "Inter", "font_weight": 600}],
+    )
+    text_id = added["results"][0]["object_id"]
+    assert designs.get_design(str(design.pk))["pages"][0]["objects"][-1]["font_weight"] == 600
+
+    designs.edit_design(
+        str(design.pk),
+        [{"op": "update_object", "object_id": text_id, "font_weight": 300}],
+    )
+    assert designs.get_design(str(design.pk))["pages"][0]["objects"][-1]["font_weight"] == 300
+
+
 def test_edit_design_explains_what_went_wrong_and_changes_nothing(as_caller, other, design):
     theirs = make_asset(other)
     with pytest.raises(ToolError, match=r"Operation 1: There is no picture .* Nothing was changed"):

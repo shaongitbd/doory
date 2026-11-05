@@ -94,7 +94,8 @@ def search_fonts(
     category: Literal["sans-serif", "serif", "display", "handwriting", "monospace"] | None = None,
     limit: Limit = 20,
 ) -> dict[str, Any]:
-    """Search the font catalogue, most popular first. Use a `family` as `font_family` in edit_design."""
+    """Search installed fonts, most popular first. Use a `family` and one of its `weights` in
+    edit_design's `font_family` and `font_weight` fields."""
     rows = _filtered(FontFilter, {"q": query, "category": category}, PublicFontList().get_queryset(), limit)
     return {
         "fonts": [

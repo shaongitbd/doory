@@ -148,7 +148,12 @@ class AddText(_Add):
         None, description="A family from search_fonts, e.g. 'Playfair Display'."
     )
     font_size: Annotated[float, Field(gt=0, le=2000)] | None = None
-    font_weight: Annotated[int, Field(ge=100, le=900)] | None = None
+    font_weight: (
+        Annotated[
+            int, Field(ge=100, le=900, description="Use a weight listed by search_fonts for this family.")
+        ]
+        | None
+    ) = None
     color: Color | None = None
     align: builders.TextAlign = "center"
     line_height: Annotated[float, Field(gt=0, le=10)] | None = None
@@ -274,7 +279,12 @@ class UpdateObject(_Op):
     stroke_width: Annotated[float, Field(ge=0, le=1000)] | None = None
     font_family: Annotated[str, StringConstraints(min_length=1, max_length=120)] | None = None
     font_size: Annotated[float, Field(gt=0, le=2000)] | None = None
-    font_weight: Annotated[int, Field(ge=100, le=900)] | None = None
+    font_weight: (
+        Annotated[
+            int, Field(ge=100, le=900, description="Use a weight listed by search_fonts for this family.")
+        ]
+        | None
+    ) = None
     align: builders.TextAlign | None = None
     effects: Effects | None = Field(None, description=EFFECTS_HELP + " Shapes take only a shadow.")
     curve: Curve | None = Field(None, description="Text only. " + CURVE_HELP)
