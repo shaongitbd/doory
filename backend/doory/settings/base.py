@@ -124,6 +124,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # per asset
 MAX_DESIGN_DOCUMENT_BYTES = 12 * 1024 * 1024
 USER_STORAGE_QUOTA_BYTES = env.int("USER_STORAGE_QUOTA_BYTES", default=2 * 1024**3)
+FONT_ON_DEMAND_ENABLED = env.bool("FONT_ON_DEMAND_ENABLED", default=True)
 MAX_DESIGNS_PER_USER = env.int("MAX_DESIGNS_PER_USER", default=5000)
 MAX_API_TOKENS_PER_USER = env.int("MAX_API_TOKENS_PER_USER", default=20)
 MAX_DESIGN_PAGES = 100
@@ -261,6 +262,7 @@ REST_FRAMEWORK = {
         "auth": "20/min",  # login / register / password reset
         "oidc": "30/min",  # single sign-on: a sign-in takes one start and one callback
         "upload": "60/min",
+        "font_download": "6/hour",
         "stock": "60/min",
         "video_upload": "20/min",  # clips uploaded or imported: each one runs ffmpeg
         "stock_preview": "300/min",  # listening to Freesound previews; searches keep the `stock` budget

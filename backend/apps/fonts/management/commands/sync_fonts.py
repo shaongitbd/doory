@@ -59,7 +59,9 @@ class Command(BaseCommand):
             "Devanagari, Hebrew…) except Chinese, Japanese and Korean.",
         )
         parser.add_argument(
-            "--weights", default="400,700", help="Comma-separated weights (default: 400,700)."
+            "--weights",
+            default="300,400,500,600,700,800,900",
+            help="Comma-separated weights (default: 300,400,500,600,700,800,900).",
         )
         parser.add_argument("--styles", default="normal,italic", help="normal and/or italic (default: both).")
         parser.add_argument(
