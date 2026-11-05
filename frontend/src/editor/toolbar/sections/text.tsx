@@ -1,9 +1,12 @@
 import { PilcrowLeft, PilcrowRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FontFamily } from '@/types/api'
+import { fontsApi } from '@/lib/api/fonts'
 import { ColorTool } from '../../chrome/ColorTool'
 import { I } from '../../chrome/icons'
 import { isBold, textValue } from '../../builtins/textState'
 import { useEditor, useSelection } from '../../context'
+import { isSystemFont, pickVariant, weightToNumber } from '../../engine/fonts'
 import { readFill } from '../../engine/objects/fills'
 import { CURVE_MAX } from '../../engine/text/curve'
 import { primaryFamily } from '../../engine/text/fontStack'
@@ -38,26 +41,96 @@ const CASES = [
 ] as const
 
 const RESTORE_CASE = { id: 'none', label: t.ctx.caseNormal } as const
+const FALLBACK_WEIGHTS = [400, 700]
+const weightName = (weight: number): string => t.toolbar.weightNames[weight as keyof typeof t.toolbar.weightNames] ?? String(weight)
 
-/** Whether the catalog has an italic file for the family (unknown and system fonts: assume so). */
-function useHasItalic(family: string): boolean {
+/** Keep the weight menu in step with uploaded fonts and the catalog's available files. */
+function useFontFamily(family: string): [FontFamily | null, (entry: FontFamily) => void] {
   const editor = useEditor()
-  const [known, setKnown] = useState<{ family: string; italic: boolean } | null>(null)
+  const [known, setKnown] = useState<{ family: string; entry: FontFamily | null } | null>(null)
   useEffect(() => {
     let cancelled = false
     if (!family) return
     void editor.fonts.lookup(family).then((f) => {
-      if (!cancelled) setKnown({ family, italic: !f || f.variants.length === 0 || f.variants.some((v) => v.style === 'italic') })
+      if (!cancelled) setKnown({ family, entry: f })
     })
     return () => {
       cancelled = true
     }
   }, [editor, family])
-  return known?.family === family ? known.italic : true
+  return [known?.family === family ? known.entry : null, (entry) => setKnown({ family, entry })]
+}
+
+function WeightTool({ family, weight, italic, entry, onDownloaded }: { family: string; weight: number; italic: boolean; entry: FontFamily | null; onDownloaded: (entry: FontFamily) => void }) {
+  const editor = useEditor()
+  const [remote, setRemote] = useState<{ family: string; enabled: boolean; weights: Array<{ weight: number; style: 'normal' | 'italic' }> } | null>(null)
+  const [adding, setAdding] = useState<number | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    if (entry?.is_user_font) return
+    if (family) void fontsApi.weights(family).then((result) => {
+      if (!cancelled) setRemote({ family, ...result })
+    }).catch(() => {
+      if (!cancelled) setRemote({ family, enabled: false, weights: [] })
+    })
+    return () => { cancelled = true }
+  }, [family, entry?.is_user_font])
+  const variants = entry?.variants ?? []
+  const style = italic ? 'italic' : 'normal'
+  const canDownload = !entry?.is_user_font && remote?.family === family && remote.enabled
+  const available = variants.length
+    ? [...new Set(variants.filter((v) => v.style === style || (italic && !variants.some((face) => face.style === 'italic'))).map((v) => v.weight))].sort((a, b) => a - b)
+    : canDownload ? [] : FALLBACK_WEIGHTS
+  const downloadable = canDownload
+    ? remote.weights.filter((v) => v.style === style && !variants.some((face) => face.style === style && face.weight === v.weight))
+    : []
+  // Keep an old document's weight visible unless this menu can download its missing face.
+  const weights = available.includes(weight) || downloadable.some((v) => v.weight === weight)
+    ? available : [...available, weight].sort((a, b) => a - b)
+  const add = async (value: number, close: () => void): Promise<void> => {
+    const selectionVersion = editor.state.selection.version
+    setAdding(value)
+    setError('')
+    try {
+      const installed = await fontsApi.addWeight(family, value, style)
+      editor.fonts.remember([installed])
+      onDownloaded(installed)
+      // A slow download must not format a different selection made in the meantime.
+      if (editor.state.selection.version === selectionVersion) editor.style.text({ fontWeight: value }, t.history.changeFontWeight)
+      close()
+    } catch {
+      setError(t.toolbar.fontWeightDownloadFailed)
+    } finally {
+      setAdding(null)
+    }
+  }
+  return (
+    <PopoverTool label={t.toolbar.fontWeight} trigger={<><span className={ed.toolText}>{weightName(weight)}</span>{I.chevronDown}</>} flush testId="ed-font-weight">
+      {(close) => (
+        <div className={ed.menuList} role="menu">
+          {weights.map((value) => (
+            <button key={value} type="button" role="menuitemradio" aria-checked={value === weight} className={ed.menuItem} disabled={!available.includes(value)} data-testid={`ed-weight-${value}`} onClick={() => {
+              editor.style.text({ fontWeight: value }, t.history.changeFontWeight)
+              close()
+            }}>
+              {weightName(value)}<span>{value}</span>
+            </button>
+          ))}
+          {downloadable.map(({ weight: value }) => (
+            <button key={`add-${value}`} type="button" className={ed.menuItem} disabled={adding !== null} data-testid={`ed-add-weight-${value}`} onClick={() => void add(value, close)}>
+              {t.toolbar.addFontWeight(weightName(value))}<span>{value}</span>
+            </button>
+          ))}
+          {error ? <p role="alert" className={ed.hintText}>{error}</p> : null}
+        </div>
+      )}
+    </PopoverTool>
+  )
 }
 
 /** The font pill and its searchable list. */
-function FontTool({ family, stack, sample }: { family: string; stack: string; sample: string }) {
+function FontTool({ family, stack, sample, weight, italic }: { family: string; stack: string; sample: string; weight: number; italic: boolean }) {
   const editor = useEditor()
   const ref = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
@@ -79,9 +152,19 @@ function FontTool({ family, stack, sample }: { family: string; stack: string; sa
           current={family}
           sample={sample}
           onPreview={preview.preview}
-          onPick={(next) => {
+          onPick={(next, picked) => {
             preview.commit()
-            editor.style.text({ fontFamily: next }, t.history.changeFont)
+            const entry = editor.fonts.known(picked)
+            const style = italic ? 'italic' : 'normal'
+            const installed = entry?.variants.length
+              ? pickVariant(entry.variants, weight, style)?.weight
+              : isSystemFont(picked) && !editor.fonts.isUserFont(picked)
+                ? [...FALLBACK_WEIGHTS].sort((a, b) => Math.abs(a - weight) - Math.abs(b - weight))[0]
+                : undefined
+            editor.style.text({ fontFamily: next, ...(installed !== undefined && installed !== weight ? { fontWeight: installed } : {}) }, t.history.changeFont)
+            if (installed !== undefined && installed !== weight) {
+              editor.toast(t.toolbar.fontWeightAdjusted(picked, weightName(weight), weightName(installed)), 'info')
+            }
             setOpen(false)
           }}
           onClose={close}
@@ -97,7 +180,8 @@ export function TextSection() {
   const obj = sel.objects[0] ?? {}
   const stack = String(textValue(sel, 'fontFamily') ?? '')
   const family = primaryFamily(stack)
-  const hasItalic = useHasItalic(family)
+  const [fontEntry, setFontEntry] = useFontFamily(family)
+  const hasItalic = !fontEntry || fontEntry.variants.length === 0 || fontEntry.variants.some((v) => v.style === 'italic')
   const size = Math.round(Number(textValue(sel, 'fontSize') ?? 16))
   const fill = readFill(textValue(sel, 'fill'), '#1c1517')
   const weight = textValue(sel, 'fontWeight')
@@ -114,7 +198,8 @@ export function TextSection() {
 
   return (
     <>
-      <FontTool family={family} stack={stack} sample={String(obj.text ?? '')} />
+      <FontTool family={family} stack={stack} sample={String(obj.text ?? '')} weight={weightToNumber(weight as string | number | undefined)} italic={italic} />
+      <WeightTool family={family} weight={weightToNumber(weight as string | number | undefined)} italic={italic} entry={fontEntry} onDownloaded={setFontEntry} />
       <Stepper label={t.ctx.sizeInput} value={size} limit={FONT_SIZE} testId="ed-font-size" onChange={(n, key) => editor.style.text({ fontSize: n }, t.history.changeFontSize, key === 'step' ? 'size-step' : 'font-size')} />
       <ColorTool label={t.toolbar.textColor} value={fill} allowGradient testId="ed-text-color" onChange={(f, key) => editor.style.text({ fill: f }, t.history.changeTextColor, key ?? 'text-color')} />
 
