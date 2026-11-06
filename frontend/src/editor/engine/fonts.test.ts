@@ -80,6 +80,15 @@ describe('unicode subsets', () => {
     expect(subsetsToLoad(e, v, 'Hello')[0].range).toBe(LATIN)
   })
 
+  it('loads an unranged CJK slice for non-Latin text', () => {
+    const v = variant(400, 'normal', '/f/latin.woff2', [{ subset: 'chinese-simplified', url: '/f/zh.woff2' }])
+    const e = entry([v], { latin: LATIN })
+    expect(subsetsToLoad(e, v, '中文').map((s) => s.subset)).toEqual(['latin', 'chinese-simplified'])
+    expect(subsetsToLoad(e, v, 'Hello').map((s) => s.subset)).toEqual(['latin'])
+    expect(subsetsToLoad(e, v, '“Привет”').map((s) => s.subset)).toEqual(['latin'])
+    expect(subsetsToLoad(e, v, 'かな 한국').map((s) => s.subset)).toEqual(['latin', 'chinese-simplified'])
+  })
+
   it('works with the legacy catalog shape (no subsets, no ranges)', () => {
     const v = variant(400, 'normal', '/f/a.woff2')
     expect(subsetsToLoad(entry([v]), v, 'Привет')).toEqual([{ subset: 'latin', url: '/f/a.woff2', range: '' }])
