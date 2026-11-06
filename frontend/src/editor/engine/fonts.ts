@@ -77,6 +77,9 @@ export interface SubsetToLoad {
   range: string
 }
 
+/** Hangul, CJK symbols, kana and ideographs, fullwidth forms, and the supplementary ideographs. */
+const CJK_TEXT = /[\u1100-\u11ff\u2e80-\u9fff\ua960-\ua97f\uac00-\ud7ff\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef\u{20000}-\u{3134f}]/u
+
 /**
  * Files to register for one variant: the Latin file first (always), then every other subset whose unicode
  * range contains a character of `text`. Without catalog ranges only the main file is used.
@@ -89,8 +92,9 @@ export function subsetsToLoad(entry: FontFamilyEx, variant: FontVariantEx, text:
     const range = ranges[file.subset]
     // Fontsource CJK files are often whole-font slices and intentionally have no CSS range.
     // The old path silently skipped them, so headless Canvas measured and painted in its fallback.
+    // Only CJK text loads one: they are large, and a curly quote or a Cyrillic word doesn't need them.
     const isUnrangedCjk = !range && /^(chinese|japanese|korean)/.test(file.subset)
-    if ((range && rangesCoverText(parseUnicodeRange(range), text)) || (isUnrangedCjk && /[^\u0000-\u00ff]/u.test(text))) {
+    if ((range && rangesCoverText(parseUnicodeRange(range), text)) || (isUnrangedCjk && CJK_TEXT.test(text))) {
       out.push({ subset: file.subset, url: file.url, range: range ?? '' })
     }
   }

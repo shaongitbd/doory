@@ -85,6 +85,8 @@ describe('unicode subsets', () => {
     const e = entry([v], { latin: LATIN })
     expect(subsetsToLoad(e, v, '中文').map((s) => s.subset)).toEqual(['latin', 'chinese-simplified'])
     expect(subsetsToLoad(e, v, 'Hello').map((s) => s.subset)).toEqual(['latin'])
+    expect(subsetsToLoad(e, v, '“Привет”').map((s) => s.subset)).toEqual(['latin'])
+    expect(subsetsToLoad(e, v, 'かな 한국').map((s) => s.subset)).toEqual(['latin', 'chinese-simplified'])
   })
 
   it('works with the legacy catalog shape (no subsets, no ranges)', () => {
