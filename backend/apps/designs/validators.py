@@ -225,11 +225,18 @@ def _check_structure(doc: object) -> DocumentInfo:
     pages = doc.get("pages")
     if not isinstance(pages, list) or not 1 <= len(pages) <= MAX_PAGES:
         raise InvalidDocument(f"`pages` must be a list of 1 to {MAX_PAGES} pages.")
+    seen_page_ids: set[str] = set()
     for index, page in enumerate(pages):
         if not isinstance(page, dict):
             raise InvalidDocument(f"Page {index + 1} must be an object.")
         if not isinstance(page.get("id"), str) or not page["id"]:
             raise InvalidDocument(f"Page {index + 1} needs a string `id`.")
+        # Pages are looked up by id (first match wins), so a repeated id would make
+        # page references — including audio scope.pageId — ambiguous. Tracked like the
+        # unique audio track ids in _check_audio_track.
+        if page["id"] in seen_page_ids:
+            raise InvalidDocument(f"Page {index + 1} `id` must be unique.")
+        seen_page_ids.add(page["id"])
         for key in ("width", "height"):
             # A page may carry its own size (pages of one design can differ); absent means the document's.
             if key in page and (not _is_int(page[key]) or not 1 <= page[key] <= MAX_DIMENSION):
