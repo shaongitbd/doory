@@ -6,7 +6,7 @@ reported by `manage.py check` (warning `ai.W002`).
 
 ```env
 AI_PROVIDER_1_URL=http://model-server:7000
-AI_PROVIDER_1_STYLE=multipart            # doory | multipart | json | mask | custom
+AI_PROVIDER_1_STYLE=multipart            # doory | multipart | json | mask | custom | queue
 AI_PROVIDER_1_STYLE_CONFIG={"path": "/api/remove"}
 AI_PROVIDER_1_TASKS=background-removal
 AI_PROVIDER_1_MODELS=fast-model:Fast,best-model:Best   # empty: the server's default (doory style: its list)
@@ -121,6 +121,10 @@ def parse(raw: dict[str, Any]) -> EnvProvider:
     unknown = [t for t in tasks if t not in TASKS]
     if unknown or not tasks:
         raise ConfigError(f"{prefix}TASKS: unknown task {unknown[0] if unknown else '(none)'}.")
+    try:
+        style.check_tasks(tasks)
+    except ConfigError as exc:
+        raise ConfigError(f"{prefix}TASKS: {exc}") from None
     header = raw.get("AUTH_HEADER", "").strip()
     if header:
         try:

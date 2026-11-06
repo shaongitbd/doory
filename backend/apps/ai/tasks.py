@@ -13,8 +13,10 @@ class Task:
     label: str
     #: "image-alpha": an image with transparency; "image": any image.
     output: Literal["image-alpha", "image"]
-    #: Appended to the source asset's name: "photo.jpg (no background)".
+    #: Appended to the source asset's name: "photo.jpg (no background)" (or to the prompt, for a text task).
     result_suffix: str
+    #: "image": the task starts from one of the user's images; "prompt": from a line of text.
+    input: Literal["image", "prompt"] = "image"
     #: Whether the result must have the source's size (a result of the same aspect ratio is scaled to it).
     same_size: bool = True
     #: JSON schema (the subset `validate_options` reads) of the task's options; empty: no options.
@@ -28,7 +30,18 @@ TASKS: dict[str, Task] = {
         output="image-alpha",
         result_suffix="no background",
     ),
+    "text-to-image": Task(
+        id="text-to-image",
+        label="Create image from text",
+        output="image",
+        result_suffix="created",
+        input="prompt",
+        same_size=False,
+    ),
 }
+
+#: The longest prompt a text task accepts.
+MAX_PROMPT_LENGTH = 2000
 
 
 def get_task(task_id: str) -> Task | None:

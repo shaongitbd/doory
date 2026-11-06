@@ -74,15 +74,22 @@ class TaskView(APIView):
         },
     )
     def post(self, request, task: str):
-        """Run `task` (e.g. background-removal) on one of the user's images; the result is a new asset."""
+        """Run `task` on one of the user's images (background-removal) or on a prompt (text-to-image); the
+        result is a new asset."""
         if task not in TASKS:
             raise ApiError("unknown_task", "Unknown task.", status.HTTP_404_NOT_FOUND)
-        body = TaskRequestSerializer(data=request.data)
+        body = TaskRequestSerializer(data=request.data, context={"task": TASKS[task]})
         body.is_valid(raise_exception=True)
-        asset = get_object_or_404(Asset, pk=body.validated_data["asset_id"], owner=request.user)
+        asset_id = body.validated_data.get("asset_id")
+        asset = get_object_or_404(Asset, pk=asset_id, owner=request.user) if asset_id else None
         try:
             result = services.run(
-                request.user, task, asset, body.validated_data["model"], body.validated_data.get("options")
+                request.user,
+                task,
+                asset,
+                body.validated_data["model"],
+                body.validated_data.get("options"),
+                prompt=body.validated_data.get("prompt", ""),
             )
         except InvalidOptions as exc:
             raise ApiError("invalid_options", str(exc)) from None

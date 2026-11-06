@@ -6,6 +6,8 @@
   `{"data": {"result_b64": …}}`
 * a mask server: `POST /mask` → a black and white mask of another size
 * a Doory-compatible server: `GET /v1/models`, `POST /v1/{task}`
+* a queue server (`QueueServer`, text-to-image): `POST /v1/queue/{model}` with `Authorization: Key …`, its
+  status, its result, and the picture the result links to
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from PIL import Image, ImageOps
 
 Y_KEY = "y-secret-key-123"
 Z_TOKEN = "z-secret-token-456"
+QUEUE_KEY = "queue-secret-key-789"
 
 
 @dataclass
@@ -186,3 +189,46 @@ class FakeServer:
     def stop(self) -> None:
         self.httpd.shutdown()
         self.httpd.server_close()
+
+
+class QueueServer:
+    """A queue server on `fake` for `model`: `POST /v1/queue/{model}` takes the job `job-1` (with the
+    `QUEUE_KEY`), its status runs through `statuses` (the last one repeats), and the result links to a 48 x 32
+    picture at `/files/job-1.png` on `link_host`."""
+
+    def __init__(
+        self,
+        fake: FakeServer,
+        model: str,
+        *,
+        statuses: tuple[str, ...] = ("IN_PROGRESS", "COMPLETED"),
+        link_host: str = "localhost",
+    ) -> None:
+        self.fake = fake
+        self.statuses = list(statuses)
+        self.job = f"/v1/queue/{model}/requests/job-1"
+        self.picture = png(Image.new("RGB", (48, 32), (200, 80, 40)))
+        self.link = f"http://{link_host}:{fake.httpd.server_address[1]}/files/job-1.png"
+        fake.routes.update(
+            {
+                ("POST", f"/v1/queue/{model}"): self.submit,
+                ("GET", f"{self.job}/status"): self.status,
+                ("GET", self.job): self.result,
+                ("GET", "/files/job-1.png"): lambda request: image_answer(self.picture),
+            }
+        )
+
+    def submit(self, request: Received) -> Answer:
+        if request.headers.get("authorization") != f"Key {QUEUE_KEY}":
+            return json_answer({"error": {"code": "unauthorized", "message": "Bad key."}}, 401)
+        url = self.fake.url + self.job
+        return json_answer(
+            {"request_id": "job-1", "status": "IN_QUEUE", "status_url": f"{url}/status", "response_url": url}
+        )
+
+    def status(self, request: Received) -> Answer:
+        state = self.statuses.pop(0) if len(self.statuses) > 1 else self.statuses[0]
+        return json_answer({"status": state, "error": None})
+
+    def result(self, request: Received) -> Answer:
+        return json_answer({"images": [{"url": self.link, "content_type": "image/png"}]})

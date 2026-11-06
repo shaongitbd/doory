@@ -11,16 +11,16 @@ import base64
 import binascii
 import json
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field, replace
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 from urllib.parse import quote, unquote_plus, urlsplit
 
 import urllib3
 
 from ..errors import AIProviderError
 from ..results import SourceImage, from_image, from_mask
-from ..tasks import Task
+from ..tasks import TASKS, Task
 from ..transport import _UNSAFE_URL_CHARS, HttpResponse, Policy
 
 MAX_FIELDS = 20
@@ -56,6 +56,9 @@ class StyleConfig:
     response: Literal["image", "mask", "auto"] = "image"  # auto: an image, or JSON with `response_path`
     response_format: Literal["binary", "json"] = "binary"
     response_path: str = "image_b64"
+    prompt_field: str = "prompt"  # a text task: the field the prompt goes in
+    status_path: str = ""  # the queue style: where a job's status is read; may contain {model} and {id}
+    result_path: str = ""  # the queue style: where a job's result is read
 
 
 @dataclass(frozen=True)
@@ -120,8 +123,13 @@ class Connection:
         return url
 
 
-#: (request, largest answer accepted) → the answer
-Send = Callable[[OutgoingRequest, int], HttpResponse]
+class Send(Protocol):
+    """One request and its answer: `max_bytes` caps the answer, `time_left` (seconds) shortens the
+    provider's timeout for a style that makes several requests in one call."""
+
+    def __call__(
+        self, request: OutgoingRequest, max_bytes: int, time_left: float | None = None
+    ) -> HttpResponse: ...
 
 
 def _text(value: Any, name: str, *, limit: int = MAX_FIELD_VALUE) -> str:
@@ -273,6 +281,9 @@ READERS: dict[str, Callable[[Any], dict[str, Any]]] = {
     "extra_fields": lambda v: {"extra_fields": _fields(v)},
     "extra_headers": lambda v: {"extra_headers": _headers(v)},
     "response_path": lambda v: {"response_path": _json_path(v)},
+    "status_path": lambda v: {"status_path": _path(v)},
+    "result_path": lambda v: {"result_path": _path(v)},
+    "prompt_field": lambda v: {"prompt_field": _field_name(v, "prompt_field")},
     "response": _response,
 }
 
@@ -286,6 +297,8 @@ class ApiStyle:
     keys: frozenset[str] = frozenset()
     fixed: Mapping[str, Any] = {}
     can_list_models = False
+    #: What the style can send: "image" (the user's picture) and/or "prompt" (a line of text).
+    inputs: frozenset[str] = frozenset({"image"})
 
     def config(self, raw: Any) -> StyleConfig:
         """The style configuration from the stored JSON, or ConfigError."""
@@ -304,6 +317,13 @@ class ApiStyle:
         if config.body == "json" and config.send_as == "file":
             config = replace(config, send_as="base64")
         return config
+
+    def check_tasks(self, tasks: Iterable[str]) -> None:
+        """ConfigError when the style cannot send one of `tasks` (a text task to an image style, say)."""
+        for task_id in tasks:
+            task = TASKS.get(task_id)
+            if task is not None and task.input not in self.inputs:
+                raise ConfigError(f"The {self.label} style cannot run {task_id}.")
 
     # -- requests ----------------------------------------------------------------------------------------
 
@@ -348,6 +368,26 @@ class ApiStyle:
             headers["Content-Type"] = content_type
         url = connection.url(self.path(connection, task, model))
         return OutgoingRequest(config.method, url, headers, body)
+
+    def run(
+        self,
+        connection: Connection,
+        task: Task,
+        model: str,
+        image: SourceImage | None,
+        options: Mapping[str, Any],
+        *,
+        prompt: str,
+        send: Send,
+        limit: int,
+    ) -> tuple[bytes, int, int]:
+        """The whole call: (the finished PNG, bytes sent, bytes received). One request here; a style that
+        works in several steps (queue) overrides it."""
+        if image is None:
+            raise AIProviderError("not_supported", f"The {self.label} style needs an image.")
+        request = self.build(connection, task, model, image, options)
+        response = send(request, limit)
+        return self.parse(connection, task, response, image), len(request.body), len(response.body)
 
     # -- answers -----------------------------------------------------------------------------------------
 

@@ -132,6 +132,9 @@ _CONFIG_SCHEMA = inline_serializer(
                     help_text="The options every signed-in user has; "
                     "GET /api/v1/ai/models/ lists those of the signed-in user."
                 ),
+                "text_to_image": TaskOptionsSerializer(
+                    help_text="The same for making an image from a prompt."
+                ),
             },
         ),
     },

@@ -25,6 +25,7 @@ class Style(models.TextChoices):
     JSON = "json", "JSON → base64"
     MASK = "mask", "Mask"
     CUSTOM = "custom", "Custom"
+    QUEUE = "queue", "Queue"
 
 
 class Audience(models.TextChoices):

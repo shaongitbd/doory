@@ -13,5 +13,5 @@ class CustomStyle(ApiStyle):
         "send_as (file or base64, for multipart), file_field, model_field, options_field, extra_fields, "
         "extra_headers, response (image, mask, json:<path> or json-mask:<path>)."
     )
-    keys = frozenset(READERS) - {"response_path"}
+    keys = frozenset(READERS) - {"response_path", "status_path", "result_path", "prompt_field"}
     fixed = {}

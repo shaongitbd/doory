@@ -109,8 +109,8 @@ def _png(image: Image.Image) -> bytes:
     return out.getvalue()
 
 
-def from_image(task: Task, source: SourceImage, data: bytes) -> bytes:
-    """The provider's finished image, as PNG."""
+def from_image(task: Task, source: SourceImage | None, data: bytes) -> bytes:
+    """The provider's finished image, as PNG (scaled to `source` when the task keeps its size)."""
     try:
         probe = _probe(data, what="result")
         width, height = probe.size
@@ -122,7 +122,7 @@ def from_image(task: Task, source: SourceImage, data: bytes) -> bytes:
                 result = result.convert("RGBA")
             elif result.mode not in ("RGB", "RGBA", "L", "LA"):
                 result = result.convert("RGBA" if _has_alpha(result) else "RGB")
-            if task.same_size:
+            if task.same_size and source is not None:
                 result = _fit(result, source.width, source.height, any_aspect=False)
             return _png(result)
     except ImageBusy as exc:

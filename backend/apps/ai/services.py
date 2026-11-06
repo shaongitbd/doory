@@ -32,11 +32,12 @@ from .errors import AIProviderError, ModelNotAvailable, QuotaReached, RunsOnDevi
 from .models import AICall, Provider, ProviderModel
 from .results import SourceImage, decode_source
 from .serializers import USER_PROVIDER_MAX_TIMEOUT
-from .styles import Connection, get_style
-from .tasks import TASKS, Task, validate_options
+from .styles import ConfigError, Connection, get_style
+from .tasks import MAX_PROMPT_LENGTH, TASKS, InvalidOptions, Task, validate_options
 
 SENT_AS_IS = ("image/png", "image/jpeg", "image/webp")
 PREVIEW_SIDE = 256
+SAMPLE_PROMPT = "A red apple on a white table, studio light"  # what a text task is tested with
 JSON_OVERHEAD = 64 * 1024
 MAX_IN_FLIGHT_PER_USER = 1
 # Longer than any call can last: the longest user timeout, waiting for a decode slot for the source and for
@@ -95,15 +96,35 @@ def track_in_flight(user, max_in_flight: int = MAX_IN_FLIGHT_PER_USER, timeout: 
             cache.delete(key)
 
 
-def call(conn: Connection, task: Task, model: str, source: SourceImage, options: dict[str, Any]) -> Outcome:
-    """One request to the provider and its result as PNG (AIProviderError otherwise)."""
-    if len(source.data) > conn.max_image_bytes:
+def call(
+    conn: Connection,
+    task: Task,
+    model: str,
+    source: SourceImage | None,
+    options: dict[str, Any],
+    *,
+    prompt: str = "",
+) -> Outcome:
+    """One call to the provider (one request, or a job and its status checks for the queue style) and its
+    result as PNG (AIProviderError otherwise)."""
+    if source is not None and len(source.data) > conn.max_image_bytes:
         raise refused(AIProviderError("too_large", "The image is too large for this option."))
     style = get_style(conn.style)
-    request = style.build(conn, task, model, source, options)
-    response = catalog.sender(conn)(request, answer_limit(conn))
-    png = style.parse(conn, task, response, source)
-    return Outcome(png=png, bytes_in=len(request.body), bytes_out=len(response.body))
+    try:
+        style.check_tasks([task.id])
+    except ConfigError as exc:
+        raise refused(AIProviderError("not_supported", str(exc))) from None
+    png, bytes_in, bytes_out = style.run(
+        conn,
+        task,
+        model,
+        source,
+        options,
+        prompt=prompt,
+        send=catalog.sender(conn),
+        limit=answer_limit(conn),
+    )
+    return Outcome(png=png, bytes_in=bytes_in, bytes_out=bytes_out)
 
 
 def refused(error: E) -> E:
@@ -202,36 +223,44 @@ def _cache_key(user, option: Option, digest: str, options: dict[str, Any]) -> st
     return f"ai:result:{user.pk}:{hashlib.sha256(raw.encode()).hexdigest()}"
 
 
-def _result_name(asset: Asset, task: Task) -> str:
+def _result_name(asset: Asset | None, task: Task, prompt: str = "") -> str:
     suffix = f" ({task.result_suffix})"
-    base = asset.name or "Image"
+    base = (asset.name if asset is not None else " ".join(prompt.split())[:100]) or "Image"
     return clean_name(base[: 255 - len(suffix)] + suffix)
 
 
-def run(user, task_id: str, asset: Asset, model_id: str, options: Any = None) -> Asset:
-    """A new asset of `user` made from `asset` by the option `model_id` of task `task_id`."""
+def run(
+    user, task_id: str, asset: Asset | None, model_id: str, options: Any = None, *, prompt: str = ""
+) -> Asset:
+    """A new asset of `user` made by the option `model_id` of task `task_id`: from `asset` for an image
+    task, from `prompt` (no asset) for a text task such as text-to-image."""
     task = TASKS.get(task_id)
     if task is None:
         raise ModelNotAvailable()
     options = validate_options(task, options)
+    prompt = prompt.strip() if task.input == "prompt" else ""
+    if task.input == "prompt" and not 0 < len(prompt) <= MAX_PROMPT_LENGTH:
+        raise InvalidOptions(f"Describe the image to make in at most {MAX_PROMPT_LENGTH} characters.")
     option = catalog.find(user, task_id, model_id)
     if option is None:
         raise ModelNotAvailable()
     if option.kind == "device":
         raise RunsOnDevice()
-    if asset.owner_id != user.pk:
+    if task.input == "image" and (asset is None or asset.owner_id != user.pk):
         raise UnsupportedAsset()
     provider = option.provider
     assert provider is not None
     started = time.monotonic()
     try:
         conn = catalog.connection(provider)
-        source = read_source(asset, conn.max_image_bytes)
+        source = None
+        if asset is not None and task.input == "image":
+            source = read_source(asset, conn.max_image_bytes)
     except AIProviderError as exc:
         _log(user, option, error=refused(exc), started=started)
         raise
 
-    digest = hashlib.sha256(source.data).hexdigest()
+    digest = hashlib.sha256(source.data if source is not None else prompt.encode()).hexdigest()
     key = _cache_key(user, option, digest, options)
     cached_id = cache.get(key)
     if cached_id:
@@ -247,21 +276,24 @@ def run(user, task_id: str, asset: Asset, model_id: str, options: Any = None) ->
     in_flight = track_in_flight(user) if not provider.is_operator else nullcontext()
     try:
         with in_flight:
-            outcome = call(conn, task, option.remote_name, source, options)
+            outcome = call(conn, task, option.remote_name, source, options, prompt=prompt)
     except AIProviderError as exc:
         _log(user, option, error=exc, started=started)
         raise
-    meta = {
-        "ai": {
-            "task": task_id,
-            "option": option.id,
-            "provider": option.provider_name,
-            "model": option.remote_name,
-            "source_asset": str(asset.pk),
-        }
+    about: dict[str, str] = {
+        "task": task_id,
+        "option": option.id,
+        "provider": option.provider_name,
+        "model": option.remote_name,
     }
+    if source is not None and asset is not None:
+        about["source_asset"] = str(asset.pk)
+    else:
+        about["prompt"] = prompt
+    meta = {"ai": about}
     try:
-        result = create_asset(user, outcome.png, name=_result_name(asset, task), meta=meta)
+        name = _result_name(asset if source is not None else None, task, prompt)
+        result = create_asset(user, outcome.png, name=name, meta=meta)
     except Exception as exc:
         _log(user, option, error=exc, started=started, outcome=outcome)
         raise
@@ -326,7 +358,8 @@ def first_model(provider: Provider | EnvProvider, task: str) -> str:
 def test_provider(
     user, provider: Provider | EnvProvider, *, task: str | None = None, model: str | None = None
 ) -> TestResult:
-    """Send the sample picture to `provider` and report how it went (never raises for provider errors)."""
+    """Send the sample picture (a sample prompt for a text task) to `provider` and report how it went
+    (never raises for provider errors)."""
     task_id = task or (provider.tasks[0] if provider.tasks else "background-removal")
     task_obj = TASKS.get(task_id)
     model = first_model(provider, task_id) if model is None else model
@@ -337,8 +370,9 @@ def test_provider(
     in_flight = track_in_flight(user) if not provider.is_operator else nullcontext()
     try:
         conn = catalog.connection(provider)
+        source = sample_image() if task_obj.input == "image" else None
         with in_flight:
-            outcome = call(conn, task_obj, model, sample_image(), {})
+            outcome = call(conn, task_obj, model, source, {}, prompt=SAMPLE_PROMPT)
         preview = _preview(outcome.png)
     except AIProviderError as exc:
         entry = log_call(user, provider, ref, provider.name, task_id, model, error=exc, started=started)

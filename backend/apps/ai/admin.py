@@ -119,6 +119,10 @@ class ProviderAdminForm(forms.ModelForm):
                 get_style(style).config(cleaned.get("style_config") or {})
             except ConfigError as exc:
                 self.add_error("style_config", str(exc))
+            try:
+                get_style(style).check_tasks(cleaned.get("tasks") or [])
+            except ConfigError as exc:
+                self.add_error("tasks", str(exc))
         cleaned["style_config"] = cleaned.get("style_config") or {}
         return cleaned
 

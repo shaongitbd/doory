@@ -138,7 +138,8 @@ def connection(provider: Provider | EnvProvider) -> Connection:
 def sender(conn: Connection, *, timeout: float | None = None):
     """A `Send` for the styles: one request under the provider's network policy and timeout."""
 
-    def send(request, max_bytes: int) -> transport.HttpResponse:
+    def send(request, max_bytes: int, time_left: float | None = None) -> transport.HttpResponse:
+        limit = timeout or conn.timeout
         try:
             return transport.send(
                 request.method,
@@ -147,7 +148,7 @@ def sender(conn: Connection, *, timeout: float | None = None):
                 headers=request.headers,
                 body=request.body,
                 max_bytes=max_bytes,
-                timeout=timeout or conn.timeout,
+                timeout=limit if time_left is None else min(limit, time_left),
             )
         except transport.TransportError as exc:
             raise AIProviderError(exc.code, exc.message) from exc

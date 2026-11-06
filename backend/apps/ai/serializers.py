@@ -8,7 +8,7 @@ from . import secrets, transport
 from .models import Provider, ProviderModel, Style
 from .styles import ConfigError, get_style
 from .styles.base import check_header_name
-from .tasks import TASKS
+from .tasks import MAX_PROMPT_LENGTH, TASKS
 
 MAX_SECRET_LENGTH = 4096
 MAX_MODELS_PER_PROVIDER = 50
@@ -31,9 +31,27 @@ class TaskOptionsSerializer(serializers.Serializer):
 
 
 class TaskRequestSerializer(serializers.Serializer):
-    asset_id = serializers.UUIDField()
+    """Pass the task (`apps.ai.tasks.Task`) as `context["task"]`: an image task needs `asset_id`, a text
+    task (text-to-image) `prompt`."""
+
+    asset_id = serializers.UUIDField(required=False, help_text="The image, for an image task.")
+    prompt = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=MAX_PROMPT_LENGTH,
+        help_text="What to make, for a text task such as text-to-image.",
+    )
     model = serializers.CharField(max_length=300, help_text="An option id from GET /api/v1/ai/models/.")
     options = serializers.DictField(required=False, default=dict, help_text="Task options (none for now).")
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        task = self.context.get("task")
+        if task is not None and task.input == "prompt":
+            if not attrs.get("prompt"):
+                raise serializers.ValidationError({"prompt": ["Describe the image to make."]})
+        elif not attrs.get("asset_id"):
+            raise serializers.ValidationError({"asset_id": ["This field is required."]})
+        return attrs
 
 
 class SanitizedCharField(serializers.CharField):
@@ -185,6 +203,10 @@ class ProviderSerializer(serializers.ModelSerializer):
             get_style(style).config(style_config)
         except ConfigError as exc:
             raise serializers.ValidationError({"style_config": [str(exc)]}) from None
+        try:
+            get_style(style).check_tasks(attrs.get("tasks", getattr(self.instance, "tasks", None)) or [])
+        except ConfigError as exc:
+            raise serializers.ValidationError({"tasks": [str(exc)]}) from None
         new_url = attrs.get("base_url")
         if (
             self.instance is not None

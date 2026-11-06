@@ -8,9 +8,11 @@ from .doory import DooryStyle
 from .json_b64 import JsonStyle
 from .mask import MaskStyle
 from .multipart import MultipartStyle
+from .queue import QueueStyle
 
 STYLES: dict[str, ApiStyle] = {
-    style.name: style for style in (DooryStyle(), MultipartStyle(), JsonStyle(), MaskStyle(), CustomStyle())
+    style.name: style
+    for style in (DooryStyle(), MultipartStyle(), JsonStyle(), MaskStyle(), CustomStyle(), QueueStyle())
 }
 
 
