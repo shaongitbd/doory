@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useAssetUsage } from '@/lib/api/hooks'
 import { formatBytes } from '@/lib/time'
 import styles from './UsageMeter.module.css'
@@ -13,15 +14,13 @@ export function UsageMeter() {
       <p className={styles.label}>
         {quota ? (
           <>
-            <strong>{formatBytes(used)}</strong> of {formatBytes(quota)} used
-          </>
+            <strong>{formatBytes(used)}</strong> {msg("of ")}{formatBytes(quota)} {msg("used")}</>
         ) : (
           <>
-            <strong>{formatBytes(used)}</strong> used
-          </>
+            <strong>{formatBytes(used)}</strong> {msg("used")}</>
         )}
       </p>
-      {percent !== null ? <progress className={styles.bar} max={100} value={percent} data-high={percent >= 90 || undefined} aria-label="Storage used" /> : null}
+      {percent !== null ? <progress className={styles.bar} max={100} value={percent} data-high={percent >= 90 || undefined} aria-label={msg("Storage used")} /> : null}
     </div>
   )
 }

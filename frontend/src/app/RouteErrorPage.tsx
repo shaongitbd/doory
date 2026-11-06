@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { TriangleAlert } from 'lucide-react'
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom'
 import { Button, EmptyState, LinkButton } from '@/ui'
@@ -22,10 +23,9 @@ export function RouteErrorPage() {
         role="alert"
         action={
           <>
-            <Button onClick={() => window.location.reload()}>Reload page</Button>
+            <Button onClick={() => window.location.reload()}>{msg("Reload page")}</Button>
             <LinkButton to="/" variant="secondary">
-              Go home
-            </LinkButton>
+              {msg("Go home")}</LinkButton>
           </>
         }
       />

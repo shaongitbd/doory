@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { LayoutDashboard, LogOut, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, Menu, MenuItem, MenuLabel, MenuSeparator, useToast } from '@/ui'
@@ -16,13 +17,13 @@ export function AccountMenu() {
       await logout()
       navigate('/', { replace: true })
     } catch {
-      toast({ title: 'Couldn’t sign out', description: 'Please try again.', variant: 'error' })
+      toast({ title: msg("Couldn’t sign out"), description: msg("Please try again."), variant: 'error' })
     }
   }
 
   return (
     <Menu
-      label="Account"
+      label={msg("Account")}
       placement="bottom-end"
       trigger={
         <button type="button" className={styles.trigger} aria-label={`Account menu for ${name}`}>
@@ -32,15 +33,12 @@ export function AccountMenu() {
     >
       <MenuLabel>{user.email}</MenuLabel>
       <MenuItem icon={<LayoutDashboard size={16} />} onSelect={() => navigate('/dashboard')}>
-        Dashboard
-      </MenuItem>
+        {msg("Dashboard")}</MenuItem>
       <MenuItem icon={<Settings size={16} />} onSelect={() => navigate('/settings')}>
-        Settings
-      </MenuItem>
+        {msg("Settings")}</MenuItem>
       <MenuSeparator />
       <MenuItem icon={<LogOut size={16} />} onSelect={() => void signOut()}>
-        Sign out
-      </MenuItem>
+        {msg("Sign out")}</MenuItem>
     </Menu>
   )
 }

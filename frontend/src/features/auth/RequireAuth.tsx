@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Button, EmptyState } from '@/ui'
 import { WifiOff } from 'lucide-react'
@@ -14,14 +15,14 @@ export function RequireAuth({ keepOpenWhenSessionEnds = false }: { keepOpenWhenS
   const { status, bootstrapError, signedOutByUser, lostSession, retryBootstrap } = useAuth()
   const location = useLocation()
 
-  if (status === 'loading') return <PageLoader label="Checking your session" />
+  if (status === 'loading') return <PageLoader label={msg("Checking your session")} />
   if (status === 'anonymous' && bootstrapError && bootstrapError.status !== 401) {
     return (
       <EmptyState
         icon={<WifiOff size={28} />}
-        title="We can’t reach Doory"
-        description="Check your connection and try again. Your designs are safe."
-        action={<Button onClick={retryBootstrap}>Try again</Button>}
+        title={msg("We can’t reach Doory")}
+        description={msg("Check your connection and try again. Your designs are safe.")}
+        action={<Button onClick={retryBootstrap}>{msg("Try again")}</Button>}
         role="alert"
       />
     )

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -26,7 +27,7 @@ export function SsoSection() {
   useEffect(() => {
     if (handled.current || (!params.has('sso') && !params.has('sso_error'))) return
     handled.current = true
-    if (params.get('sso') === 'connected') toast({ title: 'Single sign-on connected', description: `You can now log in with the “${label}” button.`, variant: 'success' })
+    if (params.get('sso') === 'connected') toast({ title: msg("Single sign-on connected"), description: `You can now log in with the “${label}” button.`, variant: 'success' })
     const rest = new URLSearchParams(params)
     rest.delete('sso')
     rest.delete('sso_error')
@@ -42,7 +43,7 @@ export function SsoSection() {
     setError('')
     try {
       setUser((await authApi.oidcDisconnect()).user)
-      toast({ title: 'Single sign-on disconnected', variant: 'success' })
+      toast({ title: msg("Single sign-on disconnected"), variant: 'success' })
     } catch (failure) {
       setError(describeFormError(failure, []).message)
     } finally {
@@ -52,18 +53,17 @@ export function SsoSection() {
 
   return (
     <>
-      <SettingsCard id="sso" title="Single sign-on" description={linked ? `You can log in with the “${label}” button.` : `Connect your account to log in with the “${label}” button.`}>
+      <SettingsCard id="sso" title={msg("Single sign-on")} description={linked ? `You can log in with the “${label}” button.` : `Connect your account to log in with the “${label}” button.`}>
         {error ? (
           <p className={styles.error} role="alert">
             {error}
           </p>
         ) : null}
         <div className={styles.inline}>
-          {linked ? <Badge tone="success">Connected</Badge> : <Badge>Not connected</Badge>}
+          {linked ? <Badge tone="success">{msg("Connected")}</Badge> : <Badge>{msg("Not connected")}</Badge>}
           {linked && canDisconnect ? (
             <Button size="sm" variant="secondary" loading={busy} onClick={() => void disconnect()}>
-              Disconnect
-            </Button>
+              {msg("Disconnect")}</Button>
           ) : null}
           {!linked ? (
             <Button
@@ -74,13 +74,12 @@ export function SsoSection() {
                 setOpen(true)
               }}
             >
-              Connect…
-            </Button>
+              {msg("Connect…")}</Button>
           ) : null}
         </div>
-        {linked && !canDisconnect ? <p className={styles.hint}>Set a password to be able to disconnect: it’s your only way to log in.</p> : null}
+        {linked && !canDisconnect ? <p className={styles.hint}>{msg("Set a password to be able to disconnect: it’s your only way to log in.")}</p> : null}
       </SettingsCard>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Connect single sign-on" description="Confirm it’s you, then log in at your sign-in provider. You’ll come back here." size="sm">
+      <Dialog open={open} onClose={() => setOpen(false)} title={msg("Connect single sign-on")} description={msg("Confirm it’s you, then log in at your sign-in provider. You’ll come back here.")} size="sm">
         {open ? <ConnectForm hasPassword={user.has_password} onCancel={() => setOpen(false)} /> : null}
       </Dialog>
     </>
@@ -115,17 +114,15 @@ function ConnectForm({ hasPassword, onCancel }: { hasPassword: boolean; onCancel
         </p>
       ) : null}
       {hasPassword ? (
-        <PasswordInput label="Your password" name="current-password" autoComplete="current-password" value={value} onChange={(event) => setValue(event.target.value)} autoFocus />
+        <PasswordInput label={msg("Your password")} name="current-password" autoComplete="current-password" value={value} onChange={(event) => setValue(event.target.value)} autoFocus />
       ) : (
-        <Input label="Type your email address to confirm" value={value} onChange={(event) => setValue(event.target.value)} autoComplete="off" spellCheck={false} autoFocus />
+        <Input label={msg("Type your email address to confirm")} value={value} onChange={(event) => setValue(event.target.value)} autoComplete="off" spellCheck={false} autoFocus />
       )}
       <div className={styles.dialogFooter}>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
-          Cancel
-        </Button>
+          {msg("Cancel")}</Button>
         <Button type="submit" loading={busy} disabled={!value.trim()}>
-          Continue
-        </Button>
+          {msg("Continue")}</Button>
       </div>
     </form>
   )

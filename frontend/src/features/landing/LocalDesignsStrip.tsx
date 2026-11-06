@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { ArchiveRestore, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -17,9 +18,9 @@ function LocalCard({ design, onDelete }: { design: LocalDesignSummary; onDelete(
       <Link to={`/local/${design.id}`} className={styles.link}>
         <Thumbnail src={url} alt={`${title} preview`} aspect={4 / 3} fit="contain" className={styles.thumb} />
         <span className={styles.title}>{title}</span>
-        <span className={styles.meta}>edited {formatRelative(design.updatedAt)}</span>
+        <span className={styles.meta}>{msg("edited ")}{formatRelative(design.updatedAt)}</span>
       </Link>
-      <button type="button" className={styles.delete} aria-label={`Delete ${title}`} title="Delete" onClick={() => onDelete(design)}>
+      <button type="button" className={styles.delete} aria-label={`Delete ${title}`} title={msg("Delete")} onClick={() => onDelete(design)}>
         <Trash2 size={15} aria-hidden="true" />
       </button>
     </li>
@@ -35,8 +36,7 @@ function RestoreProjectButton({ quiet = false }: { quiet?: boolean }) {
   return (
     <>
       <Button variant={quiet ? 'ghost' : 'secondary'} size={quiet ? 'sm' : 'md'} loading={restoring} leftIcon={<ArchiveRestore size={17} aria-hidden="true" />} onClick={() => input.current?.click()}>
-        Restore project
-      </Button>
+        {msg("Restore project")}</Button>
       <input
         ref={input}
         type="file"
@@ -49,10 +49,10 @@ function RestoreProjectButton({ quiet = false }: { quiet?: boolean }) {
           setRestoring(true)
           try {
             const design = await importLocalProject(file)
-            toast({ title: 'Project restored', description: 'A new local copy was saved in this browser.', variant: 'success' })
+            toast({ title: msg("Project restored"), description: msg("A new local copy was saved in this browser."), variant: 'success' })
             navigate(`/local/${design.id}`)
           } catch (error) {
-            toast({ title: 'Couldn’t restore this project', description: error instanceof Error ? error.message : 'Choose a valid Doory project backup and try again.', variant: 'error', duration: 9000 })
+            toast({ title: msg("Couldn’t restore this project"), description: error instanceof Error ? error.message : 'Choose a valid Doory project backup and try again.', variant: 'error', duration: 9000 })
           } finally {
             inputElement.value = ''
             setRestoring(false)
@@ -91,8 +91,7 @@ export function LocalDesignsStrip() {
     return (
       <p className={styles.restoreLine}>
         <span>
-          Have a <code>.doory</code> backup?
-        </span>
+          {msg("Have a ")}<code>{msg(".doory")}</code> {msg("backup?")}</span>
         <RestoreProjectButton quiet />
       </p>
     )
@@ -103,17 +102,15 @@ export function LocalDesignsStrip() {
       <div className={styles.panel}>
         <div className={styles.headerRow}>
           <header className={styles.header}>
-            <p className={styles.eyebrow}>on this device</p>
+            <p className={styles.eyebrow}>{msg("on this device")}</p>
             <h2 id="local-designs-title" className={styles.heading}>
-              Pick up where you <Accent>left off</Accent>
+              {msg("Pick up where you ")}<Accent>{msg("left off")}</Accent>
             </h2>
             <p className={styles.lead}>
-              These designs are saved in this browser.{' '}
+              {msg("These designs are saved in this browser.")}{' '}
               <Link to="/signup" className={styles.signup}>
-                Sign up
-              </Link>{' '}
-              to keep them in your account and open them anywhere.
-            </p>
+                {msg("Sign up")}</Link>{' '}
+              {msg("to keep them in your account and open them anywhere.")}</p>
           </header>
           <RestoreProjectButton />
         </div>
@@ -126,7 +123,7 @@ export function LocalDesignsStrip() {
       <ConfirmDialog
         open={pending !== null}
         title={`Delete “${pending?.title || 'Untitled design'}”?`}
-        description="It’s stored only in this browser, so it can’t be recovered once deleted."
+        description={msg("It’s stored only in this browser, so it can’t be recovered once deleted.")}
         confirmLabel="Delete design"
         tone="danger"
         onCancel={() => setPending(null)}
@@ -134,9 +131,9 @@ export function LocalDesignsStrip() {
           if (!pending) return
           try {
             await deleteLocalDesign(pending.id)
-            toast({ title: 'Design deleted', variant: 'success' })
+            toast({ title: msg("Design deleted"), variant: 'success' })
           } catch {
-            toast({ title: 'Couldn’t delete the design', description: 'Please try again.', variant: 'error' })
+            toast({ title: msg("Couldn’t delete the design"), description: msg("Please try again."), variant: 'error' })
           }
           setPending(null)
           await refresh()

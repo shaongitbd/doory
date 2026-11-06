@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -65,20 +66,20 @@ export default function LocalEditorPage() {
         ensureSignedIn: (reason) => handlers.get().openAuthModal({ reason }),
         onMigrationStart: () => setMigration({ active: true, progress: null }),
         onMigrationProgress: (progress) => setMigration({ active: true, progress }),
-        onMigrationWarning: (message) => handlers.get().toast({ title: 'Some images were left out', description: message, variant: 'warning', duration: 9000 }),
+        onMigrationWarning: (message) => handlers.get().toast({ title: msg("Some images were left out"), description: message, variant: 'warning', duration: 9000 }),
         onMigrated: (designId) => {
           setMigration({ active: false, progress: null })
-          handlers.get().toast({ title: 'Saved to your account', description: 'Your design is now safe in the cloud.', variant: 'success' })
+          handlers.get().toast({ title: msg("Saved to your account"), description: msg("Your design is now safe in the cloud."), variant: 'success' })
           handlers.get().navigate(`/design/${designId}`, { replace: true })
         },
         onMigrationError: (error, retry) => {
           setMigration({ active: false, progress: null })
           handlers.get().toast({
-            title: 'We couldn’t save to your account',
+            title: msg("We couldn’t save to your account"),
             description: `${error.message} Your design is still safe in this browser.`,
             variant: 'error',
             duration: 0,
-            action: { label: 'Try again', onClick: () => void retry() },
+            action: { label: msg("Try again"), onClick: () => void retry() },
           })
         },
       }),
@@ -103,7 +104,7 @@ export default function LocalEditorPage() {
 
   const initialMeta = useMemo(() => (load.kind === 'ready' ? { id: load.design.id, title: load.design.title, mode: 'guest' as const } : null), [load])
 
-  if (load.kind === 'loading') return <EditorSkeleton label="Opening your design" />
+  if (load.kind === 'loading') return <EditorSkeleton label={msg("Opening your design")} />
   if (load.kind === 'missing') return <EditorProblemPage problem="local-missing" />
   if (load.kind === 'error') return <EditorProblemPage problem="error" onRetry={() => setAttempt((value) => value + 1)} />
   if (!initialMeta) return null

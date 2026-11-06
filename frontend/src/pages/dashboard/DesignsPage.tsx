@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { FolderPlus, LayoutGrid, List, Plus, Search, Star, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -16,10 +17,10 @@ import { Button, ConfirmDialog, Dialog, EmptyState, Input, LinkButton, Segmented
 import styles from './pageStyles.module.css'
 
 const SORTS: Array<{ value: NonNullable<DesignQuery['ordering']>; label: string }> = [
-  { value: '-updated_at', label: 'Last modified' },
-  { value: '-created_at', label: 'Newest first' },
-  { value: 'title', label: 'Title A–Z' },
-  { value: '-title', label: 'Title Z–A' },
+  { value: '-updated_at', label: msg("Last modified") },
+  { value: '-created_at', label: msg("Newest first") },
+  { value: 'title', label: msg("Title A–Z") },
+  { value: '-title', label: msg("Title Z–A") },
 ]
 const LAYOUTS = ['grid', 'list'] as const
 const EMPTY_SELECTION: ReadonlySet<string> = new Set()
@@ -127,8 +128,8 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.heading}>
-          <nav aria-label="Breadcrumb" className={styles.crumbs} hidden={starred}>
-            <Link to="/dashboard/designs">All designs</Link>
+          <nav aria-label={msg("Breadcrumb")} className={styles.crumbs} hidden={starred}>
+            <Link to="/dashboard/designs">{msg("All designs")}</Link>
             {crumbs.map((crumb, index) => (
               <span key={crumb.id}>
                 / {index === crumbs.length - 1 ? <span aria-current="page">{crumb.name}</span> : <Link to={`/dashboard/designs/folder/${crumb.id}`}>{crumb.name}</Link>}
@@ -140,12 +141,11 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
         <div className={styles.tools}>
           {q ? (
             <Button variant="secondary" rightIcon={<X size={14} />} onClick={() => setParam('q', null)}>
-              Clear search
-            </Button>
+              {msg("Clear search")}</Button>
           ) : null}
-          <Select label="Sort by" hideLabel value={ordering} onChange={(event) => setParam('sort', event.target.value === '-updated_at' ? null : event.target.value)} options={SORTS} />
+          <Select label={msg("Sort by")} hideLabel value={ordering} onChange={(event) => setParam('sort', event.target.value === '-updated_at' ? null : event.target.value)} options={SORTS} />
           <SegmentedControl
-            label="Layout"
+            label={msg("Layout")}
             value={layout}
             onChange={setLayout}
             options={[
@@ -155,20 +155,19 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
           />
           {starred ? null : (
             <Button variant="secondary" leftIcon={<FolderPlus size={16} />} onClick={() => setNewFolderOpen(true)}>
-              New folder
-            </Button>
+              {msg("New folder")}</Button>
           )}
         </div>
       </header>
 
       {subfolders.length > 0 ? (
-        <section aria-label="Folders" className={styles.section}>
+        <section aria-label={msg("Folders")} className={styles.section}>
           <ul className={styles.grid}>
             {subfolders.map((folder) => (
               <li key={folder.id}>
                 <FolderCard
                   folder={folder}
-                  onRename={(target, name) => renameFolder.mutate({ id: target.id, name }, { onError: (error) => toast({ title: 'Couldn’t rename the folder', description: errorMessage(error), variant: 'error' }) })}
+                  onRename={(target, name) => renameFolder.mutate({ id: target.id, name }, { onError: (error) => toast({ title: msg("Couldn’t rename the folder"), description: errorMessage(error), variant: 'error' }) })}
                   onDelete={setFolderToDelete}
                   onDropDesigns={dropOnFolder}
                 />
@@ -180,7 +179,7 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
 
       <div aria-live="polite" aria-busy={list.isPending}>
         {list.isPending ? (
-          <ul className={layout === 'grid' ? styles.grid : styles.list} aria-label="Loading designs">
+          <ul className={layout === 'grid' ? styles.grid : styles.list} aria-label={msg("Loading designs")}>
             {Array.from({ length: 8 }, (_, index) => (
               <li key={index} className={styles.skeletonCard}>
                 <Skeleton height={layout === 'grid' ? '11rem' : '4.5rem'} radius="var(--radius-lg)" />
@@ -189,16 +188,16 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
             ))}
           </ul>
         ) : list.isError ? (
-          <EmptyState title="Your designs didn’t load" description={errorMessage(list.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void list.refetch()}>Try again</Button>} />
+          <EmptyState title={msg("Your designs didn’t load")} description={errorMessage(list.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void list.refetch()}>{msg("Try again")}</Button>} />
         ) : empty ? (
           q ? (
-            <EmptyState icon={<Search size={28} />} title={`No designs match “${q}”`} description="Check the spelling, or try a shorter search." action={<Button variant="secondary" onClick={() => setParam('q', null)}>Clear search</Button>} />
+            <EmptyState icon={<Search size={28} />} title={`No designs match “${q}”`} description={msg("Check the spelling, or try a shorter search.")} action={<Button variant="secondary" onClick={() => setParam('q', null)}>{msg("Clear search")}</Button>} />
           ) : starred ? (
-            <EmptyState icon={<Star size={28} />} title="Nothing starred yet" description="Star a design from its menu or its card to keep it here, whatever folder it is in." />
+            <EmptyState icon={<Star size={28} />} title={msg("Nothing starred yet")} description={msg("Star a design from its menu or its card to keep it here, whatever folder it is in.")} />
           ) : folderId ? (
-            <EmptyState icon={<FolderPlus size={28} />} title="This folder is empty" description="Drag designs onto a folder, or use “Move to folder” in a design’s menu." action={<LinkButton to="/dashboard/designs" variant="secondary">Back to all designs</LinkButton>} />
+            <EmptyState icon={<FolderPlus size={28} />} title={msg("This folder is empty")} description={msg("Drag designs onto a folder, or use “Move to folder” in a design’s menu.")} action={<LinkButton to="/dashboard/designs" variant="secondary">{msg("Back to all designs")}</LinkButton>} />
           ) : subfolders.length > 0 ? null : (
-            <EmptyState icon={<Plus size={28} />} title="No designs yet" description="Your designs will appear here. Start with a blank canvas or a template." action={<><LinkButton to="/create">Create a design</LinkButton><LinkButton to="/dashboard/templates" variant="secondary">Browse templates</LinkButton></>} />
+            <EmptyState icon={<Plus size={28} />} title={msg("No designs yet")} description={msg("Your designs will appear here. Start with a blank canvas or a template.")} action={<><LinkButton to="/create">{msg("Create a design")}</LinkButton><LinkButton to="/dashboard/templates" variant="secondary">{msg("Browse templates")}</LinkButton></>} />
           )
         ) : (
           <ul className={layout === 'grid' ? styles.grid : styles.list}>
@@ -222,8 +221,7 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
         {hasNextPage ? (
           <div className={styles.more}>
             <Button variant="secondary" loading={isFetchingNextPage} onClick={() => void fetchNextPage()}>
-              Load more
-            </Button>
+              {msg("Load more")}</Button>
           </div>
         ) : null}
       </div>
@@ -259,9 +257,9 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
             {
               onSuccess: () => {
                 setNewFolderOpen(false)
-                toast({ title: 'Folder created', description: name, variant: 'success' })
+                toast({ title: msg("Folder created"), description: name, variant: 'success' })
               },
-              onError: (error) => toast({ title: 'Couldn’t create the folder', description: errorMessage(error), variant: 'error' }),
+              onError: (error) => toast({ title: msg("Couldn’t create the folder"), description: errorMessage(error), variant: 'error' }),
             },
           )
         }
@@ -270,7 +268,7 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
       <ConfirmDialog
         open={folderToDelete !== null}
         title={`Delete folder “${folderToDelete?.name ?? ''}”?`}
-        description="The designs and folders inside move up to the parent folder. Nothing is deleted."
+        description={msg("The designs and folders inside move up to the parent folder. Nothing is deleted.")}
         confirmLabel="Delete folder"
         tone="danger"
         loading={deleteFolder.isPending}
@@ -280,9 +278,9 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
           deleteFolder.mutate(folderToDelete.id, {
             onSuccess: () => {
               setFolderToDelete(null)
-              toast({ title: 'Folder deleted' })
+              toast({ title: msg("Folder deleted") })
             },
-            onError: (error) => toast({ title: 'Couldn’t delete the folder', description: errorMessage(error), variant: 'error' }),
+            onError: (error) => toast({ title: msg("Couldn’t delete the folder"), description: errorMessage(error), variant: 'error' }),
           })
         }}
       />
@@ -297,9 +295,9 @@ function NewFolderDialog({ open, busy, onClose, onCreate }: { open: boolean; bus
     if (name.trim()) onCreate(name.trim())
   }
   return (
-    <Dialog open={open} onClose={onClose} title="New folder" size="sm" footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" form="new-folder-form" loading={busy} disabled={!name.trim()}>Create folder</Button></>}>
+    <Dialog open={open} onClose={onClose} title={msg("New folder")} size="sm" footer={<><Button variant="ghost" onClick={onClose}>{msg("Cancel")}</Button><Button type="submit" form="new-folder-form" loading={busy} disabled={!name.trim()}>{msg("Create folder")}</Button></>}>
       <form id="new-folder-form" onSubmit={submit}>
-        <Input label="Folder name" autoFocus value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
+        <Input label={msg("Folder name")} autoFocus value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
       </form>
     </Dialog>
   )

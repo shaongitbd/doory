@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { type FormEvent, useState } from 'react'
 import { Button, Input } from '@/ui'
 import type { ApiUser } from '@/types/api'
@@ -62,18 +63,17 @@ export function SignupForm({ onSuccess, autoFocus = true, showName = true, ssoNe
 
   return (
     <div className={styles.stack}>
-      <form className={styles.form} onSubmit={submit} noValidate aria-label="Sign up">
+      <form className={styles.form} onSubmit={submit} noValidate aria-label={msg("Sign up")}>
         {formError ? (
           <div className={styles.alert} role="alert">
             {formError}
           </div>
         ) : null}
-        {showName ? <Input label="Name" hint="Optional. Shown on designs you share." name="name" autoComplete="name" autoFocus={autoFocus} value={name} onChange={(event) => setName(event.target.value)} error={fieldErrors.display_name} maxLength={80} /> : null}
-        <Input label="Email" type="email" name="email" autoComplete="email" inputMode="email" autoFocus={autoFocus && !showName} value={email} onChange={(event) => setEmail(event.target.value)} error={fieldErrors.email} required />
-        <PasswordInput label="Password" name="new-password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} error={fieldErrors.password} showStrength required />
+        {showName ? <Input label={msg("Name")} hint={msg("Optional. Shown on designs you share.")} name="name" autoComplete="name" autoFocus={autoFocus} value={name} onChange={(event) => setName(event.target.value)} error={fieldErrors.display_name} maxLength={80} /> : null}
+        <Input label={msg("Email")} type="email" name="email" autoComplete="email" inputMode="email" autoFocus={autoFocus && !showName} value={email} onChange={(event) => setEmail(event.target.value)} error={fieldErrors.email} required />
+        <PasswordInput label={msg("Password")} name="new-password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} error={fieldErrors.password} showStrength required />
         <Button type="submit" fullWidth loading={busy}>
-          Create free account
-        </Button>
+          {msg("Create free account")}</Button>
       </form>
       <SignInDivider />
       <SsoButton next={ssoNext} />

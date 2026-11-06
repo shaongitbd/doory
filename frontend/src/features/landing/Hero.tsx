@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { PenLine } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -27,33 +28,27 @@ export function Hero() {
         <img className={styles.bunny} src={bunny} alt="" width={523} height={713} draggable={false} />
         <span className={styles.ground} aria-hidden="true" />
         <span className={styles.bubble} aria-hidden="true">
-          hi there!
-        </span>
+          {msg("hi there!")}</span>
       </div>
 
       <h1 id="hero-title" className={styles.title}>
-        Make something{' '}
+        {msg("Make something")}{' '}
         <em className={styles.accent}>
-          lovely
-          <svg viewBox="0 0 200 18" preserveAspectRatio="none" aria-hidden="true">
+          {msg("lovely")}<svg viewBox="0 0 200 18" preserveAspectRatio="none" aria-hidden="true">
             <path d="M4 12 C 50 4, 110 4, 196 10" />
           </svg>
         </em>{' '}
-        today.
-      </h1>
+        {msg("today.")}</h1>
       <p className={styles.lead}>
-        Cards, posts, slides, posters and little logos, made right in your browser. Free, and no sign-up to start.
-      </p>
+        {msg("Cards, posts, slides, posters and little logos, made right in your browser. Free, and no sign-up to start.")}</p>
 
       <HeroCards />
 
       <div className={styles.create}>
         <LinkButton to="/create" size="lg" rightIcon={<PenLine size={18} aria-hidden="true" />}>
-          Create a design
-        </LinkButton>
+          {msg("Create a design")}</LinkButton>
         <p className={styles.note} aria-hidden="true">
-          it’s free, promise!
-          <svg viewBox="0 0 60 44">
+          {msg("it’s free, promise!")}<svg viewBox="0 0 60 44">
             <path d="M50 4 C 54 22, 40 36, 8 34 M8 34 l10 -8 M8 34 l9 8" />
           </svg>
         </p>
@@ -66,8 +61,7 @@ export function Hero() {
 
       <div className={styles.sizes}>
         <p className={styles.sizesLabel} id="hero-sizes">
-          Or start with a size
-        </p>
+          {msg("Or start with a size")}</p>
         <ul className={styles.chips} aria-labelledby="hero-sizes">
           {quickPresets(catalogue).map((preset) => (
             <li key={preset.id}>
@@ -79,8 +73,7 @@ export function Hero() {
           ))}
           <li>
             <Button variant="ghost" size="sm" className={styles.customChip} onClick={() => setCustomOpen(true)}>
-              Custom size…
-            </Button>
+              {msg("Custom size…")}</Button>
           </li>
         </ul>
       </div>

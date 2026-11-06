@@ -11,9 +11,12 @@ import './styles/tokens.css'
 import './styles/global.css'
 import { initContrast } from './lib/contrast'
 import App from './App'
+import { loadLocale } from './i18n/catalog'
+import { getLocale, setLocale } from './i18n/locale'
 
 // Before the first render, so high contrast is on from the first paint (the CSP allows no inline script for this).
 initContrast()
+await loadLocale(getLocale()).catch(() => setLocale('en'))
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')

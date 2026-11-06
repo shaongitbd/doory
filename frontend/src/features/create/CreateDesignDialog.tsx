@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createUrl } from '@/features/presets'
@@ -42,8 +43,8 @@ export function CreateDesignDialog({ open, onClose, initialTab = 'sizes' }: Crea
     <Dialog
       open={open}
       onClose={close}
-      title="Create a design"
-      description="Choose a size to start with. You can change it any time."
+      title={msg("Create a design")}
+      description={msg("Choose a size to start with. You can change it any time.")}
       size="xl"
       footer={
         <>
@@ -59,16 +60,14 @@ export function CreateDesignDialog({ open, onClose, initialTab = 'sizes' }: Crea
                 </span>
               </>
             ) : custom ? null : (
-              <small>Pick a size, then create. A double click creates it at once.</small>
+              <small>{msg("Pick a size, then create. A double click creates it at once.")}</small>
             )}
           </div>
           <Button variant="ghost" onClick={close}>
-            Cancel
-          </Button>
+            {msg("Cancel")}</Button>
           {custom ? null : (
             <Button disabled={!chosen} onClick={() => chosen && create(chosen)}>
-              Create design
-            </Button>
+              {msg("Create design")}</Button>
           )}
         </>
       }

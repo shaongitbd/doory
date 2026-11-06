@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
@@ -90,7 +91,7 @@ export default function DesignEditorPage() {
   }, [adapter])
   const meta = useMemo(() => (design ? { id: design.id, title: design.title, mode: 'account' as const, revision: design.revision } : null), [design])
 
-  if (query.isPending) return <EditorSkeleton label="Opening your design" />
+  if (query.isPending) return <EditorSkeleton label={msg("Opening your design")} />
   if (query.isError) return <EditorProblemPage problem={problemFor(query.error)} onRetry={() => void query.refetch()} />
   if (!design || !meta) return null
   if (design.trashed_at) {
@@ -108,8 +109,7 @@ export default function DesignEditorPage() {
               })
             }
           >
-            Restore design
-          </Button>
+            {msg("Restore design")}</Button>
         }
       />
     )

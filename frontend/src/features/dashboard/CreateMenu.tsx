@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Plus, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -17,8 +18,8 @@ export function CreateMenu() {
   const choices = useSizeChoices()
   return (
     <>
-      <Menu label="Create a design" placement="bottom-end" trigger={compact ? <IconButton variant="primary" label="Create a design" icon={<Plus size={20} />} /> : <Button leftIcon={<Plus size={18} />}>Create a design</Button>}>
-        <MenuLabel>Your sizes</MenuLabel>
+      <Menu label={msg("Create a design")} placement="bottom-end" trigger={compact ? <IconButton variant="primary" label={msg("Create a design")} icon={<Plus size={20} />} /> : <Button leftIcon={<Plus size={18} />}>{msg("Create a design")}</Button>}>
+        <MenuLabel>{msg("Your sizes")}</MenuLabel>
         {yourSizes(catalogue, choices).map((preset) => (
           <MenuItem
             key={preset.id}
@@ -33,9 +34,8 @@ export function CreateMenu() {
         ))}
         <MenuSeparator />
         <MenuItem icon={<SlidersHorizontal size={16} />} onSelect={() => setDialog('custom')}>
-          Custom size…
-        </MenuItem>
-        <MenuItem onSelect={() => setDialog('sizes')}>All sizes…</MenuItem>
+          {msg("Custom size…")}</MenuItem>
+        <MenuItem onSelect={() => setDialog('sizes')}>{msg("All sizes…")}</MenuItem>
       </Menu>
       <LazyCreateDesignDialog open={dialog !== null} onClose={() => setDialog(null)} initialTab={dialog === 'custom' ? 'custom' : 'sizes'} />
     </>

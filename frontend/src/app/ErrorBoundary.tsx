@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import styles from './ErrorBoundary.module.css'
 
@@ -21,11 +22,10 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     if (!this.state.failed) return this.props.children
     return (
       <div className={styles.page} role="alert">
-        <h1 className={styles.title}>Something went wrong</h1>
-        <p className={styles.text}>Doory hit an unexpected problem. Reloading usually fixes it, and anything you saved is safe.</p>
+        <h1 className={styles.title}>{msg("Something went wrong")}</h1>
+        <p className={styles.text}>{msg("Doory hit an unexpected problem. Reloading usually fixes it, and anything you saved is safe.")}</p>
         <button type="button" className={styles.button} onClick={() => window.location.reload()}>
-          Reload page
-        </button>
+          {msg("Reload page")}</button>
       </div>
     )
   }

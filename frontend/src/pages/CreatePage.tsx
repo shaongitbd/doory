@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { EditorProblemPage, EditorSkeleton } from '@/features/editor/EditorStates'
@@ -17,7 +18,7 @@ import { TriangleAlert } from 'lucide-react'
  * Guests get a local design (`/local/:id`); signed-in users get a real one (`/design/:id`).
  */
 export default function CreatePage() {
-  usePageMeta({ title: 'Creating your design', noindex: true })
+  usePageMeta({ title: msg("Creating your design"), noindex: true })
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { status } = useAuth()
@@ -44,16 +45,16 @@ export default function CreatePage() {
   }, [status, params, navigate, attempt])
 
   if (failure === 'template-missing') {
-    return <EditorProblemPage problem="not-found" extraAction={<Button variant="secondary" onClick={() => navigate('/templates')}>Browse templates</Button>} />
+    return <EditorProblemPage problem="not-found" extraAction={<Button variant="secondary" onClick={() => navigate('/templates')}>{msg("Browse templates")}</Button>} />
   }
   if (failure === 'storage-full') {
     return (
       <EmptyState
         icon={<TriangleAlert size={28} />}
-        title="Your browser is out of space"
-        description="Doory couldn’t store a new design here. Free up some space, or sign up to keep designs in your account instead."
+        title={msg("Your browser is out of space")}
+        description={msg("Doory couldn’t store a new design here. Free up some space, or sign up to keep designs in your account instead.")}
         role="alert"
-        action={<Button onClick={() => navigate('/signup')}>Create a free account</Button>}
+        action={<Button onClick={() => navigate('/signup')}>{msg("Create a free account")}</Button>}
       />
     )
   }
@@ -68,7 +69,7 @@ export default function CreatePage() {
       />
     )
   }
-  return <EditorSkeleton label="Setting up your canvas" />
+  return <EditorSkeleton label={msg("Setting up your canvas")} />
 }
 
 function isNotFound(error: unknown): boolean {
