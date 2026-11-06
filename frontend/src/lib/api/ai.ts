@@ -5,8 +5,8 @@ import { http } from './client'
 export const aiApi = {
   /** The options the signed-in user may pick for `task`, the in-browser model first. Never URLs or secrets. */
   options: (task: string, signal?: AbortSignal) => http.get<AiOption[]>('/ai/models/', { query: { task }, signal }),
-  /** Runs `task` on one of the user's images with a server option; the result is a new asset. */
-  run: (task: string, input: { asset_id: string; model: string }, signal?: AbortSignal) => http.post<Asset>(`/ai/${encodeURIComponent(task)}/`, { json: input, signal }),
+  /** Runs `task` with a server option on one of the user's images (`asset_id`) or on a `prompt` (text-to-image); the result is a new asset. */
+  run: (task: string, input: { asset_id?: string; model: string; prompt?: string }, signal?: AbortSignal) => http.post<Asset>(`/ai/${encodeURIComponent(task)}/`, { json: input, signal }),
   providers: {
     list: (signal?: AbortSignal) => http.get<AiProvider[]>('/ai/providers/', { signal }),
     create: (input: AiProviderInput) => http.post<AiProvider>('/ai/providers/', { json: input }),

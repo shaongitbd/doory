@@ -5,8 +5,8 @@ from the link in it.
 * `POST {base}{path}` (default `/v1/queue/{model}`), JSON `{"prompt": …}` with `extra_fields` and the task's
   options → `{"request_id": …}`, and optionally `status_url` and `response_url`
 * `GET` the job's `status_url` (else `{base}{status_path}`, default `/v1/queue/{model}/requests/{id}/status`)
-  → `{"status": …}`: `IN_QUEUE` or `IN_PROGRESS` while the job runs, `COMPLETED` when it is done; `error` set
-  when it failed
+  → `{"status": …}`: `IN_QUEUE` or `IN_PROGRESS` while the job runs, `COMPLETED` when it is done;
+  `error` set when it failed
 * `GET` the job's `response_url` (else `{base}{result_path}`, default `/v1/queue/{model}/requests/{id}`) →
   JSON with a link to the picture (or a base64 image) at `response_path` (default `images.0.url`)
 

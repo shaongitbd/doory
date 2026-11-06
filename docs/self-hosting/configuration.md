@@ -237,9 +237,9 @@ admin under "AI providers".
 |---------|---------|--------------|
 | `AI_PROVIDERS_ENABLED` | `true` | Offer the configured providers in the editor |
 | `AI_PROVIDER_<n>_URL` | | Address of provider `<n>` (1 to 9), e.g. `http://model-server:7000` |
-| `AI_PROVIDER_<n>_STYLE` | `doory` | How its API looks: `doory` (the contract at `/api/v1/ai/contract.yaml`), `multipart`, `json`, `mask` or `custom` |
+| `AI_PROVIDER_<n>_STYLE` | `doory` | How its API looks: `doory` (the contract at `/api/v1/ai/contract.yaml`), `multipart`, `json`, `mask`, `custom` or `queue` (text to image, see [ai-providers.md](ai-providers.md#text-to-image)) |
 | `AI_PROVIDER_<n>_STYLE_CONFIG` | | JSON details for the style, e.g. `{"path": "/remove", "file_field": "image"}` |
-| `AI_PROVIDER_<n>_TASKS` | `background-removal` | Tasks it serves |
+| `AI_PROVIDER_<n>_TASKS` | `background-removal` | Tasks it serves, comma separated: `background-removal`, `text-to-image` (the `queue` style only) |
 | `AI_PROVIDER_<n>_MODELS` | | `name:Label,name2:Label2`. Empty: the server's own list (`doory` style) or its default |
 | `AI_PROVIDER_<n>_AUTH_HEADER` | | Header for the key, e.g. `Authorization` or `X-Api-Key` |
 | `AI_PROVIDER_<n>_AUTH_VALUE` | | Value sent as is (e.g. `Bearer …`). Never shown in the browser or the logs |

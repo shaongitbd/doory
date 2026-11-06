@@ -128,6 +128,9 @@ export function createAiService({ config, userId }: { config?: AiConfig; userId?
       const blob = typeof image === 'function' ? await image() : image
       return assetToRef(await aiApi.run(task, { asset_id: await upload(blob, signal), model }, signal))
     },
+    async generate(task, { model, prompt, signal }) {
+      return assetToRef(await aiApi.run(task, { model, prompt }, signal))
+    },
     remembered: (task) => safeGetItem(storageKey(task)),
     remember: (task, option) => {
       safeSetItem(storageKey(task), option)

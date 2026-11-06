@@ -55,6 +55,14 @@ export const AI_STYLES: readonly AiStyleInfo[] = [
     example: { method: 'POST', path: '/v1/{task}', body: 'multipart', file_field: 'image', response: 'image' },
     canLoadModels: false,
   },
+  {
+    id: 'queue',
+    label: 'Queue',
+    summary: 'For text to image: the prompt goes as a job, Doory checks its status until it is done, then downloads the picture from the link in the answer.',
+    settings: 'path (default "/v1/queue/{model}"), status_path and result_path (when the answer has no status_url or response_url), prompt_field (default "prompt"), model_field, options_field, extra_fields, extra_headers, response_path (default "images.0.url").',
+    example: { path: '/{model}', extra_fields: { image_size: 'landscape_4_3' } },
+    canLoadModels: false,
+  },
 ]
 
 export function styleInfo(id: string): AiStyleInfo {
@@ -62,7 +70,10 @@ export function styleInfo(id: string): AiStyleInfo {
 }
 
 /** The AI tasks a server can be set up for, with their names in Settings. */
-export const AI_TASKS: readonly { id: string; label: string }[] = [{ id: 'background-removal', label: 'Background removal' }]
+export const AI_TASKS: readonly { id: string; label: string }[] = [
+  { id: 'background-removal', label: 'Background removal' },
+  { id: 'text-to-image', label: 'Text to image' },
+]
 
 export function taskLabel(id: string): string {
   return AI_TASKS.find((task) => task.id === id)?.label ?? id

@@ -175,6 +175,27 @@
   font: 500 12px / 1.4 var(--font-sans);
 }
 
+.prompt {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--ed-border);
+  border-radius: 10px;
+  background: var(--ed-surface);
+  color: var(--ed-text);
+  font: 400 13px / 1.45 var(--font-sans);
+}
+textarea.prompt {
+  min-height: 96px;
+  resize: vertical;
+}
+.prompt:focus {
+  outline: none;
+  border-color: var(--ed-accent);
+  box-shadow: var(--ed-focus-glow);
+}
+
 .search {
   position: relative;
   display: flex;

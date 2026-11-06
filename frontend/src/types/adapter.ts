@@ -144,6 +144,8 @@ export interface AiService {
    * Rejects with the server's `ApiError` (`ai_timeout`, `ai_quota`, …).
    */
   run(task: string, input: { model: string; image: Blob | (() => Promise<Blob>); assetId?: string; signal?: AbortSignal }): Promise<AssetRef>
+  /** Runs a text task (`text-to-image`) with the server option `model` on `prompt` and resolves with the new asset. */
+  generate?(task: string, input: { model: string; prompt: string; signal?: AbortSignal }): Promise<AssetRef>
   /** The option this user last picked for `task`, if any. */
   remembered(task: string): string | null
   remember(task: string, option: string): void

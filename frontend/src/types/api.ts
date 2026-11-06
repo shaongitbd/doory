@@ -77,6 +77,8 @@ export interface AiConfig {
   /** The operator's wording of the notice under options that send the image away; empty: the editor's own. */
   offsite_notice?: string
   background_removal?: AiTaskOptions
+  /** Making a picture from a prompt; absent or no models: the editor hides the Create tab. */
+  text_to_image?: AiTaskOptions
 }
 
 export interface AiTaskOptions {
@@ -631,7 +633,7 @@ export interface ApiTokenScope {
 }
 
 /** The API styles a provider can speak (see the backend's `apps.ai.styles`). */
-export type AiProviderStyle = 'doory' | 'multipart' | 'json' | 'mask' | 'custom'
+export type AiProviderStyle = 'doory' | 'multipart' | 'json' | 'mask' | 'custom' | 'queue'
 
 /** A model a user's provider offers for a task, as they picked and labelled it. */
 export interface AiProviderModel {

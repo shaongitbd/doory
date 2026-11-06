@@ -13,6 +13,7 @@ import { loadable } from '../ui/loadable'
 import { Skeleton } from '../ui/Skeleton'
 import ed from '../chrome/ed.module.css'
 import styles from './Drawers.module.css'
+import { GenerateTab, useTextToImageOptions } from './GenerateTab'
 import { beginImageAssetDrag, endImageAssetDrag } from './imageAssetDrag'
 import { uploadToLibrary } from './uploads'
 
@@ -143,11 +144,14 @@ function UploadsTab({ close }: PanelProps) {
 const StockTab = loadable(() => import('./StockTab').then((m) => m.StockTab))
 const GridTab = loadable(() => import('./GridTab').then((m) => m.GridTab))
 
-/** Image drawer: uploaded photos, image-grid layouts, and stock photos when the server offers them. */
+/** Image drawer: uploaded photos, image-grid layouts, stock photos when the server offers them, and Create (a
+ * picture made from a prompt) when the server can make one. */
 export function ImageDrawer(props: PanelProps) {
   const editor = useEditor()
   const hasStock = editor.adapter.services.stock !== null
-  const [tab, setTab] = useState<'uploads' | 'grids' | 'stock'>('uploads')
+  const createOptions = useTextToImageOptions()
+  const hasCreate = createOptions.length > 0
+  const [tab, setTab] = useState<'uploads' | 'grids' | 'stock' | 'create'>('uploads')
   const moveBetweenTabs = (e: React.KeyboardEvent<HTMLDivElement>): void => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
     const tabs = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
@@ -203,6 +207,21 @@ export function ImageDrawer(props: PanelProps) {
             {t.imageDrawer.stock}
           </button>
         ) : null}
+        {hasCreate ? (
+          <button
+            type="button"
+            id="image-tab-create"
+            role="tab"
+            className={styles.tab}
+            aria-controls="image-panel-create"
+            aria-selected={tab === 'create'}
+            tabIndex={tab === 'create' ? 0 : -1}
+            data-testid="image-tab-create"
+            onClick={() => setTab('create')}
+          >
+            {t.imageDrawer.create}
+          </button>
+        ) : null}
       </div>
       {tab === 'uploads' ? (
         <div id="image-panel-uploads" role="tabpanel" aria-labelledby="image-tab-uploads">
@@ -217,6 +236,11 @@ export function ImageDrawer(props: PanelProps) {
       {tab === 'stock' && hasStock ? (
         <div id="image-panel-stock" role="tabpanel" aria-labelledby="image-tab-stock">
           <StockTab {...props} />
+        </div>
+      ) : null}
+      {tab === 'create' && hasCreate ? (
+        <div id="image-panel-create" role="tabpanel" aria-labelledby="image-tab-create">
+          <GenerateTab {...props} models={createOptions} />
         </div>
       ) : null}
     </>
