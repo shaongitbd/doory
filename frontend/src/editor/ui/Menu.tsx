@@ -34,10 +34,11 @@ interface MenuProps {
   onClose: () => void
   /** Extra class for the panel (a wider menu). */
   className?: string
+  wrapLabels?: boolean
 }
 
 /** Keyboard-navigable menu (arrow keys, Home/End, Enter, Escape). */
-export function Menu({ items, label, at, anchorRef, onClose, className }: MenuProps) {
+export function Menu({ items, label, at, anchorRef, onClose, className, wrapLabels = false }: MenuProps) {
   const root = usePortalRoot()
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
@@ -56,7 +57,7 @@ export function Menu({ items, label, at, anchorRef, onClose, className }: MenuPr
     left = Math.max(8, Math.min(left, window.innerWidth - r.width - 8))
     top = Math.max(8, Math.min(top, window.innerHeight - r.height - 8))
     setPos({ left, top })
-  }, [at, anchorRef, items.length])
+  }, [at, anchorRef, items.length, wrapLabels])
 
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])')?.focus({ preventScroll: true })
@@ -124,7 +125,7 @@ export function Menu({ items, label, at, anchorRef, onClose, className }: MenuPr
       ref={ref}
       role="menu"
       aria-label={label}
-      className={`${styles.menu} ${className ?? ''}`}
+      className={`${styles.menu} ${wrapLabels ? styles.wrapLabels : ''} ${className ?? ''}`}
       style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, opacity: pos ? undefined : 0 }}
       onKeyDown={onKeyDown}
     >

@@ -45,10 +45,43 @@ read from the environment must have a row in [configuration.md](../self-hosting/
 | `pages/` | Route-level pages |
 | `features/` | Non-editor features: auth, dashboard, templates, settings, brand, uploads, … |
 | `editor/` | The editor: `engine/` (drawing), `panels/`, `toolbar/`, `collab/`, `animation/`, `clips/` (video clips: timing, sources, sound), `presenter/`, `headless/` (the render page used by server-side image export), … |
+| `i18n/` | UI translation resources, the i18next instance and browser-local language preference |
 | `ui/`, `lib/`, `styles/` | Shared components, helpers and styles |
 
 Besides `index.html`, the frontend builds two more entry pages: `presenter-view.html` (the second presenter
 window) and `render.html` (server-side image export).
+
+### UI internationalization
+
+`i18n/instance.ts` creates an i18next instance with local English and German resources. English is the default
+and fallback. The small `common` and `editor` catalogs are bundled for both languages, so a language change
+cannot suspend a mounted editor. Settings and editor route boundaries load `UiLanguageProvider` with their
+UI, keeping the runtime out of the initial public-page bundle. Split catalogs further before substantially
+expanding editor translations; preserve the readiness boundary rather than suspending an active canvas.
+
+The translated route boundaries and development editor harness initialize `i18n/preferences.ts` before rendering. An explicit
+browser-local choice wins over the ordered browser language list; unsupported languages fall back to English.
+Regional variants use the base language. Following the browser removes the override rather than storing the
+detected language. Blocked storage keeps the choice in memory for the session. Storage and `languagechange`
+listeners follow other tabs and the browser; initialization is idempotent and returns a disposer.
+
+`UiLanguageProvider` supplies a stable translation instance and respects an outer isolated test instance. Components
+subscribe through `useTranslation`. Preference controls use the stable instance from the provider context,
+because the translation hook may return a different wrapper after a language change. The preference module
+updates `<html lang>` and translations without touching editor stores, history, persistence or collaboration.
+The language dialog uses local React state and preserves the mounted editor and canvas.
+
+Translation coverage is incremental: the language controls, View menu and save/live indicators are translated.
+Other settings cards, File/Share menus, panels, toolbars and the presenter window remain English. View command
+labels are resolved during render using the existing label override; registry identities and registrations
+stay unchanged. A later migration must add optional translation metadata for every registry consumer while
+retaining literal labels for extensions, without re-registering commands on language changes.
+
+The original editor string modules remain the source for migration and a compatibility API for remaining
+consumers. They also contain starter text and object names: do not change them globally or translate all their
+values mechanically. UI localization excludes templates, starter content and every stored design value.
+Backend messages, headless rendering, machine-readable values and document text direction are unaffected.
+See [the translation contributor guidance](README.md#translating-the-interface) and [testing](testing.md#ui-language-tests).
 
 ## Requests in development
 

@@ -1,0 +1,58 @@
+{
+  "topbar": {
+    "view": "View",
+    "menu": "Menu",
+    "menus": "Design menus"
+  },
+  "menu": {
+    "rulers": "Show rulers",
+    "grid": "Show grid",
+    "guides": "Show smart guides",
+    "snapping": "Snap to guides",
+    "bleed": "Show print margins",
+    "safeZone": "Show safe zone"
+  },
+  "design": {
+    "clearGuides_one": "Clear {{count, number}} ruler guide",
+    "clearGuides_other": "Clear {{count, number}} ruler guides"
+  },
+  "cmd": {
+    "viewNotes": "Notes",
+    "viewHighContrast": "High contrast",
+    "fileShortcuts": "Keyboard shortcuts"
+  },
+  "animation": {
+    "cmd": {
+      "timeline": "Show or hide the timeline",
+      "playPage": "Play the animations of this page"
+    }
+  },
+  "save": {
+    "saving": "Saving…",
+    "saved": "Saved",
+    "local": "Saved in this browser",
+    "localHint": "Only this browser has this design. Save it to an account to open it anywhere.",
+    "unsaved": "Unsaved changes",
+    "conflict": "Conflict",
+    "error": "Not saved",
+    "retry": "Retry",
+    "readOnly": "View only"
+  },
+  "collab": {
+    "status": {
+      "live_one": "Live",
+      "live_other": "Live · {{count, number}} people",
+      "viewing_one": "Watching live",
+      "viewing_other": "Watching live · {{count, number}} people",
+      "connecting": "Connecting…",
+      "reconnecting": "Reconnecting…",
+      "offline": "Offline. Changes will sync",
+      "busy": "Server busy, retrying",
+      "signedOut": "Signed out",
+      "forbidden": "No access",
+      "notFound": "Design not found",
+      "tooLarge": "Too large to sync",
+      "unavailable": "Live editing is off"
+    }
+  }
+}

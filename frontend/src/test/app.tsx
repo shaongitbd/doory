@@ -1,4 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
+import type { i18n as I18n } from 'i18next'
+import { I18nextProvider } from 'react-i18next'
+import { createUiI18n } from '@/i18n/instance'
 import { render } from '@testing-library/react'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import { RouterProvider } from 'react-router-dom'
@@ -15,6 +18,7 @@ export interface AppHarnessOptions {
   user?: ApiUser | null
   config?: AppConfig
   client?: QueryClient
+  i18nInstance?: I18n
   /** Test-specific handlers; they take priority over the defaults below. */
   handlers?: RequestHandler[]
 }
@@ -67,9 +71,11 @@ export function renderApp(route: string, options: AppHarnessOptions = {}) {
   const router = createTestRouter([route])
   const client = options.client ?? createTestQueryClient()
   const utils = render(
-    <AppProviders client={client}>
-      <RouterProvider router={router} />
-    </AppProviders>,
+    <I18nextProvider i18n={options.i18nInstance ?? createUiI18n()}>
+      <AppProviders client={client}>
+        <RouterProvider router={router} />
+      </AppProviders>
+    </I18nextProvider>,
   )
   return {
     ...utils,

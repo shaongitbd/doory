@@ -1,0 +1,58 @@
+{
+  "topbar": {
+    "view": "Ansicht",
+    "menu": "Menü",
+    "menus": "Designmenüs"
+  },
+  "menu": {
+    "rulers": "Lineale anzeigen",
+    "grid": "Raster anzeigen",
+    "guides": "Intelligente Hilfslinien anzeigen",
+    "snapping": "An Hilfslinien ausrichten",
+    "bleed": "Druckränder anzeigen",
+    "safeZone": "Sicherheitsbereich anzeigen"
+  },
+  "design": {
+    "clearGuides_one": "{{count, number}} Linealhilfslinie entfernen",
+    "clearGuides_other": "{{count, number}} Linealhilfslinien entfernen"
+  },
+  "cmd": {
+    "viewNotes": "Notizen",
+    "viewHighContrast": "Hoher Kontrast",
+    "fileShortcuts": "Tastenkombinationen"
+  },
+  "animation": {
+    "cmd": {
+      "timeline": "Zeitleiste ein- oder ausblenden",
+      "playPage": "Animationen dieser Seite abspielen"
+    }
+  },
+  "save": {
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert",
+    "local": "In diesem Browser gespeichert",
+    "localHint": "Dieses Design ist nur in diesem Browser gespeichert. Speichere es in einem Konto, um es überall zu öffnen.",
+    "unsaved": "Ungespeicherte Änderungen",
+    "conflict": "Konflikt",
+    "error": "Nicht gespeichert",
+    "retry": "Erneut versuchen",
+    "readOnly": "Nur ansehen"
+  },
+  "collab": {
+    "status": {
+      "live_one": "Live",
+      "live_other": "Live · {{count, number}} Personen",
+      "viewing_one": "Live-Ansicht",
+      "viewing_other": "Live-Ansicht · {{count, number}} Personen",
+      "connecting": "Verbindung wird hergestellt…",
+      "reconnecting": "Verbindung wird wiederhergestellt…",
+      "offline": "Offline. Änderungen werden später synchronisiert",
+      "busy": "Server ausgelastet, neuer Versuch folgt",
+      "signedOut": "Abgemeldet",
+      "forbidden": "Kein Zugriff",
+      "notFound": "Design nicht gefunden",
+      "tooLarge": "Zu groß zum Synchronisieren",
+      "unavailable": "Gemeinsames Bearbeiten ist deaktiviert"
+    }
+  }
+}
