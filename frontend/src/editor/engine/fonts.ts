@@ -217,6 +217,11 @@ export class FontManager {
     for (const f of fonts) this.catalog.set(f.family.toLowerCase(), f)
   }
 
+  /** Returns a face already seen in the picker without waiting for another catalogue request. */
+  known(family: string): FontFamily | null {
+    return this.catalog.get(primaryFamily(family).toLowerCase()) ?? null
+  }
+
   onLoaded(listener: Listener): () => void {
     this.listeners.add(listener)
     return () => {

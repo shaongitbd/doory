@@ -88,7 +88,8 @@ See [content.md](content.md) for what each option installs and how long it takes
 | `DOORY_SYNC_ELEMENTS_ARGS` | | Extra arguments for `sync_element_packs`, e.g. `--pack lucide` |
 | `DOORY_ELEMENTS_BRAND_LOGOS` | `false` | Include brand logos from the icon sets. These are trademarks, so they are off by default |
 | `DOORY_SYNC_FONTS` | `false` | Download the font catalogue once, on the first start |
-| `DOORY_SYNC_FONTS_ARGS` | `--popular 100` | Which font families to download, e.g. `--popular 253` or `--all` |
+| `DOORY_SYNC_FONTS_ARGS` | `--popular 100` | Which font families to download, e.g. `--popular 253` or `--all`; add `--weights 400,700` for a smaller Regular/Bold catalogue |
+| `FONT_ON_DEMAND_ENABLED` | `true` | Let editor users download available weights for Doory catalog fonts from Fontsource; set `false` to disable outside downloads |
 | `DOORY_SEED_TEMPLATES` | `false` | Add the starter templates every time the API starts. It only adds: templates that already exist are never changed |
 | `DOORY_SYNC_MODELS` | `false` | Install the background-removal model every time the API starts |
 | `DOORY_SYNC_MODELS_ARGS` | | Extra arguments for `sync_models`, e.g. `--model u2net` or `--all` |

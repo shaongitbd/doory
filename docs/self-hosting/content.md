@@ -11,7 +11,7 @@ Commands are shown for Docker. Without Docker, use the `manage` helper from [man
 | What | Command | Option in `.env` | Size and time |
 |------|---------|------------------|---------------|
 | Template categories | `docker compose exec api python manage.py seed_gallery` | | instant |
-| Fonts (open-licensed) | `… sync_fonts --popular 100` (or `--popular 253`, `--all`) | `DOORY_SYNC_FONTS`, `DOORY_SYNC_FONTS_ARGS` (once) | about 6 MB for 100 families |
+| Fonts (open-licensed) | `… sync_fonts --popular 100` (or `--popular 253`, `--all`) | `DOORY_SYNC_FONTS`, `DOORY_SYNC_FONTS_ARGS` (once) | Size varies by the weights each family offers |
 | Starter templates | `… seed_templates` (`--update` refreshes them) | `DOORY_SEED_TEMPLATES` | needs the fonts first |
 | Shapes and graphics | `… seed_elements` | `DOORY_SYNC_ELEMENTS` | instant |
 | Icons, emoji, illustrations | `… sync_element_packs` (`--pack <name>` for some packs only) | `DOORY_SYNC_ELEMENTS`, `DOORY_SYNC_ELEMENTS_ARGS` | about 27,500 elements, 120–130 MB, about 40 s the first time |
@@ -25,6 +25,21 @@ starts.
 
 Every command can be run again. The ones that run on every start only check what's already installed, so a
 restart doesn't download anything twice.
+
+The font sync imports weights 300–900 where a family offers them, so the editor's weight menu can show
+Light, Medium, Semi Bold and heavier choices. Existing sites can add these files with
+`docker compose exec api python manage.py sync_fonts --popular 100`; the command skips files already installed.
+Use `--weights 400,700` to keep the smaller Regular/Bold catalogue, or choose a different comma-separated set.
+
+### Add weights from the editor
+
+Signed-in editors can add available weights for a font in Doory's curated or installed
+catalogue. The weight menu asks Fontsource which files exist; choosing **Add** downloads the selected weight and
+style to this site's font catalogue before applying it. Fonts stay available to everyone on the site, including in
+exports. The source must identify an OFL, Apache or Ubuntu font licence; other fonts are refused. Downloads are
+limited to six requests per client per hour and require the server to reach Fontsource and jsDelivr. A failed
+download leaves the design's current weight in place.
+Set `FONT_ON_DEMAND_ENABLED=false` to disable on-demand downloads.
 
 ### Brand logos
 

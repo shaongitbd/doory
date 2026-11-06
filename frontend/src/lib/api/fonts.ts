@@ -7,6 +7,8 @@ const MAX_MINE_PAGES = 10
 const MAX_CATALOGUE_PAGES = 50
 
 export const fontsApi = {
+  weights: (family: string) => http.get<{ enabled: boolean; weights: Array<{ weight: number; style: 'normal' | 'italic' }> }>('/fonts/weights/', { query: { family } }),
+  addWeight: (family: string, weight: number, style: 'normal' | 'italic') => http.post<FontFamily>('/fonts/weights/', { json: { family, weight, style } }),
   list: (query: FontQuery = {}, signal?: AbortSignal) => http.get<Page<FontFamily>>('/fonts/', { query: { ordering: 'popularity', ...query }, signal }),
   /** Every family of the catalogue, by name (all pages, for a list the user picks from). */
   all: async (signal?: AbortSignal): Promise<FontFamily[]> => {
