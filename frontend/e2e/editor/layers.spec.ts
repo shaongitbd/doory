@@ -37,6 +37,27 @@ test.describe('[layout] layers panel', () => {
     expect((await pageObjects(page)).map((o) => o.id)).toEqual(ids)
   })
 
+  test('Shift-click selects the layers in between and Ctrl-click toggles one', async ({ page }) => {
+    await openEditor(page, 'doc=blank')
+    await addShape(page, 'rect')
+    await addShape(page, 'ellipse')
+    await addShape(page, 'star')
+    await addShape(page, 'triangle')
+    await waitForObjectCount(page, 4)
+    await openTool(page, 'layers')
+    const rows = page.getByRole('treeitem')
+    await rows.nth(0).click()
+    await rows.nth(2).click({ modifiers: ['Shift'] })
+    await expect(rows.nth(0)).toHaveAttribute('aria-selected', 'true')
+    await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'true')
+    await expect(rows.nth(2)).toHaveAttribute('aria-selected', 'true')
+    await expect(rows.nth(3)).toHaveAttribute('aria-selected', 'false')
+    await rows.nth(1).click({ modifiers: ['Control'] })
+    await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'false')
+    await expect(rows.nth(0)).toHaveAttribute('aria-selected', 'true')
+    await expect(rows.nth(2)).toHaveAttribute('aria-selected', 'true')
+  })
+
   test('drag to reorder changes stacking order', async ({ page }) => {
     await openEditor(page, 'doc=blank')
     await addShape(page, 'rect')

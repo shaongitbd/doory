@@ -587,4 +587,24 @@ export class ArrangeApi {
       this.engine.refreshSelection()
     }
   }
+
+  /**
+   * Layers panel Shift-click: selects the layers from `anchorId` to `id`, inclusive. A canvas selection can't span
+   * parents, so the anchor must share the target's parent; otherwise this selects the target alone.
+   */
+  selectLayerRange(anchorId: string | null, id: string): void {
+    const view = this.view
+    if (!view) return
+    const target = findLive(view.canvas.getObjects(), id)
+    if (!target) return
+    // `group` is the active selection while the layer is part of a multi-select; `parent` is its own group.
+    const parent = target.parent
+    const siblings = parent ? parent.getObjects() : view.canvas.getObjects()
+    const from = anchorId === null ? -1 : siblings.findIndex((o) => asDory(o).id === anchorId)
+    if (from < 0) return this.selectLayer(id)
+    const to = siblings.indexOf(target)
+    if (parent) view.enterGroup(parent)
+    view.selectObjects(siblings.slice(Math.min(from, to), Math.max(from, to) + 1))
+    this.engine.refreshSelection()
+  }
 }

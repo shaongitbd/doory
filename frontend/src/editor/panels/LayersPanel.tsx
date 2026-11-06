@@ -46,6 +46,7 @@ export function LayersPanel() {
   const [drag, setDrag] = useState<string | null>(null)
   const [over, setOver] = useState<{ id: string; side: 'above' | 'below' } | null>(null)
   const treeRef = useRef<HTMLDivElement>(null)
+  const anchorRef = useRef<string | null>(null)
 
   const rows = useMemo(() => {
     const out: Row[] = []
@@ -78,6 +79,19 @@ export function LayersPanel() {
     if (target >= 0) editor.arrange.reorderTo(drag, over.side === 'above' ? target + 1 : target)
     setDrag(null)
     setOver(null)
+  }
+
+  // Shift-click ranges from the last row picked without Shift; a single layer picked on the canvas works as the start too.
+  const selectRow = (id: string, e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): void => {
+    if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+      const kept = anchorRef.current !== null && selected.includes(anchorRef.current) ? anchorRef.current : null
+      const start = kept ?? (selected.length === 1 ? selected[0] : null)
+      editor.arrange.selectLayerRange(start, id)
+      anchorRef.current = start ?? id
+      return
+    }
+    anchorRef.current = id
+    editor.arrange.selectLayer(id, e.metaKey || e.ctrlKey)
   }
 
   const onKeyDown = (e: React.KeyboardEvent): void => {
@@ -136,7 +150,7 @@ export function LayersPanel() {
               setDrag(null)
               setOver(null)
             }}
-            onClick={(e) => editor.arrange.selectLayer(obj.id, e.shiftKey || e.metaKey || e.ctrlKey)}
+            onClick={(e) => selectRow(obj.id, e)}
             onContextMenu={(e) => {
               // The canvas's right-click menu (cut, copy, delete, arrange...) for this layer; a right-click on a
               // layer outside the selection selects it first, like it does on the canvas.
@@ -148,7 +162,7 @@ export function LayersPanel() {
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                editor.arrange.selectLayer(obj.id, e.shiftKey)
+                selectRow(obj.id, e)
               } else if (e.key === 'F2' && !readOnly) {
                 setRenaming(obj.id)
               } else if (e.altKey && top && !readOnly && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
