@@ -677,6 +677,21 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('keeps adding and dropping layers inside a group once two are selected', async () => {
+    const { engine } = await setup()
+    for (let i = 0; i < 3; i++) await engine.insert.shape('rect')
+    engine.selectAll()
+    engine.arrange.group()
+    const [a, b, c] = (objectsOf(engine)[0] as unknown as { objects: { id: string }[] }).objects.map((o) => o.id)
+    engine.arrange.selectLayer(a)
+    engine.arrange.selectLayer(b, true)
+    engine.arrange.selectLayer(c, true)
+    expect([...engine.state.selection.ids].sort()).toEqual([a, b, c].sort())
+    engine.arrange.selectLayer(a, true)
+    expect([...engine.state.selection.ids].sort()).toEqual([b, c].sort())
+    engine.dispose()
+  })
+
   it('fit to page scales a group evenly until it covers the page', async () => {
     const { engine, view } = await setup()
     await engine.insert.shape('rect')
