@@ -659,6 +659,39 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('keeps a multi-select when picking layers inside a group (#156)', async () => {
+    const { engine } = await setup()
+    await engine.insert.shape('rect')
+    await engine.insert.shape('ellipse')
+    engine.selectAll()
+    engine.arrange.group()
+    const group = objectsOf(engine)[0] as unknown as { objects: { id: string }[] }
+    const [first, second] = group.objects.map((o) => o.id)
+    engine.arrange.selectLayer(first)
+    engine.arrange.selectLayer(second, true)
+    expect(engine.state.selection.ids).toHaveLength(2)
+    expect(engine.state.selection.ids).toEqual(expect.arrayContaining([first, second]))
+    // Ctrl/Cmd-clicking a selected layer inside the group drops just that layer again.
+    engine.arrange.selectLayer(second, true)
+    expect(engine.state.selection.ids).toEqual([first])
+    engine.dispose()
+  })
+
+  it('keeps adding and dropping layers inside a group once two are selected', async () => {
+    const { engine } = await setup()
+    for (let i = 0; i < 3; i++) await engine.insert.shape('rect')
+    engine.selectAll()
+    engine.arrange.group()
+    const [a, b, c] = (objectsOf(engine)[0] as unknown as { objects: { id: string }[] }).objects.map((o) => o.id)
+    engine.arrange.selectLayer(a)
+    engine.arrange.selectLayer(b, true)
+    engine.arrange.selectLayer(c, true)
+    expect([...engine.state.selection.ids].sort()).toEqual([a, b, c].sort())
+    engine.arrange.selectLayer(a, true)
+    expect([...engine.state.selection.ids].sort()).toEqual([b, c].sort())
+    engine.dispose()
+  })
+
   it('fit to page scales a group evenly until it covers the page', async () => {
     const { engine, view } = await setup()
     await engine.insert.shape('rect')
