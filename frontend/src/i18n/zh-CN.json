@@ -246,7 +246,6 @@
   "app.Ask the owner to share it with you, or sign in with a different account.": "请联系所有者分享设计，或使用其他账号登录。",
   "app.Auth header": "身份验证标头",
   "app.Authorization": "授权",
-  "app.Authorization: Bearer &lt;token&gt;": "Authorization: Bearer &lt;token&gt;",
   "app.Back to all designs": "回到所有设计",
   "app.Back to home": "返回首页",
   "app.Back to log in": "返回登录页面",

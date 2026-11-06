@@ -206,7 +206,7 @@ function IssuedToken({ issued, onDone }: { issued: IssuedApiToken; onDone(): voi
         </Button>
       </div>
       <p className={styles.hint}>
-        {msg("Server URL: ")}<code>{mcpUrl()}</code>{msg(", with the header ")}<code>{msg("Authorization: Bearer &lt;token&gt;")}</code>{msg(". In Claude Code:")}</p>
+        {msg("Server URL: ")}<code>{mcpUrl()}</code>{msg(", with the header ")}<code>Authorization: Bearer &lt;token&gt;</code>{msg(". In Claude Code:")}</p>
       <div className={styles.inline}>
         <code className={styles.secret}>{claudeCodeCommand(issued.token)}</code>
         <Button size="sm" variant="secondary" leftIcon={copied === 'command' ? <Check size={14} /> : <Copy size={14} />} onClick={() => void copyValue('command', claudeCodeCommand(issued.token))}>
