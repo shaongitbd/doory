@@ -33,7 +33,7 @@ Use `--weights 400,700` to keep the smaller Regular/Bold catalogue, or choose a 
 
 ### Add weights from the editor
 
-Editors can add available weights for a font in Doory's curated or installed
+Signed-in editors can add available weights for a font in Doory's curated or installed
 catalogue. The weight menu asks Fontsource which files exist; choosing **Add** downloads the selected weight and
 style to this site's font catalogue before applying it. Fonts stay available to everyone on the site, including in
 exports. The source must identify an OFL, Apache or Ubuntu font licence; other fonts are refused. Downloads are

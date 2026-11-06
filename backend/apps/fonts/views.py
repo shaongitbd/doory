@@ -43,10 +43,11 @@ def offered_weights(meta: FamilyMeta) -> list[tuple[int, str]]:
 
 
 class FontWeights(APIView):
-    """Offer and install real catalog variants, one requested weight at a time."""
+    """Offer and install real catalog variants, one requested weight at a time. Anyone may ask which weights
+    exist; only a signed-in user may add one, since it downloads files into the catalog everyone shares."""
 
-    authentication_classes: list = []
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        return [IsAuthenticated() if self.request.method == "POST" else AllowAny()]
 
     def get_throttles(self):
         classes = [*api_settings.DEFAULT_THROTTLE_CLASSES]
@@ -79,7 +80,7 @@ class FontWeights(APIView):
         return font_id, None
 
     def get(self, request):
-        if not settings.FONT_ON_DEMAND_ENABLED:
+        if not settings.FONT_ON_DEMAND_ENABLED or not request.user.is_authenticated:
             return Response({"enabled": False, "weights": []})
         font_id, error = self._request(request)
         if error:
