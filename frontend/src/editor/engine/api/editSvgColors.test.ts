@@ -1,4 +1,4 @@
-import { FabricImage, type FabricObject } from 'fabric'
+import { FabricImage, Group, type FabricObject } from 'fabric'
 import { createBlankDocument } from '@/lib/document'
 import { createMemoryAdapter } from '../../dev/memoryAdapter'
 import { installImageStub } from '../../test/imageStub'
@@ -69,6 +69,40 @@ describe('StyleApi.editSvgColors', () => {
     expect(only(engine).type).toBe('image')
     expect(only(engine).elementId).toBeUndefined()
     engine.dispose()
+  })
+
+  it('offers vector editing for a guest SVG whose stored URL has no extension', async () => {
+    const { engine, img } = await setup()
+    asDory(img).docSrc = 'idb://00000000-0000-0000-0000-000000000001'
+    asDory(img).name = 'figure.svg'
+    expect(engine.style.canEditSvgColors()).toBe(true)
+    expect(await engine.style.editSvgColors()).toBe(true)
+    engine.dispose()
+  })
+
+  it('lets an individual SVG shape be selected and keeps its fill after reload', async () => {
+    const { engine, view } = await setup()
+    await engine.style.editSvgColors()
+    const group = view.canvas.getObjects()[0] as Group
+    expect(group.interactive).toBe(true)
+    expect(group.subTargetCheck).toBe(true)
+    const red = group.getObjects().find((child) => asDory(child).origFill === '#ff0000')!
+    view.selectObjects([red])
+    engine.style.setFill({ type: 'solid', color: '#00ff00' })
+    expect(asDory(red).origFill).toBe('#00ff00')
+    const saved = structuredClone(engine.state.doc)
+    engine.dispose()
+
+    const again = new EditorEngine({ adapter: createMemoryAdapter().adapter, document: saved, meta: { id: 'd', title: 'T', mode: 'guest' }, ephemeral: true })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const pageId = again.state.doc.pages[0].id
+    again.mountPage(pageId, host)
+    const loaded = await again.whenView(pageId)
+    const restored = loaded.canvas.getObjects()[0] as Group
+    expect(restored.interactive).toBe(true)
+    expect(restored.getObjects().map((child) => child.fill)).toContain('#00ff00')
+    again.dispose()
   })
 
   it.each([

@@ -77,6 +77,15 @@ export function scaledCrop(crop: CropRect, width: number, height: number, scale:
   }
 }
 
+function isEditableSvgChild(object: FabricObject): boolean {
+  let group = object.group
+  while (group) {
+    if (asDory(group).elementId?.startsWith('upload:')) return true
+    group = group.group
+  }
+  return false
+}
+
 export class StyleApi {
   constructor(private readonly engine: EditorEngine) {}
 
@@ -118,6 +127,9 @@ export class StyleApi {
         return
       }
       o.set('fill', buildFill(spec))
+      if (isEditableSvgChild(o)) {
+        asDory(o).origFill = spec.type === 'solid' && spec.color !== 'transparent' ? normalizeColor(spec.color) : undefined
+      }
     }, t.history.changeFill, key)
   }
 
@@ -132,6 +144,9 @@ export class StyleApi {
         else {
           this.engine.rememberColor(normalizeColor(patch.color))
           o.set({ stroke: patch.color, strokeWidth: currentWidth > 0 ? currentWidth : Math.max(2, patch.width ?? 2) })
+        }
+        if (isEditableSvgChild(o)) {
+          asDory(o).origStroke = patch.color === null ? undefined : normalizeColor(patch.color)
         }
       }
       if (patch.width !== undefined) {
@@ -509,7 +524,10 @@ export class StyleApi {
   /** Whether the selected picture is an uploaded SVG that "Edit colors" can turn into shapes. */
   canEditSvgColors(): boolean {
     const img = this.images()[0]
-    return this.targets().length === 1 && img !== undefined && isSvgSource(asDory(img).docSrc ?? img.getSrc())
+    if (this.targets().length !== 1 || !img) return false
+    const d = asDory(img)
+    // Guest uploads use an idb:// URL, so the saved filename is the SVG clue.
+    return isSvgSource(d.docSrc ?? img.getSrc()) || isSvgSource(d.name)
   }
 
   /**

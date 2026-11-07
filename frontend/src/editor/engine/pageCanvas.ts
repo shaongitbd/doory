@@ -533,7 +533,12 @@ export class PageCanvas {
       if (asDory(obj).fit) refitTextbox(obj)
     }
     if (obj instanceof Group && !(obj instanceof ActiveSelection)) {
-      obj.set({ subTargetCheck: false, interactive: false })
+      const editableSvg = !this.host.readOnly && !asDory(obj).locked && asDory(obj).elementId?.startsWith('upload:') === true
+      const configureChildren = (group: Group): void => {
+        group.set({ subTargetCheck: editableSvg, interactive: editableSvg })
+        if (editableSvg) for (const child of group.getObjects()) if (child instanceof Group) configureChildren(child)
+      }
+      configureChildren(obj)
     }
   }
 
