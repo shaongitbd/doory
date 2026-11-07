@@ -25,13 +25,15 @@ interface ColorToolProps {
   allowGradient?: boolean
   /** Draw the swatch as a ring in the colour (a border swatch). */
   ring?: boolean
+  /** The selection has different fills; keep the picker available without showing one as shared. */
+  mixed?: boolean
   testId: string
 }
 
 const isNone = (c: string): boolean => c === 'transparent' || c === ''
 
 /** The round colour swatch of the toolbar and its popover: design colours, defaults, gradients, custom. */
-export function ColorTool({ label, value, onChange, allowNone, allowGradient, ring, testId }: ColorToolProps) {
+export function ColorTool({ label, value, onChange, allowNone, allowGradient, ring, mixed, testId }: ColorToolProps) {
   const ref = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [keyboard, setKeyboard] = useState(false)
@@ -43,9 +45,9 @@ export function ColorTool({ label, value, onChange, allowNone, allowGradient, ri
         <button
           ref={ref}
           type="button"
-          className={`${ed.swatch} ${none ? ed.swatchNone : ''}`}
-          style={ring ? { background: 'transparent', border: `3px solid ${css ?? 'var(--ed-border)'}` } : css ? { background: css } : undefined}
-          aria-label={label}
+          className={`${ed.swatch} ${mixed ? ed.swatchMixed : none ? ed.swatchNone : ''}`}
+          style={mixed ? undefined : ring ? { background: 'transparent', border: `3px solid ${css ?? 'var(--ed-border)'}` } : css ? { background: css } : undefined}
+          aria-label={mixed ? t.toolbar.mixedColors(label) : label}
           aria-haspopup="dialog"
           aria-expanded={open}
           data-testid={testId}
@@ -56,20 +58,20 @@ export function ColorTool({ label, value, onChange, allowNone, allowGradient, ri
         />
       </Tooltip>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={ref} label={label} placement="bottom" variant="plain" cover focusOnOpen={keyboard}>
-        <SwatchGrid value={value} onChange={onChange} allowNone={allowNone} allowGradient={allowGradient} testId={testId} />
+        <SwatchGrid value={value} onChange={onChange} allowNone={allowNone} allowGradient={allowGradient} mixed={mixed} testId={testId} />
       </Popover>
     </>
   )
 }
 
-function SwatchGrid({ value, onChange, allowNone, allowGradient, testId }: Pick<ColorToolProps, 'value' | 'onChange' | 'allowNone' | 'allowGradient' | 'testId'>) {
+function SwatchGrid({ value, onChange, allowNone, allowGradient, mixed, testId }: Pick<ColorToolProps, 'value' | 'onChange' | 'allowNone' | 'allowGradient' | 'mixed' | 'testId'>) {
   const doc = useDocument()
   const canvasColors = useCanvasIllustrationColors()
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState<'swatches' | 'custom'>('swatches')
   const design = useMemo(() => documentColors(doc, 30), [doc])
   const brand = useSyncExternalStore(palettes.subscribe, palettes.getSnapshot).find((p) => p.id === 'brand')
-  const active = value.type === 'solid' ? normalizeColor(value.color).toLowerCase() : null
+  const active = !mixed && value.type === 'solid' ? normalizeColor(value.color).toLowerCase() : null
   const shown = showAll ? design : design.slice(0, DESIGN_COLORS_SHOWN)
 
   const solid = (color: string, key?: string): void => onChange({ type: 'solid', color }, key)
@@ -123,7 +125,7 @@ function SwatchGrid({ value, onChange, allowNone, allowGradient, testId }: Pick<
 
       <p className={ed.cpTitle}>{t.swatches.defaults}</p>
       <div className={ed.cpGrid}>
-        {allowNone ? <button type="button" className={`${ed.cpSwatch} ${ed.cpNoFill} ${value.type === 'solid' && isNone(value.color) ? ed.cpOn : ''}`} title={t.swatches.noFill} aria-label={t.swatches.noFill} data-testid={`${testId}-none`} onClick={() => solid('transparent')} /> : null}
+        {allowNone ? <button type="button" className={`${ed.cpSwatch} ${ed.cpNoFill} ${!mixed && value.type === 'solid' && isNone(value.color) ? ed.cpOn : ''}`} title={t.swatches.noFill} aria-label={t.swatches.noFill} data-testid={`${testId}-none`} onClick={() => solid('transparent')} /> : null}
         {DEFAULT_COLORS.map((c) => swatch(c, `f-${c}`))}
         <button type="button" className={`${ed.cpSwatch} ${ed.cpRainbow}`} title={t.swatches.custom} aria-label={t.swatches.custom} data-testid={`${testId}-custom`} onClick={() => setView('custom')} />
       </div>

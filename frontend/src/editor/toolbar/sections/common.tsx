@@ -1,9 +1,11 @@
 import { Check, Group, LayoutGrid, Maximize, Ungroup } from 'lucide-react'
 import { useState } from 'react'
 import { I } from '../../chrome/icons'
+import { ColorTool } from '../../chrome/ColorTool'
 import { useEditor, useEditorState, useSelection } from '../../context'
 import { canFitKind } from '../../engine/api/arrange'
 import { FIELD_KEY, FIELD_LABEL_MAX, fieldTypeFor, keyClashes, readField } from '../../engine/fields'
+import { readFill } from '../../engine/objects/fills'
 import { MIN_FIT_FONT_SIZE, defaultMinFontSize, readTextFit } from '../../engine/objects/textStyle'
 import { pxToUnit, unitDecimals, unitToPx } from '../../engine/units'
 import { t } from '../../strings'
@@ -346,11 +348,15 @@ export function FieldPanel({ type }: { type: FieldType }) {
 export function MultiSection() {
   const editor = useEditor()
   const sel = useSelection()
+  const shapes = sel.kinds.length === 1 && sel.kinds[0] === 'shape'
+  const fills = sel.objects.map((object) => readFill(object.fill, 'transparent'))
+  const mixed = fills.some((fill) => JSON.stringify(fill) !== JSON.stringify(fills[0]))
   return (
     <>
       <span className={styles.count} data-testid="ed-multi-count">
         {t.ctx.selected(sel.ids.length)}
       </span>
+      {shapes ? <ColorTool label={t.toolbar.fill} value={fills[0]} mixed={mixed} allowNone allowGradient testId="ed-multi-fill" onChange={(fill, key) => editor.style.setFill(fill, key)} /> : null}
       <ToolButton label={t.toolbar.group} shortcut="Mod+G" testId="ed-group" onClick={() => editor.arrange.group()}>
         <Group size={18} aria-hidden="true" />
       </ToolButton>

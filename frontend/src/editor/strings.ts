@@ -417,6 +417,7 @@ export const t = {
     hollow: 'Hollow',
     none: 'None',
     fill: 'Fill',
+    mixedColors: (label: string) => `${label}: mixed colors`,
     stroke: 'Border',
     strokeWidth: 'Border width',
     dash: 'Border style',
