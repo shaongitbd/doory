@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { type Hsva, hsvToRgb, parseColor, rgbToHsv, rgbaToHex } from '../engine/colors'
 import { useDocument, useEditorStateShallow } from '../context'
 import { documentColors } from '../engine/docOps'
+import { useCanvasIllustrationColors } from '../hooks/useCanvasIllustrationColors'
 import { palettes } from './swatches'
 import { t } from '../strings'
 import styles from './ColorPicker.module.css'
@@ -30,6 +31,7 @@ function toHsva(value: string): Hsva {
 export function ColorPicker({ value, onChange, allowAlpha = true, extraSwatches }: ColorPickerProps) {
   const [hsva, setHsva] = useState<Hsva>(() => toHsva(value))
   const emitted = useRef(value)
+  const canvasColors = useCanvasIllustrationColors()
   const docColors = useDocumentColors()
   const recent = useEditorStateShallow((s) => s.recentColors)
   const allPalettes = useSyncExternalStore(palettes.subscribe, palettes.getSnapshot)
@@ -149,6 +151,7 @@ export function ColorPicker({ value, onChange, allowAlpha = true, extraSwatches 
       </div>
       <div className={styles.swatchArea}>
         {extraSwatches && extraSwatches.colors.length > 0 ? <SwatchRow label={extraSwatches.label} colors={extraSwatches.colors} onPick={pick} current={hex} /> : null}
+        {canvasColors.length > 0 ? <SwatchRow label={t.toolbar.canvasColors} colors={canvasColors} onPick={pick} current={hex} /> : null}
         {docColors.length > 0 ? <SwatchRow label={t.picker.documentColors} colors={docColors} onPick={pick} current={hex} /> : null}
         {recent.length > 0 ? <SwatchRow label={t.picker.recent} colors={recent} onPick={pick} current={hex} /> : null}
         {allPalettes.map((p) => (

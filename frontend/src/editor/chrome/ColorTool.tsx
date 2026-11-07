@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useDocument } from '../context'
 import { normalizeColor } from '../engine/colors'
 import { documentColors } from '../engine/docOps'
+import { useCanvasIllustrationColors } from '../hooks/useCanvasIllustrationColors'
 import { type FillSpec, fillCssPreview, gradientCss } from '../engine/objects/fills'
 import { t } from '../strings'
 import { ColorPicker } from '../ui/ColorPicker'
@@ -63,6 +64,7 @@ export function ColorTool({ label, value, onChange, allowNone, allowGradient, ri
 
 function SwatchGrid({ value, onChange, allowNone, allowGradient, testId }: Pick<ColorToolProps, 'value' | 'onChange' | 'allowNone' | 'allowGradient' | 'testId'>) {
   const doc = useDocument()
+  const canvasColors = useCanvasIllustrationColors()
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState<'swatches' | 'custom'>('swatches')
   const design = useMemo(() => documentColors(doc, 30), [doc])
@@ -94,6 +96,14 @@ function SwatchGrid({ value, onChange, allowNone, allowGradient, testId }: Pick<
           <p className={ed.cpTitle}>{brand.label}</p>
           <div className={ed.cpGrid} data-testid={`${testId}-brand`}>
             {brand.colors.map((c, i) => swatch(c, `b-${i}-${c}`))}
+          </div>
+        </>
+      ) : null}
+      {canvasColors.length > 0 ? (
+        <>
+          <p className={ed.cpTitle}>{t.toolbar.canvasColors}</p>
+          <div className={ed.cpGrid}>
+            {canvasColors.map((c) => swatch(c, `i-${c}`))}
           </div>
         </>
       ) : null}
