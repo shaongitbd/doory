@@ -20,7 +20,7 @@ import { DoryLine } from './DoryLine'
 import type { DoryProps, QrSpec } from './dory'
 import { PATH_SHAPES, regularPolygonPoints, starPoints } from './shapeGeometry'
 import { applyMask } from './masks'
-import { applyColorMap, parseSvgElement } from './elements'
+import { applyColorMap, parseSvgElement, type ElementColorMap } from './elements'
 import { DEFAULT_QR, qrDataUrl } from './qr'
 import { t } from '../../strings'
 
@@ -249,7 +249,7 @@ export async function createElementFromSvg(
   svgText: string,
   at: Placement,
   size: number,
-  meta: { elementId: string; name?: string; colorMap?: Record<string, string> },
+  meta: { elementId: string; name?: string; colorMap?: ElementColorMap },
 ): Promise<FabricObject> {
   const { object, width, height } = await parseSvgElement(svgText)
   const scale = size / Math.max(width, height, 1)

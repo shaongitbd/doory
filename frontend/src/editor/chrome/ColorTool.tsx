@@ -7,18 +7,10 @@ import { t } from '../strings'
 import { ColorPicker } from '../ui/ColorPicker'
 import { FillEditor } from '../ui/FillEditor'
 import { Popover } from '../ui/Popover'
-import { GRADIENT_PRESETS, palettes } from '../ui/swatches'
+import { DEFAULT_COLORS, GRADIENT_PRESETS, palettes } from '../ui/swatches'
 import { Tooltip } from '../ui/Tooltip'
 import ed from './ed.module.css'
 import { I } from './icons'
-
-/** The default swatch set, with the Doory palette first. */
-const DEFAULT_COLORS = [
-  '#2b1c17', '#ffffff', '#7a64e0', '#c9bcff', '#ffa9b9', '#ffc9d3',
-  '#f5a623', '#fb923c', '#fef08a', '#16a34a', '#22a39f', '#3b82f6',
-  '#1e40af', '#0a1f55', '#7e6cd8', '#5b2bb8', '#a3199c', '#3a0a4d',
-  '#7b4a1f', '#e8d5a6', '#cfd6df', '#6b6165', '#3b0a0a',
-] as const
 
 const DESIGN_COLORS_SHOWN = 5
 

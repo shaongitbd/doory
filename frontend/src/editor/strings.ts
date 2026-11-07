@@ -478,6 +478,8 @@ export const t = {
     cropCancel: 'Cancel',
     cropFree: 'Free',
     filters: 'Adjust',
+    canvasColors: 'Colors in canvas',
+    colorPalette: 'Color palette',
     filterPresets: 'Filters',
     brightness: 'Brightness',
     contrast: 'Contrast',

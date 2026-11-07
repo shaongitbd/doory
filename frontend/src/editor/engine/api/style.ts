@@ -12,7 +12,7 @@ import { UpscaleError, fitsOutput, maxOutputPixels, targetSize, upscaleImage as 
 import { MAX_UPLOAD_BYTES } from '../assets'
 import { DoryLine } from '../objects/DoryLine'
 import { asDory } from '../objects/dory'
-import { SVG_EDIT_LIMITS, applyColorMap, elementColors, isSvgSource, parseSvgElement, shapeCount, svgEditProblem } from '../objects/elements'
+import { SVG_EDIT_LIMITS, applyColorMap, elementColors, isSvgSource, parseSvgElement, shapeCount, svgEditProblem, type ElementColorMap } from '../objects/elements'
 import { applyEffects } from '../objects/effects'
 import { readField } from '../fields'
 import { type FillSpec, buildFill } from '../objects/fills'
@@ -608,12 +608,18 @@ export class StyleApi {
   }
 
   recolor(from: string, to: string): void {
+    this.recolorFill(from, { type: 'solid', color: to })
+  }
+
+  recolorFill(from: string, fill: FillSpec): void {
+    const source = normalizeColor(from)
+    const replacement = fill.type === 'solid' ? normalizeColor(fill.color) : fill
     this.each((o) => {
-      const map = { ...(asDory(o).colorMap ?? {}) }
-      map[normalizeColor(from)] = normalizeColor(to)
+      const map: ElementColorMap = { ...(asDory(o).colorMap ?? {}) }
+      map[source] = replacement
       applyColorMap(o, map)
-    }, t.history.recolor, `recolor:${from}`)
-    this.engine.rememberColor(normalizeColor(to))
+    }, t.history.recolor, `recolor:${source}`)
+    if (typeof replacement === 'string') this.engine.rememberColor(replacement)
   }
 
   resetColors(): void {

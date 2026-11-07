@@ -5,6 +5,7 @@ import { installImageStub } from '../../test/imageStub'
 import { EditorEngine } from '../editor'
 import { asDory } from '../objects/dory'
 import { elementColors } from '../objects/elements'
+import { isGradient } from '../objects/fills'
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect width="100" height="100" fill="#ff0000"/><circle cx="150" cy="50" r="40"/></svg>'
 
@@ -147,6 +148,27 @@ describe('StyleApi.editSvgColors', () => {
     const fills = (obj as unknown as { getObjects(): FabricObject[] }).getObjects().map((leaf) => leaf.fill)
     expect(fills).toContain('#7a64e0')
     expect(fills).not.toContain('#ff0000')
+    again.dispose()
+  })
+
+  it('keeps a gradient replacement on SVG fills after reload', async () => {
+    const { engine } = await setup()
+    await engine.style.editSvgColors()
+    engine.style.recolorFill('#ff0000', { type: 'gradient', kind: 'linear', angle: 45, stops: [
+      { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' },
+    ] })
+    const saved = structuredClone(engine.state.doc)
+    expect(saved.pages[0].objects[0].colorMap).toMatchObject({ '#ff0000': { type: 'gradient', kind: 'linear' } })
+    engine.dispose()
+
+    const again = new EditorEngine({ adapter: createMemoryAdapter().adapter, document: saved, meta: { id: 'd', title: 'T', mode: 'guest' }, ephemeral: true })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const pageId = again.state.doc.pages[0].id
+    again.mountPage(pageId, host)
+    const view = await again.whenView(pageId)
+    const group = view.canvas.getObjects()[0] as Group
+    expect(group.getObjects().some((child) => isGradient(child.fill))).toBe(true)
     again.dispose()
   })
 
