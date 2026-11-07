@@ -250,6 +250,9 @@
     linear-gradient(to top right, transparent calc(50% - 1px), var(--color-brand) calc(50% - 1px), var(--color-brand) calc(50% + 1px), transparent calc(50% + 1px)),
     var(--ed-surface);
 }
+.swatchMixed {
+  background: conic-gradient(var(--ed-border) 25%, var(--ed-surface) 0 50%, var(--ed-border) 0 75%, var(--ed-surface) 0);
+}
 
 .select {
   display: inline-flex;

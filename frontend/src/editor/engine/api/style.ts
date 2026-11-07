@@ -12,7 +12,7 @@ import { UpscaleError, fitsOutput, maxOutputPixels, targetSize, upscaleImage as 
 import { MAX_UPLOAD_BYTES } from '../assets'
 import { DoryLine } from '../objects/DoryLine'
 import { asDory } from '../objects/dory'
-import { SVG_EDIT_LIMITS, applyColorMap, elementColors, isSvgSource, parseSvgElement, shapeCount, svgEditProblem } from '../objects/elements'
+import { SVG_EDIT_LIMITS, applyColorMap, elementColors, isSvgSource, parseSvgElement, shapeCount, svgEditProblem, type ElementColorMap } from '../objects/elements'
 import { applyEffects } from '../objects/effects'
 import { readField } from '../fields'
 import { type FillSpec, buildFill } from '../objects/fills'
@@ -77,6 +77,15 @@ export function scaledCrop(crop: CropRect, width: number, height: number, scale:
   }
 }
 
+function isEditableSvgChild(object: FabricObject): boolean {
+  let group = object.group
+  while (group) {
+    if (asDory(group).elementId?.startsWith('upload:')) return true
+    group = group.group
+  }
+  return false
+}
+
 export class StyleApi {
   constructor(private readonly engine: EditorEngine) {}
 
@@ -118,6 +127,9 @@ export class StyleApi {
         return
       }
       o.set('fill', buildFill(spec))
+      if (isEditableSvgChild(o)) {
+        asDory(o).origFill = spec.type === 'solid' && spec.color !== 'transparent' ? normalizeColor(spec.color) : undefined
+      }
     }, t.history.changeFill, key)
   }
 
@@ -132,6 +144,9 @@ export class StyleApi {
         else {
           this.engine.rememberColor(normalizeColor(patch.color))
           o.set({ stroke: patch.color, strokeWidth: currentWidth > 0 ? currentWidth : Math.max(2, patch.width ?? 2) })
+        }
+        if (isEditableSvgChild(o)) {
+          asDory(o).origStroke = patch.color === null ? undefined : normalizeColor(patch.color)
         }
       }
       if (patch.width !== undefined) {
@@ -509,7 +524,10 @@ export class StyleApi {
   /** Whether the selected picture is an uploaded SVG that "Edit colors" can turn into shapes. */
   canEditSvgColors(): boolean {
     const img = this.images()[0]
-    return this.targets().length === 1 && img !== undefined && isSvgSource(asDory(img).docSrc ?? img.getSrc())
+    if (this.targets().length !== 1 || !img) return false
+    const d = asDory(img)
+    // Guest uploads use an idb:// URL, so the saved filename is the SVG clue.
+    return isSvgSource(d.docSrc ?? img.getSrc()) || isSvgSource(d.name)
   }
 
   /**
@@ -590,12 +608,18 @@ export class StyleApi {
   }
 
   recolor(from: string, to: string): void {
+    this.recolorFill(from, { type: 'solid', color: to })
+  }
+
+  recolorFill(from: string, fill: FillSpec): void {
+    const source = normalizeColor(from)
+    const replacement = fill.type === 'solid' ? normalizeColor(fill.color) : fill
     this.each((o) => {
-      const map = { ...(asDory(o).colorMap ?? {}) }
-      map[normalizeColor(from)] = normalizeColor(to)
+      const map: ElementColorMap = { ...(asDory(o).colorMap ?? {}) }
+      map[source] = replacement
       applyColorMap(o, map)
-    }, t.history.recolor, `recolor:${from}`)
-    this.engine.rememberColor(normalizeColor(to))
+    }, t.history.recolor, `recolor:${source}`)
+    if (typeof replacement === 'string') this.engine.rememberColor(replacement)
   }
 
   resetColors(): void {

@@ -1,5 +1,13 @@
 import { Registry } from '../engine/registry'
 
+/** The default swatch set, with the Doory palette first. */
+export const DEFAULT_COLORS = [
+  '#2b1c17', '#ffffff', '#7a64e0', '#c9bcff', '#ffa9b9', '#ffc9d3',
+  '#f5a623', '#fb923c', '#fef08a', '#16a34a', '#22a39f', '#3b82f6',
+  '#1e40af', '#0a1f55', '#7e6cd8', '#5b2bb8', '#a3199c', '#3a0a4d',
+  '#7b4a1f', '#e8d5a6', '#cfd6df', '#6b6165', '#3b0a0a',
+] as const
+
 export interface Palette {
   id: string
   label: string

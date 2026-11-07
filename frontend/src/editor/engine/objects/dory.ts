@@ -3,6 +3,7 @@
  * augment Fabric's own types: `DoryObject` is an intersection used wherever custom props are read.
  */
 import type { FabricObject } from 'fabric'
+import type { FillSpec } from './fills'
 import { newId } from '@/lib/document'
 import type {
   ArrowHead,
@@ -36,7 +37,7 @@ export interface DoryProps {
   maskRadius?: number
   assetId?: string
   elementId?: string
-  colorMap?: Record<string, string>
+  colorMap?: Record<string, string | Extract<FillSpec, { type: 'gradient' }>>
   origFill?: string
   origStroke?: string
   isPlaceholder?: boolean

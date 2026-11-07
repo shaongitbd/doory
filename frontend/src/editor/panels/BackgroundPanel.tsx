@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import type { PageBackground } from '@/types/document'
 import { useDocument, useEditor, useEditorState, useEditorStateShallow } from '../context'
 import { documentColors } from '../engine/docOps'
+import { useCanvasIllustrationColors } from '../hooks/useCanvasIllustrationColors'
 import { gradientCss } from '../engine/objects/fills'
 import { t } from '../strings'
 import { Button } from '../ui/Button'
@@ -34,9 +35,10 @@ export function BackgroundPanel() {
   const uploads = useEditorStateShallow((s) => s.uploads)
   const page = doc.pages.find((p) => p.id === activeId) ?? doc.pages[0]
   const bg = page.background
+  const canvasColors = useCanvasIllustrationColors()
   const docColors = useMemo(() => documentColors(doc, 12), [doc])
   const preset = palettes.get('doory')?.colors ?? []
-  const colors = [...new Set([...docColors, ...preset, ...(palettes.get('vivid')?.colors ?? [])])].slice(0, 18)
+  const colors = [...new Set([...canvasColors, ...docColors, ...preset, ...(palettes.get('vivid')?.colors ?? [])])].slice(0, 18)
 
   const set = (b: PageBackground, key?: string): void => editor.pages.setBackground(page.id, b, key)
   const [ink, setInk] = useState('#7a64e0')

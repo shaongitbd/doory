@@ -1,12 +1,15 @@
 import { useState } from 'react'
+import { Palette } from 'lucide-react'
 import type { ArrowHead } from '@/types/document'
 import { ColorTool } from '../../chrome/ColorTool'
 import { useEditor, useSelection } from '../../context'
 import { dashStyleOf } from '../../engine/api/style'
 import { normalizeColor } from '../../engine/colors'
-import { readFill } from '../../engine/objects/fills'
+import { fillCssPreview, gradientCss, readFill, type FillSpec } from '../../engine/objects/fills'
+import type { ElementColorMap } from '../../engine/objects/elements'
 import { t } from '../../strings'
 import { ColorButton } from '../../ui/ColorButton'
+import { DEFAULT_COLORS, GRADIENT_PRESETS } from '../../ui/swatches'
 import { EffectsPanel } from '../effects'
 import { Accordion, LimitedNumber, OpacityTool } from '../controls'
 import { CORNER_RADIUS, LINE_WIDTH, POLYGON_SIDES, STAR_INNER_RATIO, STAR_POINTS, STROKE_WIDTH, capLimit } from '../limits'
@@ -197,20 +200,43 @@ export function ElementSection() {
   const editor = useEditor()
   const sel = useSelection()
   const o = sel.objects[0] ?? {}
-  const map = (o.colorMap ?? {}) as Record<string, string>
+  const map = (o.colorMap ?? {}) as ElementColorMap
   const list = elementColors(o)
+  const [selected, setSelected] = useState(list[0] ?? '')
   if (list.length === 0) return null
+  const source = list.includes(selected) ? selected : list[0]
+  const valueOf = (color: string): FillSpec => {
+    const current = map[color]
+    return typeof current === 'string' || !current ? { type: 'solid', color: current ?? color } : current
+  }
+  const current = valueOf(source)
   return (
-    <div className={styles.row} role="group" aria-label={t.toolbar.recolor} data-testid="ed-recolor">
-      {list.map((c) => (
-        <ColorButton key={c} label={t.tools.recolorOf(c)} value={{ type: 'solid', color: map[c] ?? c }} solidOnly extraSwatches={{ label: t.tools.originalColors, colors: list }} onChange={(f) => (f.type === 'solid' ? editor.style.recolor(c, f.color) : undefined)} />
-      ))}
-      {Object.keys(map).length > 0 ? (
-        <button type="button" className={`${ed.btn} ${ed.ghost}`} onClick={() => editor.style.resetColors()}>
-          {t.toolbar.reset}
-        </button>
-      ) : null}
-    </div>
+    <PopoverTool label={t.toolbar.colorPalette} trigger={<span className={styles.paletteTrigger}><Palette size={18} aria-hidden="true" /><span className={ed.toolText}>{t.toolbar.colorPalette}</span></span>} width={280} testId="ed-recolor" flush>
+      <div className={ed.colorPicker}>
+        <p className={ed.cpTitle}>{t.toolbar.recolor}</p>
+        <div className={ed.cpGrid} role="group" aria-label={t.toolbar.recolor}>
+          {list.map((color) => (
+            <button key={color} type="button" className={`${ed.cpSwatch} ${source === color ? ed.cpOn : ''}`} style={{ background: fillCssPreview(valueOf(color)) }} aria-label={t.tools.recolorOf(color)} aria-pressed={source === color} title={color} onClick={() => setSelected(color)} />
+          ))}
+        </div>
+        <p className={ed.cpTitle}>{t.swatches.defaults}</p>
+        <div className={ed.cpGrid} role="group" aria-label={t.swatches.defaults}>
+          {DEFAULT_COLORS.map((color) => <button key={color} type="button" className={ed.cpSwatch} style={{ background: color }} aria-label={t.swatches.use(color)} title={color} onClick={() => editor.style.recolor(source, color)} />)}
+        </div>
+        <p className={ed.cpTitle}>{t.swatches.gradients}</p>
+        <div className={ed.cpGrid} role="group" aria-label={t.swatches.gradients}>
+          {GRADIENT_PRESETS.map((preset) => {
+            const fill: Extract<FillSpec, { type: 'gradient' }> = { type: 'gradient', kind: 'linear', angle: preset.angle, stops: preset.stops }
+            return <button key={preset.id} type="button" className={ed.cpSwatch} style={{ background: gradientCss(fill) }} aria-label={t.swatches.gradient(preset.label)} title={preset.label} onClick={() => editor.style.recolorFill(source, fill)} />
+          })}
+        </div>
+        <div className={styles.paletteFooter}>
+          <ColorButton label={t.swatches.custom} value={current} extraSwatches={{ label: t.tools.originalColors, colors: list }} onChange={(fill) => editor.style.recolorFill(source, fill)} />
+          <span>{t.swatches.custom}</span>
+          {Object.keys(map).length > 0 ? <button type="button" className={`${ed.btn} ${ed.ghost}`} onClick={() => editor.style.resetColors()}>{t.toolbar.reset}</button> : null}
+        </div>
+      </div>
+    </PopoverTool>
   )
 }
 
