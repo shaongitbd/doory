@@ -92,7 +92,7 @@ export function ApiTokensSection() {
             <li key={token.id} className={styles.tokenRow}>
               <div>
                 <p className={styles.tokenName}>
-                  <KeyRound size={14} aria-hidden /> {token.name} <code className={styles.tokenPrefix}>{msg("doory_")}{token.prefix}_…</code>
+                  <KeyRound size={14} aria-hidden /> {token.name} <code className={styles.tokenPrefix}>doory_{token.prefix}_…</code>
                 </p>
                 <p className={styles.hint}>
                   {token.scopes.join(', ')} {msg("· last used ")}{when(token.last_used_at, 'never')} {msg("· expires ")}{when(token.expires_at, 'never')}
@@ -162,7 +162,7 @@ function CreateTokenForm({ scopes, onCreated }: { scopes: ApiTokenScope[]; onCre
           {formError}
         </p>
       ) : null}
-      <Input label={msg("Token name")} placeholder={msg("Claude Desktop")} value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
+      <Input label={msg("Token name")} placeholder="Claude Desktop" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
       {scopes.length > 0 ? (
         <fieldset className={styles.fieldset}>
           <legend className={styles.legend}>{msg("Permissions")}</legend>

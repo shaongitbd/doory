@@ -117,7 +117,7 @@ function ConnectionForm({ provider, onSaved, onClose }: { provider: AiProvider |
         </p>
       ) : null}
       <Input label={msg("Name")} placeholder={msg("My model server")} value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
-      <Input label={msg("Server address")} placeholder={msg("https://ai.example.com")} value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} error={errors.base_url} maxLength={500} autoComplete="off" spellCheck={false} inputMode="url" />
+      <Input label={msg("Server address")} placeholder="https://ai.example.com" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} error={errors.base_url} maxLength={500} autoComplete="off" spellCheck={false} inputMode="url" />
       <Select label={msg("API style")} hint={info.summary} options={AI_STYLES.map((item) => ({ value: item.id, label: item.label }))} value={style} onChange={(event) => setStyle(event.target.value as AiProviderStyle)} error={errors.style} />
       <Textarea
         label={msg("Style settings (JSON)")}
@@ -130,7 +130,7 @@ function ConnectionForm({ provider, onSaved, onClose }: { provider: AiProvider |
         spellCheck={false}
         className={styles.code}
       />
-      <Input label={msg("Auth header")} hint={msg("The header that carries your key, e.g. Authorization or X-Api-Key. Empty: no authentication.")} placeholder={msg("Authorization")} value={authHeader} onChange={(event) => setAuthHeader(event.target.value)} error={errors.auth_header} maxLength={64} autoComplete="off" spellCheck={false} />
+      <Input label={msg("Auth header")} hint={msg("The header that carries your key, e.g. Authorization or X-Api-Key. Empty: no authentication.")} placeholder="Authorization" value={authHeader} onChange={(event) => setAuthHeader(event.target.value)} error={errors.auth_header} maxLength={64} autoComplete="off" spellCheck={false} />
       <PasswordInput
         label={msg("Key")}
         hint={provider?.has_secret ? 'A key is stored. Leave this empty to keep it.' : 'The header’s value, e.g. “Bearer …”. It is stored encrypted and never shown again.'}

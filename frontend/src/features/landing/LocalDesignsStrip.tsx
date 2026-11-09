@@ -91,7 +91,7 @@ export function LocalDesignsStrip() {
     return (
       <p className={styles.restoreLine}>
         <span>
-          {msg("Have a ")}<code>{msg(".doory")}</code> {msg("backup?")}</span>
+          {msg("Have a ")}<code>.doory</code> {msg("backup?")}</span>
         <RestoreProjectButton quiet />
       </p>
     )
