@@ -23,14 +23,14 @@ interface AuthModalContextValue {
 const AuthModalContext = createContext<AuthModalContextValue | null>(null)
 
 const COPY: Record<AuthModalReason, { title: string; description: string }> = {
-  save: { title: msg("Create a free account to keep this design"), description: msg("Your work is stored in this browser right now. Sign up and we’ll move it to your account, images included.") },
-  share: { title: msg("Sign in to share your design"), description: msg("Share links and comments live in your account. Your design and images come along.") },
-  'brand-kit': { title: msg("Sign in to use brand kits"), description: msg("Save your colours, fonts and logos once and apply them to every design.") },
-  'version-history': { title: msg("Sign in to see version history"), description: msg("Accounts keep snapshots of your design so you can go back in time.") },
-  comment: { title: msg("Sign in to comment"), description: msg("Join the conversation on this design with a free account.") },
-  video: { title: msg("Sign in to add videos"), description: msg("Upload your own clips or pick stock videos. Your design and images come along.") },
-  generic: { title: msg("Welcome to Doory"), description: msg("Log in or create a free account.") },
-  'session-expired': { title: msg("Your session ended"), description: msg("Sign in again to keep saving. What you changed is still on this page.") },
+  save: { title: "Create a free account to keep this design", description: "Your work is stored in this browser right now. Sign up and we’ll move it to your account, images included." },
+  share: { title: "Sign in to share your design", description: "Share links and comments live in your account. Your design and images come along." },
+  'brand-kit': { title: "Sign in to use brand kits", description: "Save your colours, fonts and logos once and apply them to every design." },
+  'version-history': { title: "Sign in to see version history", description: "Accounts keep snapshots of your design so you can go back in time." },
+  comment: { title: "Sign in to comment", description: "Join the conversation on this design with a free account." },
+  video: { title: "Sign in to add videos", description: "Upload your own clips or pick stock videos. Your design and images come along." },
+  generic: { title: "Welcome to Doory", description: "Log in or create a free account." },
+  'session-expired': { title: "Your session ended", description: "Sign in again to keep saving. What you changed is still on this page." },
 }
 
 export function AuthModalProvider({ children }: { children: ReactNode }) {
@@ -63,7 +63,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   return (
     <AuthModalContext.Provider value={value}>
       {children}
-      <Dialog open={state.open} onClose={() => settle(false)} title={copy.title} description={copy.description} size="md">
+      <Dialog open={state.open} onClose={() => settle(false)} title={msg(copy.title)} description={msg(copy.description)} size="md">
         {lostSession ? (
           <div className={styles.panel}>
             <LoginForm onSuccess={() => settle(true)} lockedEmail={lostSession.email} expectUserId={lostSession.id} lockedSso={!lostSession.hasPassword && lostSession.ssoLinked} />

@@ -8,9 +8,9 @@ import { AnchorButton, Button, Input, Select, Textarea } from '@/ui'
 import styles from './ContactPage.module.css'
 
 const TOPICS = [
-  { value: 'question', label: msg("A question"), prefix: 'Question' },
-  { value: 'idea', label: msg("An idea"), prefix: 'Idea' },
-  { value: 'bug', label: msg("Something is broken"), prefix: 'Bug' },
+  { value: 'question', label: "A question", prefix: 'Question' },
+  { value: 'idea', label: "An idea", prefix: 'Idea' },
+  { value: 'bug', label: "Something is broken", prefix: 'Bug' },
 ] as const
 
 type Topic = (typeof TOPICS)[number]['value']
@@ -19,7 +19,7 @@ const WAYS = [
   {
     tone: 'pink',
     icon: Bug,
-    title: msg("Found a bug?"),
+    title: "Found a bug?",
     text: 'Tell us what you did and what went wrong. A screenshot helps a lot.',
     action: 'Report a bug',
     href: newIssueUrl('Bug: ', 'What I did:\n\nWhat I expected:\n\nWhat happened instead:\n'),
@@ -27,7 +27,7 @@ const WAYS = [
   {
     tone: 'butter',
     icon: Lightbulb,
-    title: msg("Got an idea?"),
+    title: "Got an idea?",
     text: 'A feature you miss, a template you’d love, something that could be easier.',
     action: 'Share an idea',
     href: newIssueUrl('Idea: ', ''),
@@ -35,7 +35,7 @@ const WAYS = [
   {
     tone: 'mint',
     icon: ShieldAlert,
-    title: msg("A security problem?"),
+    title: "A security problem?",
     text: 'Please don’t post it in public. Report it privately; only the maintainers can see it.',
     action: 'Report privately',
     href: `${REPO_URL}/security/advisories/new`,
@@ -66,7 +66,7 @@ export default function ContactPage() {
             <span className={styles.icon} aria-hidden="true">
               <Icon size={22} strokeWidth={2.2} />
             </span>
-            <h2 className={styles.wayTitle}>{title}</h2>
+            <h2 className={styles.wayTitle}>{msg(title)}</h2>
             <p className={styles.wayText}>{text}</p>
             <AnchorButton href={href} target="_blank" rel="noopener noreferrer" rightIcon={<ArrowUpRight size={16} aria-hidden="true" />} className={styles.wayAction}>
               {action}
@@ -106,7 +106,7 @@ function NoteForm() {
         <p className={styles.noteLead}>{msg("We’ll open it as a new issue on GitHub for you to check and post. Issues are public, so please leave out anything private.")}</p>
       </div>
       <form className={styles.form} onSubmit={submit} noValidate>
-        <Select label={msg("What’s it about?")} value={topic} onChange={(event) => setTopic(event.target.value as Topic)} options={TOPICS.map(({ value, label }) => ({ value, label }))} />
+        <Select label={msg("What’s it about?")} value={topic} onChange={(event) => setTopic(event.target.value as Topic)} options={TOPICS.map(({ value, label }) => ({ value, label: msg(label) }))} />
         <Input
           label={msg("Subject")}
           value={subject}

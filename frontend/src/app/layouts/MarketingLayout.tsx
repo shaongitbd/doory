@@ -28,7 +28,7 @@ function HeaderNav({ onNavigate, orientation }: { onNavigate?: () => void; orien
         </NavLink>
       ))}
       <a href={REPO_URL} className={styles.navLink} target="_blank" rel="noopener noreferrer" onClick={onNavigate}>
-        <GitBranch size={16} aria-hidden="true" /> {msg("GitHub")}</a>
+        <GitBranch size={16} aria-hidden="true" /> GitHub</a>
     </nav>
   )
 }
@@ -159,7 +159,7 @@ export function MarketingFooter() {
       <p className={styles.legal}>
         {msg("Doory by Siam, creator and maintainer of Doory ·")}{' '}
         <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
-          {msg("github.com/shaongitbd/doory")}</a>{' '}
+          github.com/shaongitbd/doory</a>{' '}
         {msg("· Released under the Attribution Assurance License. No ads. No watermarks.")}</p>
     </footer>
   )

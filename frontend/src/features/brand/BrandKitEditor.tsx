@@ -10,9 +10,9 @@ import styles from './BrandKitEditor.module.css'
 
 export const MAX_BRAND_COLORS = 20
 const ROLES: Array<{ role: BrandFont['role']; label: string }> = [
-  { role: 'heading', label: msg("Heading font") },
-  { role: 'subheading', label: msg("Subheading font") },
-  { role: 'body', label: msg("Body font") },
+  { role: 'heading', label: "Heading font" },
+  { role: 'subheading', label: "Subheading font" },
+  { role: 'body', label: "Body font" },
 ]
 
 export interface BrandKitEditorProps {
@@ -131,7 +131,7 @@ function EditorForm({ kit, busy, error, onClose, onSave }: { kit: BrandKit | nul
         <legend>{msg("Fonts")}</legend>
         <div className={styles.fonts}>
           {ROLES.map(({ role, label }) => (
-            <Select key={role} label={label} value={fontFor(role)} onChange={(event) => setFont(role, event.target.value)} options={fontOptions} />
+            <Select key={role} label={msg(label)} value={fontFor(role)} onChange={(event) => setFont(role, event.target.value)} options={fontOptions} />
           ))}
         </div>
         {fontList.isError ? <p className={styles.hint}>{msg("The font list couldn’t be loaded right now.")}</p> : null}

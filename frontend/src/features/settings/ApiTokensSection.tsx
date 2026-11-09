@@ -14,9 +14,9 @@ import styles from './Settings.module.css'
 
 const DEFAULT_SCOPES = ['designs:read', 'designs:write']
 const EXPIRY_OPTIONS = [
-  { value: '30', label: msg("30 days") },
-  { value: '90', label: msg("90 days") },
-  { value: '365', label: msg("1 year") },
+  { value: '30', label: "30 days" },
+  { value: '90', label: "90 days" },
+  { value: '365', label: "1 year" },
 ]
 
 async function copy(text: string): Promise<boolean> {
@@ -92,7 +92,7 @@ export function ApiTokensSection() {
             <li key={token.id} className={styles.tokenRow}>
               <div>
                 <p className={styles.tokenName}>
-                  <KeyRound size={14} aria-hidden /> {token.name} <code className={styles.tokenPrefix}>{msg("doory_")}{token.prefix}_…</code>
+                  <KeyRound size={14} aria-hidden /> {token.name} <code className={styles.tokenPrefix}>doory_{token.prefix}_…</code>
                 </p>
                 <p className={styles.hint}>
                   {token.scopes.join(', ')} {msg("· last used ")}{when(token.last_used_at, 'never')} {msg("· expires ")}{when(token.expires_at, 'never')}
@@ -162,7 +162,7 @@ function CreateTokenForm({ scopes, onCreated }: { scopes: ApiTokenScope[]; onCre
           {formError}
         </p>
       ) : null}
-      <Input label={msg("Token name")} placeholder={msg("Claude Desktop")} value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
+      <Input label={msg("Token name")} placeholder="Claude Desktop" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} maxLength={80} autoComplete="off" />
       {scopes.length > 0 ? (
         <fieldset className={styles.fieldset}>
           <legend className={styles.legend}>{msg("Permissions")}</legend>
@@ -172,7 +172,7 @@ function CreateTokenForm({ scopes, onCreated }: { scopes: ApiTokenScope[]; onCre
           {errors.scopes ? <p className={styles.error}>{errors.scopes}</p> : null}
         </fieldset>
       ) : null}
-      <Select label={msg("Expires after")} options={EXPIRY_OPTIONS} value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+      <Select label={msg("Expires after")} options={EXPIRY_OPTIONS.map((option) => ({ ...option, label: msg(option.label) }))} value={expiry} onChange={(event) => setExpiry(event.target.value)} />
       {hasPassword ? (
         <PasswordInput label={msg("Your password")} name="current-password" autoComplete="current-password" value={secret} onChange={(event) => setSecret(event.target.value)} error={errors.password} />
       ) : (
