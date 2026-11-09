@@ -4,6 +4,24 @@
   gap: 8px;
 }
 
+.paletteTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.paletteFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.paletteFooter > button:last-child {
+  margin-left: auto;
+}
+
 .grid3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

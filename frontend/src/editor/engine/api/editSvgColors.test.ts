@@ -1,10 +1,11 @@
-import { FabricImage, type FabricObject } from 'fabric'
+import { FabricImage, Group, type FabricObject } from 'fabric'
 import { createBlankDocument } from '@/lib/document'
 import { createMemoryAdapter } from '../../dev/memoryAdapter'
 import { installImageStub } from '../../test/imageStub'
 import { EditorEngine } from '../editor'
 import { asDory } from '../objects/dory'
 import { elementColors } from '../objects/elements'
+import { isGradient } from '../objects/fills'
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect width="100" height="100" fill="#ff0000"/><circle cx="150" cy="50" r="40"/></svg>'
 
@@ -71,6 +72,40 @@ describe('StyleApi.editSvgColors', () => {
     engine.dispose()
   })
 
+  it('offers vector editing for a guest SVG whose stored URL has no extension', async () => {
+    const { engine, img } = await setup()
+    asDory(img).docSrc = 'idb://00000000-0000-0000-0000-000000000001'
+    asDory(img).name = 'figure.svg'
+    expect(engine.style.canEditSvgColors()).toBe(true)
+    expect(await engine.style.editSvgColors()).toBe(true)
+    engine.dispose()
+  })
+
+  it('lets an individual SVG shape be selected and keeps its fill after reload', async () => {
+    const { engine, view } = await setup()
+    await engine.style.editSvgColors()
+    const group = view.canvas.getObjects()[0] as Group
+    // A click still picks the whole drawing (to move or resize it); a double-click enters it to pick one shape.
+    expect(group.interactive).toBe(false)
+    view.enterGroup(group)
+    const red = group.getObjects().find((child) => asDory(child).origFill === '#ff0000')!
+    view.selectObjects([red])
+    engine.style.setFill({ type: 'solid', color: '#00ff00' })
+    expect(asDory(red).origFill).toBe('#00ff00')
+    const saved = structuredClone(engine.state.doc)
+    engine.dispose()
+
+    const again = new EditorEngine({ adapter: createMemoryAdapter().adapter, document: saved, meta: { id: 'd', title: 'T', mode: 'guest' }, ephemeral: true })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const pageId = again.state.doc.pages[0].id
+    again.mountPage(pageId, host)
+    const loaded = await again.whenView(pageId)
+    const restored = loaded.canvas.getObjects()[0] as Group
+    expect(restored.getObjects().map((child) => child.fill)).toContain('#00ff00')
+    again.dispose()
+  })
+
   it.each([
     ['as it is', false, 1],
     ['flipped', true, -1],
@@ -113,6 +148,27 @@ describe('StyleApi.editSvgColors', () => {
     const fills = (obj as unknown as { getObjects(): FabricObject[] }).getObjects().map((leaf) => leaf.fill)
     expect(fills).toContain('#7a64e0')
     expect(fills).not.toContain('#ff0000')
+    again.dispose()
+  })
+
+  it('keeps a gradient replacement on SVG fills after reload', async () => {
+    const { engine } = await setup()
+    await engine.style.editSvgColors()
+    engine.style.recolorFill('#ff0000', { type: 'gradient', kind: 'linear', angle: 45, stops: [
+      { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' },
+    ] })
+    const saved = structuredClone(engine.state.doc)
+    expect(saved.pages[0].objects[0].colorMap).toMatchObject({ '#ff0000': { type: 'gradient', kind: 'linear' } })
+    engine.dispose()
+
+    const again = new EditorEngine({ adapter: createMemoryAdapter().adapter, document: saved, meta: { id: 'd', title: 'T', mode: 'guest' }, ephemeral: true })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const pageId = again.state.doc.pages[0].id
+    again.mountPage(pageId, host)
+    const view = await again.whenView(pageId)
+    const group = view.canvas.getObjects()[0] as Group
+    expect(group.getObjects().some((child) => isGradient(child.fill))).toBe(true)
     again.dispose()
   })
 

@@ -6,6 +6,9 @@
 import { type FabricObject, Group, loadSVGFromString, util } from 'fabric'
 import { normalizeColor } from '../colors'
 import { asDory } from './dory'
+import { buildFill, type FillSpec } from './fills'
+
+export type ElementColorMap = Record<string, string | Extract<FillSpec, { type: 'gradient' }>>
 
 function leaves(obj: FabricObject): FabricObject[] {
   if (obj instanceof Group) return obj.getObjects().flatMap(leaves)
@@ -40,16 +43,22 @@ export function elementColors(root: FabricObject): string[] {
 }
 
 /** Applies `colorMap` (original → replacement). Unmapped colours revert to their originals. */
-export function applyColorMap(root: FabricObject, map: Record<string, string> | undefined): void {
+export function applyColorMap(root: FabricObject, map: ElementColorMap | undefined): void {
   const colorMap = map ?? {}
   for (const leaf of leaves(root)) {
     const d = asDory(leaf)
-    if (d.origFill) leaf.set('fill', colorMap[d.origFill] ?? d.origFill)
-    if (d.origStroke) leaf.set('stroke', colorMap[d.origStroke] ?? d.origStroke)
+    if (d.origFill) {
+      const replacement = colorMap[d.origFill]
+      leaf.set('fill', replacement && typeof replacement !== 'string' ? buildFill(replacement) : replacement ?? d.origFill)
+    }
+    if (d.origStroke) {
+      const replacement = colorMap[d.origStroke]
+      leaf.set('stroke', replacement && typeof replacement !== 'string' ? buildFill(replacement) : replacement ?? d.origStroke)
+    }
     leaf.set('dirty', true)
   }
   const top = asDory(root)
-  const cleaned = Object.fromEntries(Object.entries(colorMap).filter(([from, to]) => from !== to))
+  const cleaned = Object.fromEntries(Object.entries(colorMap).filter(([from, to]) => typeof to !== 'string' || from !== to))
   top.colorMap = Object.keys(cleaned).length > 0 ? cleaned : undefined
   root.set('dirty', true)
 }
