@@ -4,7 +4,8 @@ import type { FontCategory, FontFamily } from '@/types/api'
 import { useEditor, useEditorStateShallow } from '../context'
 import { SYSTEM_FONTS } from '../engine/fonts'
 import { fontStack, primaryFamily } from '../engine/text/fontStack'
-import { SCRIPTS, scriptById, scriptOf } from '../engine/text/scripts'
+import { getLocale } from '@/i18n/locale'
+import { SCRIPTS, preferredChinese, scriptById, scriptOf } from '../engine/text/scripts'
 import { useUserFonts, useUserFontsStore } from '../fonts/userFonts'
 import { useFontUploadEntry } from '../fonts/useFontUploadEntry'
 import { useAsyncList } from '../hooks/useAsyncList'
@@ -70,7 +71,7 @@ export function FontPicker({ current, onPreview, onPick, onClose, sample = '' }:
   const recent = useEditorStateShallow((s) => s.recentFonts)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<FontCategory | 'all'>('all')
-  const [script, setScript] = useState<string>(() => scriptOf(sample)?.id ?? 'all')
+  const [script, setScript] = useState<string>(() => scriptOf(sample, preferredChinese(getLocale(), navigator.languages ?? [navigator.language]))?.id ?? 'all')
   const scriptInfo = scriptById(script)
   const [scroll, setScroll] = useState(0)
   const [highlight, setHighlight] = useState(-1)
