@@ -204,10 +204,17 @@ export class StyleApi {
       this.finish(label, key)
     }
     if (needsFont) {
-      const first = objs[0]
-      void this.engine.fonts
-        .load(patch.fontFamily ?? first.fontFamily, patch.fontWeight ?? first.fontWeight ?? 400, patch.fontStyle ?? first.fontStyle ?? 'normal')
-        .then(run)
+      // Each face the selection ends up with, with the text set in it: a font is loaded for the letters it has to
+      // show, so letters outside Latin (č, ř, ž, Cyrillic…) get their files too, not only the Latin one.
+      const faces = new Map<string, { family: string; weight: string | number; style: string; text: string }>()
+      for (const o of objs) {
+        const face = { family: patch.fontFamily ?? o.fontFamily, weight: patch.fontWeight ?? o.fontWeight ?? 400, style: patch.fontStyle ?? o.fontStyle ?? 'normal' }
+        const key = `${face.family}|${face.weight}|${face.style}`
+        const seen = faces.get(key)
+        if (seen) seen.text += o.text
+        else faces.set(key, { ...face, text: o.text })
+      }
+      void Promise.all([...faces.values()].map((f) => this.engine.fonts.load(f.family, f.weight, f.style, f.text))).then(run)
     } else run()
   }
 
