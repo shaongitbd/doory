@@ -66,6 +66,18 @@
   white-space: nowrap;
 }
 
+/* Translated labels need room to wrap; the compact menu must still fit within the viewport. */
+.wrapLabels {
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+}
+.wrapLabels .label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-block: 6px;
+}
+
 .kbd {
   margin-left: var(--space-4);
   color: var(--color-text-subtle);

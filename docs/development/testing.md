@@ -22,6 +22,28 @@ Chromium's socket. Image export tests also need the built frontend (`npm run bui
 
 ## End-to-end tests (frontend, Playwright)
 
+### UI language tests
+
+The unit-test setup fixes the default instance to English. Use `createUiI18n()` and `I18nextProvider` (or the
+test render helpers' `i18nInstance` option) for isolated German or fallback tests. Initializing a preference
+controller with `getLanguagePreferences(instance).init()` returns a disposer; always call it when a test ends.
+Control browser languages explicitly instead of depending on the host machine.
+
+`i18n/resources.test.ts` checks semantic key coverage, named parameters, language-specific plural categories
+and unchanged English source wording. Test zero, one and multiple counts, formatting, missing translations
+and English fallback when adding dynamic messages. Keep catalog fixtures isolated from the runtime instance.
+
+`editor/language.test.tsx` protects document and canvas identity, dirty state, selection, history and live
+collaboration. It uses controlled timers and a settled baseline to distinguish existing user saves from
+language-switch side effects. Preserve that distinction when expanding coverage.
+
+Run the browser coverage with `cd frontend && npm run e2e:editor -- language.spec.ts`. It checks German browser
+detection, explicit preferences across reloads, guest/view-only access, focus, desktop/mobile layout, high
+contrast and focused axe scans. Existing editor suites continue using English. Run `make test`, `make lint`,
+`npm run build` and `npm run bundle:check` (the last two in `frontend/`) before finishing a translation PR.
+
+### Suites
+
 Each suite has its own config in `frontend/` and its own tests under `frontend/e2e/`:
 
 | Command (in `frontend/`) | Suite |

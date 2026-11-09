@@ -5,6 +5,7 @@ import { AiProvidersSection } from '@/features/settings/AiProvidersSection'
 import { ApiTokensSection } from '@/features/settings/ApiTokensSection'
 import { DangerSection } from '@/features/settings/DangerSection'
 import { EmailSection } from '@/features/settings/EmailSection'
+import { LanguageSection } from '@/features/settings/LanguageSection'
 import { PasswordSection } from '@/features/settings/PasswordSection'
 import { ProfileSection } from '@/features/settings/ProfileSection'
 import { SsoSection } from '@/features/settings/SsoSection'
@@ -30,6 +31,7 @@ export default function SettingsPage() {
         <PasswordSection />
         <SsoSection />
         <AccessibilitySection />
+        <LanguageSection />
         {mcp ? <ApiTokensSection /> : null}
         {aiProviders ? <AiProvidersSection /> : null}
         <DangerSection />

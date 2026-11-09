@@ -19,11 +19,12 @@ export interface DialogProps {
   /** When false, ESC and overlay clicks do nothing and the close button is hidden. */
   dismissible?: boolean
   hideTitle?: boolean
+  closeLabel?: string
   initialFocusRef?: RefObject<HTMLElement | null>
   className?: string
 }
 
-export function Dialog({ open, onClose, title, description, children, footer, size = 'md', role = 'dialog', dismissible = true, hideTitle, initialFocusRef, className }: DialogProps) {
+export function Dialog({ open, onClose, title, description, children, footer, size = 'md', role = 'dialog', dismissible = true, hideTitle, closeLabel, initialFocusRef, className }: DialogProps) {
   if (!open) return null
   return (
     <Portal>
@@ -36,6 +37,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
         role={role}
         dismissible={dismissible}
         hideTitle={hideTitle}
+        closeLabel={closeLabel}
         initialFocusRef={initialFocusRef}
         className={className}
       >
@@ -47,7 +49,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
 
 type ContentProps = Omit<DialogProps, 'open'>
 
-function DialogContent({ onClose, title, description, children, footer, size = 'md', role = 'dialog', dismissible = true, hideTitle, initialFocusRef, className }: ContentProps) {
+function DialogContent({ onClose, title, description, children, footer, size = 'md', role = 'dialog', dismissible = true, hideTitle, closeLabel = 'Close dialog', initialFocusRef, className }: ContentProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -131,7 +133,7 @@ function DialogContent({ onClose, title, description, children, footer, size = '
               </p>
             ) : null}
           </div>
-          {dismissible ? <IconButton label="Close dialog" size="sm" icon={<X size={18} />} onClick={() => onCloseRef.current()} data-dialog-close="" /> : null}
+          {dismissible ? <IconButton label={closeLabel} size="sm" icon={<X size={18} />} onClick={() => onCloseRef.current()} data-dialog-close="" /> : null}
         </header>
         <div className={styles.body}>{children}</div>
         {footer ? <footer className={styles.footer}>{footer}</footer> : null}
