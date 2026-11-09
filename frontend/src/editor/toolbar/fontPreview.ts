@@ -36,7 +36,8 @@ export function createFontPreview(editor: EditorEngine): FontPreview {
       if (!obj) return
       if (original === null) original = String(obj.fontFamily)
       const mine = ++token
-      void editor.fonts.load(family, obj.fontWeight, obj.fontStyle).then(() => {
+      // With the text, so letters outside Latin (č, ř, ž…) load their files too.
+      void editor.fonts.load(family, obj.fontWeight, obj.fontStyle, obj.text).then(() => {
         const live = target()
         if (mine !== token || !live) return
         live.set('fontFamily', stack)

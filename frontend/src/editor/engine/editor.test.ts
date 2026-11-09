@@ -325,6 +325,18 @@ describe('EditorEngine', () => {
     engine.dispose()
   })
 
+  it('loads a new font for the letters the text has, not only Latin (#161)', async () => {
+    const { engine, view } = await setup()
+    await engine.insert.text('body')
+    const box = view.canvas.getObjects()[0] as IText
+    box.set('text', 'Příliš žluťoučký kůň')
+    view.selectObjects([box])
+    const load = vi.spyOn(engine.fonts, 'load').mockResolvedValue(true)
+    engine.style.text({ fontFamily: 'Roboto' }, 'Change font')
+    expect(load).toHaveBeenCalledWith('Roboto', expect.anything(), expect.anything(), 'Příliš žluťoučký kůň')
+    engine.dispose()
+  })
+
   it('applies text patches (bold, size, case) to a text object', async () => {
     const { engine, view } = await setup()
     await engine.insert.text('body')
