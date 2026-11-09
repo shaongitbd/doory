@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Camera, Trash2 } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -49,7 +50,7 @@ export function ProfileSection() {
       const result = await authApi.uploadAvatar(pending, pending.name)
       setUser(result.user)
       setPending(null)
-      toast({ title: 'Profile photo updated', variant: 'success' })
+      toast({ title: msg("Profile photo updated"), variant: 'success' })
     } catch (error) {
       setPhotoError(describeFormError(error, ['avatar']).fields.avatar ?? describeFormError(error, ['avatar']).message)
     } finally {
@@ -63,7 +64,7 @@ export function ProfileSection() {
     try {
       const result = await authApi.removeAvatar()
       setUser(result.user)
-      toast({ title: 'Profile photo removed' })
+      toast({ title: msg("Profile photo removed") })
     } catch (error) {
       setPhotoError(describeFormError(error, []).message)
     } finally {
@@ -83,7 +84,7 @@ export function ProfileSection() {
     try {
       const result = await authApi.updateProfile({ display_name: next })
       setUser(result.user)
-      toast({ title: 'Name updated', variant: 'success' })
+      toast({ title: msg("Name updated"), variant: 'success' })
     } catch (error) {
       const failure = describeFormError(error, ['display_name'])
       setNameError(failure.fields.display_name ?? failure.message)
@@ -93,7 +94,7 @@ export function ProfileSection() {
   }
 
   return (
-    <SettingsCard id="profile" title="Profile" description="How you appear on designs you share and in comments.">
+    <SettingsCard id="profile" title={msg("Profile")} description={msg("How you appear on designs you share and in comments.")}>
       <div className={styles.avatarRow}>
         <Avatar name={shownName} src={previewUrl ?? user.avatar_url} size={72} />
         <div className={styles.avatarActions}>
@@ -101,11 +102,9 @@ export function ProfileSection() {
             {pending ? (
               <>
                 <Button size="sm" loading={photoBusy} onClick={() => void savePhoto()}>
-                  Save photo
-                </Button>
+                  {msg("Save photo")}</Button>
                 <Button size="sm" variant="ghost" onClick={() => setPending(null)} disabled={photoBusy}>
-                  Cancel
-                </Button>
+                  {msg("Cancel")}</Button>
               </>
             ) : (
               <>
@@ -114,14 +113,13 @@ export function ProfileSection() {
                 </Button>
                 {user.avatar_url ? (
                   <Button size="sm" variant="ghost" leftIcon={<Trash2 size={14} />} loading={photoBusy} onClick={() => void removePhoto()}>
-                    Remove
-                  </Button>
+                    {msg("Remove")}</Button>
                 ) : null}
               </>
             )}
           </div>
-          <input ref={picker} type="file" accept={AVATAR_TYPES.join(',')} className={styles.hiddenInput} onChange={choose} aria-label="Choose a profile photo" tabIndex={-1} />
-          <p className={styles.hint}>Square photos look best. PNG, JPG or WebP.</p>
+          <input ref={picker} type="file" accept={AVATAR_TYPES.join(',')} className={styles.hiddenInput} onChange={choose} aria-label={msg("Choose a profile photo")} tabIndex={-1} />
+          <p className={styles.hint}>{msg("Square photos look best. PNG, JPG or WebP.")}</p>
           {photoError ? (
             <p className={styles.error} role="alert">
               {photoError}
@@ -130,11 +128,10 @@ export function ProfileSection() {
         </div>
       </div>
       <form className={styles.form} onSubmit={saveName} noValidate>
-        <Input label="Display name" value={name} maxLength={80} autoComplete="name" onChange={(event) => setName(event.target.value)} error={nameError} />
+        <Input label={msg("Display name")} value={name} maxLength={80} autoComplete="name" onChange={(event) => setName(event.target.value)} error={nameError} />
         <div>
           <Button type="submit" loading={savingName} disabled={name.trim() === user.display_name}>
-            Save name
-          </Button>
+            {msg("Save name")}</Button>
         </div>
       </form>
     </SettingsCard>

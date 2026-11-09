@@ -1,3 +1,4 @@
+import { setLocale } from '@/i18n/locale'
 import { formatBytes, formatRelative } from './time'
 
 describe('formatRelative', () => {
@@ -15,6 +16,15 @@ describe('formatRelative', () => {
   it('accepts ISO strings and ignores garbage', () => {
     expect(formatRelative('2025-06-15T11:00:00Z', now)).toBe('1 hour ago')
     expect(formatRelative('not a date', now)).toBe('')
+  })
+
+  it('formats Chinese relative time with the active choice', () => {
+    setLocale('zh-CN')
+    expect(formatRelative(now - 10_000, now)).toBe('刚刚')
+    expect(formatRelative(now - 2 * 3600_000, now)).toMatch(/2/)
+    setLocale('zh-TW')
+    expect(formatRelative(now - 10_000, now)).toBe('剛剛')
+    setLocale('en')
   })
 })
 

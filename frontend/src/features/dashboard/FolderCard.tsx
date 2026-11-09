@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Folder, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -62,11 +63,9 @@ export function FolderCard({ folder, onRename, onDelete, onDropDesigns }: Folder
       </div>
       <Menu label={`Actions for folder ${folder.name}`} placement="bottom-end" trigger={<IconButton size="sm" label={`More actions for folder ${folder.name}`} icon={<MoreHorizontal size={18} />} />}>
         <MenuItem icon={<Pencil size={16} />} onSelect={() => setRenaming(true)}>
-          Rename
-        </MenuItem>
+          {msg("Rename")}</MenuItem>
         <MenuItem icon={<Trash2 size={16} />} danger onSelect={() => onDelete(folder)}>
-          Delete folder
-        </MenuItem>
+          {msg("Delete folder")}</MenuItem>
       </Menu>
     </div>
   )

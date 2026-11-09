@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useEffect, useRef, useState } from 'react'
 import { loadGoogleIdentity, type GoogleButtonOptions } from '@/lib/googleIdentity'
 import { Skeleton } from '@/ui'
@@ -41,7 +42,7 @@ export function GoogleButton({ onCredential, text = 'continue_with' }: GoogleBut
   }, [clientId, text])
 
   if (!clientId) return null
-  if (state === 'failed') return <p className={styles.unavailable}>Google sign-in is unavailable right now. You can still use your email.</p>
+  if (state === 'failed') return <p className={styles.unavailable}>{msg("Google sign-in is unavailable right now. You can still use your email.")}</p>
   return (
     <div className={styles.wrap}>
       {state === 'loading' ? <Skeleton height={44} radius="var(--radius-full)" /> : null}

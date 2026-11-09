@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { ArrowRight, LayoutGrid } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -31,7 +32,7 @@ export default function HomePage() {
   const catalogue = useSizePresets()
   const choices = useSizeChoices()
   const [allSizes, setAllSizes] = useState(false)
-  usePageTitle('Home')
+  usePageTitle(msg("Home"))
   const recent = useDesignsList({ ordering: '-updated_at', page_size: 8 })
   const starred = useDesignsList({ starred: true, ordering: '-updated_at', page_size: 4 })
   const templates = useTemplatesList({ page_size: 8 })
@@ -44,11 +45,10 @@ export default function HomePage() {
       <section aria-labelledby="quick-create" className={homeStyles.hero}>
         <div className={homeStyles.heroHead}>
           <h1 id="quick-create" className={homeStyles.heroTitle}>
-            Create a design
-          </h1>
+            {msg("Create a design")}</h1>
           <div className={homeStyles.heroLinks}>
-            <Link to="/create">Custom size</Link>
-            <Link to="/dashboard/templates">Start from a template</Link>
+            <Link to="/create">{msg("Custom size")}</Link>
+            <Link to="/dashboard/templates">{msg("Start from a template")}</Link>
           </div>
         </div>
         <ul className={homeStyles.chips}>
@@ -72,8 +72,8 @@ export default function HomePage() {
               <span className={homeStyles.shapeBox} aria-hidden="true">
                 <LayoutGrid size={24} />
               </span>
-              <span className={homeStyles.chipName}>All sizes</span>
-              <span className={homeStyles.chipSize}>{catalogue.presets.length} sizes</span>
+              <span className={homeStyles.chipName}>{msg("All sizes")}</span>
+              <span className={homeStyles.chipSize}>{catalogue.presets.length} {msg("sizes")}</span>
             </button>
           </li>
         </ul>
@@ -84,16 +84,15 @@ export default function HomePage() {
       <section aria-labelledby="recent" className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 id="recent" className={styles.sectionTitle}>
-            Recent designs
-          </h2>
-          <Link to="/dashboard/designs">View all</Link>
+            {msg("Recent designs")}</h2>
+          <Link to="/dashboard/designs">{msg("View all")}</Link>
         </div>
         {recent.isPending ? (
           <TileSkeletons count={4} />
         ) : recent.isError ? (
-          <EmptyState compact title="Your designs didn’t load" role="alert" action={<Button onClick={() => void recent.refetch()}>Try again</Button>} />
+          <EmptyState compact title={msg("Your designs didn’t load")} role="alert" action={<Button onClick={() => void recent.refetch()}>{msg("Try again")}</Button>} />
         ) : recentItems.length === 0 ? (
-          <p className={homeStyles.none}>Designs you make show up here.</p>
+          <p className={homeStyles.none}>{msg("Designs you make show up here.")}</p>
         ) : (
           <ul className={`${styles.grid} ${styles.row}`}>
             {recentItems.map((design) => (
@@ -108,8 +107,7 @@ export default function HomePage() {
       {starredItems.length > 0 ? (
         <section aria-labelledby="starred" className={styles.section}>
           <h2 id="starred" className={styles.sectionTitle}>
-            Starred
-          </h2>
+            {msg("Starred")}</h2>
           <ul className={styles.grid}>
             {starredItems.map((design) => (
               <li key={design.id}>
@@ -124,10 +122,9 @@ export default function HomePage() {
         <section aria-labelledby="start-template" className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 id="start-template" className={styles.sectionTitle}>
-              Start from a template
-            </h2>
+              {msg("Start from a template")}</h2>
             <Link to="/dashboard/templates" className={homeStyles.more}>
-              Browse templates <ArrowRight size={14} aria-hidden="true" />
+              {msg("Browse templates ")}<ArrowRight size={14} aria-hidden="true" />
             </Link>
           </div>
           <ul className={`${styles.grid} ${styles.row}`}>

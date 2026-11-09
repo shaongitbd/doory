@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { configureBackgroundRemoval } from '@/editor/engine/bgRemoval/install'
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus(me.value.user ? 'authenticated' : 'anonymous')
         setBootstrapError(null)
       } else {
-        setBootstrapError(isApiError(me.reason) ? me.reason : new ApiError({ status: 0, code: 'network_error', message: 'Could not reach Doory.' }))
+        setBootstrapError(isApiError(me.reason) ? me.reason : new ApiError({ status: 0, code: 'network_error', message: msg("Could not reach Doory.") }))
         userRef.current = null
         setUserState(null)
         setStatus('anonymous')

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { CircleAlert, CircleCheck, ImagePlus, RotateCw, X } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { formatBytes } from '@/lib/time'
@@ -43,17 +44,16 @@ export function UploadDropzone({ queue, items, maxBytes }: UploadDropzoneProps) 
         <span className={styles.icon} aria-hidden="true">
           <ImagePlus size={26} />
         </span>
-        <p className={styles.title}>Drag and drop images here</p>
-        <p className={styles.hint}>PNG, JPG, WebP, GIF, AVIF or SVG · up to {formatBytes(maxBytes)} each</p>
+        <p className={styles.title}>{msg("Drag and drop images here")}</p>
+        <p className={styles.hint}>{msg("PNG, JPG, WebP, GIF, AVIF or SVG · up to ")}{formatBytes(maxBytes)} {msg("each")}</p>
         <Button variant="secondary" onClick={() => input.current?.click()}>
-          Choose files
-        </Button>
-        <input ref={input} type="file" multiple accept={ACCEPT_ATTRIBUTE} className={styles.input} onChange={onChange} aria-label="Choose images to upload" tabIndex={-1} />
+          {msg("Choose files")}</Button>
+        <input ref={input} type="file" multiple accept={ACCEPT_ATTRIBUTE} className={styles.input} onChange={onChange} aria-label={msg("Choose images to upload")} tabIndex={-1} />
       </div>
 
       {items.length > 0 ? (
         <div className={styles.queue}>
-          <ul aria-label="Uploads" className={styles.list}>
+          <ul aria-label={msg("Uploads")} className={styles.list}>
             {items.map((item) => (
               <li key={item.id} className={styles.item} data-status={item.status}>
                 <span className={styles.status} aria-hidden="true">
@@ -66,7 +66,7 @@ export function UploadDropzone({ queue, items, maxBytes }: UploadDropzoneProps) 
                       {item.error}
                     </p>
                   ) : item.status === 'done' ? (
-                    <p className={styles.meta}>Uploaded · {formatBytes(item.size)}</p>
+                    <p className={styles.meta}>{msg("Uploaded · ")}{formatBytes(item.size)}</p>
                   ) : (
                     <progress className={styles.progress} max={100} value={Math.round(item.progress * 100)} aria-label={`Uploading ${item.name}`} />
                   )}
@@ -78,8 +78,7 @@ export function UploadDropzone({ queue, items, maxBytes }: UploadDropzoneProps) 
           </ul>
           {finished.length > 1 ? (
             <Button variant="ghost" size="sm" onClick={() => queue.clearFinished()}>
-              Clear finished
-            </Button>
+              {msg("Clear finished")}</Button>
           ) : null}
         </div>
       ) : null}

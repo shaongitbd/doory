@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Dialog, Spinner } from '@/ui'
 import type { MigrationProgress } from './adapters'
 import styles from './MigrationOverlay.module.css'
@@ -17,13 +18,13 @@ function describe(progress: MigrationProgress | null): { text: string; value: nu
 export function MigrationOverlay({ open, progress }: { open: boolean; progress: MigrationProgress | null }) {
   const { text, value } = describe(progress)
   return (
-    <Dialog open={open} onClose={() => undefined} dismissible={false} size="sm" title="Saving to your account" description="Keep this tab open while we move your design and images over.">
+    <Dialog open={open} onClose={() => undefined} dismissible={false} size="sm" title={msg("Saving to your account")} description={msg("Keep this tab open while we move your design and images over.")}>
       <div className={styles.body} role="status">
         <div className={styles.row}>
           <Spinner size={18} />
           <span>{text}</span>
         </div>
-        <progress className={styles.progress} max={100} value={Math.round(value)} aria-label="Upload progress" />
+        <progress className={styles.progress} max={100} value={Math.round(value)} aria-label={msg("Upload progress")} />
       </div>
     </Dialog>
   )

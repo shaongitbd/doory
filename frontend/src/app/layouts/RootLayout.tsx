@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { OfflineBanner } from '@/app/OfflineBanner'
@@ -28,8 +29,7 @@ export function RootLayout() {
   return (
     <AuthModalProvider>
       <a href="#main" className={styles.skip}>
-        Skip to content
-      </a>
+        {msg("Skip to content")}</a>
       <OfflineBanner />
       <Outlet />
     </AuthModalProvider>

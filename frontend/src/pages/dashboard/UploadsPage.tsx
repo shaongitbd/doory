@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Search, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -18,7 +19,7 @@ import uploadStyles from './UploadsPage.module.css'
 type Filter = 'all' | AssetKind
 
 export default function UploadsPage() {
-  usePageTitle('Uploads')
+  usePageTitle(msg("Uploads"))
   const { config } = useAuth()
   const { toast } = useToast()
   const { queue, items } = useUploadQueue(config.limits.max_upload_bytes)
@@ -36,8 +37,8 @@ export default function UploadsPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.heading}>
-          <h1 className={styles.title}>Uploads</h1>
-          <p className={styles.lead}>Your images and logos, ready to drop into any design.</p>
+          <h1 className={styles.title}>{msg("Uploads")}</h1>
+          <p className={styles.lead}>{msg("Your images and logos, ready to drop into any design.")}</p>
         </div>
         <UsageMeter />
       </header>
@@ -47,17 +48,16 @@ export default function UploadsPage() {
       <section aria-labelledby="library" className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 id="library" className={styles.sectionTitle}>
-            Library
-          </h2>
+            {msg("Library")}</h2>
           <div className={styles.tools}>
-            <Input label="Search uploads" hideLabel type="search" placeholder="Search uploads" leftIcon={<Search size={16} />} value={text} onChange={(event) => setText(event.target.value)} />
+            <Input label={msg("Search uploads")} hideLabel type="search" placeholder={msg("Search uploads")} leftIcon={<Search size={16} />} value={text} onChange={(event) => setText(event.target.value)} />
             <SegmentedControl
-              label="Type"
+              label={msg("Type")}
               value={filter}
               onChange={setFilter}
               options={[
-                { value: 'all', label: 'All' },
-                { value: 'image', label: 'Images' },
+                { value: 'all', label: msg("All") },
+                { value: 'image', label: msg("Images") },
                 { value: 'svg', label: 'SVG' },
               ]}
             />
@@ -66,7 +66,7 @@ export default function UploadsPage() {
 
         <div aria-live="polite" aria-busy={list.isPending}>
           {list.isPending ? (
-            <ul className={uploadStyles.grid} aria-label="Loading uploads">
+            <ul className={uploadStyles.grid} aria-label={msg("Loading uploads")}>
               {Array.from({ length: 8 }, (_, index) => (
                 <li key={index}>
                   <Skeleton height="12rem" radius="var(--radius-lg)" />
@@ -74,12 +74,12 @@ export default function UploadsPage() {
               ))}
             </ul>
           ) : list.isError ? (
-            <EmptyState title="Your uploads didn’t load" description={errorMessage(list.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void list.refetch()}>Try again</Button>} />
+            <EmptyState title={msg("Your uploads didn’t load")} description={errorMessage(list.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void list.refetch()}>{msg("Try again")}</Button>} />
           ) : assets.length === 0 ? (
             q || filter !== 'all' ? (
-              <EmptyState icon={<Search size={28} />} title="No uploads match" description="Try another search or filter." />
+              <EmptyState icon={<Search size={28} />} title={msg("No uploads match")} description={msg("Try another search or filter.")} />
             ) : (
-              <EmptyState icon={<Upload size={28} />} title="No uploads yet" description="Drop images above to build your library. They’ll show up in the editor’s Images panel too." />
+              <EmptyState icon={<Upload size={28} />} title={msg("No uploads yet")} description={msg("Drop images above to build your library. They’ll show up in the editor’s Images panel too.")} />
             )
           ) : (
             <ul className={uploadStyles.grid}>
@@ -93,8 +93,7 @@ export default function UploadsPage() {
           {list.hasNextPage ? (
             <div className={styles.more}>
               <Button variant="secondary" loading={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>
-                Load more
-              </Button>
+                {msg("Load more")}</Button>
             </div>
           ) : null}
         </div>
@@ -111,9 +110,9 @@ export default function UploadsPage() {
             {
               onSuccess: () => {
                 setEditing(null)
-                toast({ title: 'Upload updated', variant: 'success' })
+                toast({ title: msg("Upload updated"), variant: 'success' })
               },
-              onError: (error) => toast({ title: 'Couldn’t save changes', description: errorMessage(error), variant: 'error' }),
+              onError: (error) => toast({ title: msg("Couldn’t save changes"), description: errorMessage(error), variant: 'error' }),
             },
           )
         }
@@ -121,7 +120,7 @@ export default function UploadsPage() {
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete “${deleting?.name ?? ''}”?`}
-        description="The file is removed from your account. Designs that still use this image will no longer show it."
+        description={msg("The file is removed from your account. Designs that still use this image will no longer show it.")}
         confirmLabel="Delete image"
         tone="danger"
         loading={remove.isPending}
@@ -131,9 +130,9 @@ export default function UploadsPage() {
           remove.mutate(deleting.id, {
             onSuccess: () => {
               setDeleting(null)
-              toast({ title: 'Image deleted' })
+              toast({ title: msg("Image deleted") })
             },
-            onError: (error) => toast({ title: 'Couldn’t delete the image', description: errorMessage(error), variant: 'error' }),
+            onError: (error) => toast({ title: msg("Couldn’t delete the image"), description: errorMessage(error), variant: 'error' }),
           })
         }}
       />

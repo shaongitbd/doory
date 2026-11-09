@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Folder, FolderClosed, Home, LayoutTemplate, Palette, Search, Settings, Star, Trash2, Upload } from 'lucide-react'
 import { Suspense, useState, type FormEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -14,18 +15,18 @@ import styles from './DashboardLayout.module.css'
 type NavItem = { to: string; label: string; icon: typeof Home; end: boolean }
 
 const MAIN: NavItem[] = [
-  { to: '/dashboard', label: 'Home', icon: Home, end: true },
-  { to: '/dashboard/designs', label: 'Designs', icon: Folder, end: false },
-  { to: '/dashboard/starred', label: 'Starred', icon: Star, end: false },
-  { to: '/dashboard/templates', label: 'Templates', icon: LayoutTemplate, end: false },
+  { to: '/dashboard', label: msg("Home"), icon: Home, end: true },
+  { to: '/dashboard/designs', label: msg("Designs"), icon: Folder, end: false },
+  { to: '/dashboard/starred', label: msg("Starred"), icon: Star, end: false },
+  { to: '/dashboard/templates', label: msg("Templates"), icon: LayoutTemplate, end: false },
 ]
 const LIBRARY: NavItem[] = [
-  { to: '/dashboard/brand', label: 'Brand', icon: Palette, end: false },
-  { to: '/dashboard/uploads', label: 'Uploads', icon: Upload, end: false },
+  { to: '/dashboard/brand', label: msg("Brand"), icon: Palette, end: false },
+  { to: '/dashboard/uploads', label: msg("Uploads"), icon: Upload, end: false },
 ]
 const FOOT: NavItem[] = [
-  { to: '/dashboard/trash', label: 'Trash', icon: Trash2, end: false },
-  { to: '/settings', label: 'Settings', icon: Settings, end: false },
+  { to: '/dashboard/trash', label: msg("Trash"), icon: Trash2, end: false },
+  { to: '/settings', label: msg("Settings"), icon: Settings, end: false },
 ]
 /** The tab bar on small screens has room for the main places only. */
 const TABS: NavItem[] = [...MAIN, ...LIBRARY, ...FOOT]
@@ -51,7 +52,7 @@ function SidebarFolders() {
   if (top.length === 0) return null
   return (
     <div className={styles.group}>
-      <p className={styles.groupLabel}>Folders</p>
+      <p className={styles.groupLabel}>{msg("Folders")}</p>
       {top.slice(0, SIDEBAR_FOLDERS).map((folder) => (
         <NavLink key={folder.id} to={`/dashboard/designs/folder/${folder.id}`} className={`${styles.link} ${styles.folder}`}>
           <FolderClosed size={16} aria-hidden="true" />
@@ -61,8 +62,7 @@ function SidebarFolders() {
       ))}
       {top.length > SIDEBAR_FOLDERS ? (
         <Link to="/dashboard/designs" className={styles.allFolders}>
-          All {top.length} folders
-        </Link>
+          {msg("All ")}{top.length} {msg("folders")}</Link>
       ) : null}
     </div>
   )
@@ -81,7 +81,7 @@ function DashboardSearch({ initial }: { initial: string }) {
 
   return (
     <form role="search" className={styles.search} onSubmit={submitSearch}>
-      <Input label="Search your designs" hideLabel type="search" placeholder="Search designs" leftIcon={<Search size={16} />} value={search} onChange={(event) => setSearch(event.target.value)} />
+      <Input label={msg("Search your designs")} hideLabel type="search" placeholder={msg("Search designs")} leftIcon={<Search size={16} />} value={search} onChange={(event) => setSearch(event.target.value)} />
     </form>
   )
 }
@@ -96,15 +96,15 @@ export default function DashboardLayout() {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <Link to="/dashboard" className={styles.logo} aria-label="Doory dashboard">
+        <Link to="/dashboard" className={styles.logo} aria-label={msg("Doory dashboard")}>
           <Logo height={30} />
         </Link>
-        <nav aria-label="Dashboard" className={styles.nav}>
+        <nav aria-label={msg("Dashboard")} className={styles.nav}>
           <div className={styles.group}>
             <NavLinks items={MAIN} />
           </div>
           <div className={styles.group}>
-            <p className={styles.groupLabel}>Library</p>
+            <p className={styles.groupLabel}>{msg("Library")}</p>
             <NavLinks items={LIBRARY} />
           </div>
           <SidebarFolders />
@@ -118,7 +118,7 @@ export default function DashboardLayout() {
       </aside>
       <div className={styles.column}>
         <header className={styles.topbar}>
-          <Link to="/dashboard" className={styles.mobileLogo} aria-label="Doory dashboard">
+          <Link to="/dashboard" className={styles.mobileLogo} aria-label={msg("Doory dashboard")}>
             <Logo variant="mark" height={30} />
           </Link>
           <DashboardSearch key={searchValue} initial={searchValue} />
@@ -127,7 +127,7 @@ export default function DashboardLayout() {
             <AccountMenu />
           </div>
         </header>
-        <nav aria-label="Dashboard sections" className={styles.tabs}>
+        <nav aria-label={msg("Dashboard sections")} className={styles.tabs}>
           {TABS.map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} className={styles.tab}>
               <Icon size={16} aria-hidden="true" />

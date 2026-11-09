@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { MailWarning } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -20,9 +21,9 @@ export function VerifyEmailBanner() {
     try {
       await authApi.resendVerification()
       setSent(true)
-      toast({ title: 'Verification email sent', description: `Check ${user?.email} for the link.`, variant: 'success' })
+      toast({ title: msg("Verification email sent"), description: `Check ${user?.email} for the link.`, variant: 'success' })
     } catch (error) {
-      toast({ title: 'Couldn’t send the email', description: isApiError(error) && error.isRateLimited ? rateLimitMessage(error.retryAfter) : 'Please try again shortly.', variant: 'error' })
+      toast({ title: msg("Couldn’t send the email"), description: isApiError(error) && error.isRateLimited ? rateLimitMessage(error.retryAfter) : 'Please try again shortly.', variant: 'error' })
     } finally {
       setBusy(false)
     }
@@ -32,8 +33,7 @@ export function VerifyEmailBanner() {
     <div className={styles.banner} role="status">
       <MailWarning size={18} aria-hidden="true" />
       <p className={styles.text}>
-        <strong>Verify your email.</strong> We sent a link to {user.email}. Confirm it to keep your account recoverable.
-      </p>
+        <strong>{msg("Verify your email.")}</strong> {msg("We sent a link to ")}{user.email}{msg(". Confirm it to keep your account recoverable.")}</p>
       <Button size="sm" variant="secondary" loading={busy} disabled={sent} onClick={() => void resend()}>
         {sent ? 'Email sent' : 'Resend email'}
       </Button>

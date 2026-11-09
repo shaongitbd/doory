@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { LogOut, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -25,28 +26,26 @@ export function DangerSection() {
       await logout()
       navigate('/', { replace: true })
     } catch {
-      toast({ title: 'Couldn’t sign out', description: 'Please try again.', variant: 'error' })
+      toast({ title: msg("Couldn’t sign out"), description: msg("Please try again."), variant: 'error' })
       setSigningOut(false)
     }
   }
 
   return (
     <>
-      <SettingsCard id="session" title="Session" description="Sign out of Doory on this device.">
+      <SettingsCard id="session" title={msg("Session")} description={msg("Sign out of Doory on this device.")}>
         <div>
           <Button variant="secondary" leftIcon={<LogOut size={16} />} loading={signingOut} onClick={() => void signOut()}>
-            Sign out
-          </Button>
+            {msg("Sign out")}</Button>
         </div>
       </SettingsCard>
-      <SettingsCard id="danger" title="Delete account" description="Permanently deletes your account, designs, uploads and brand kits. This can’t be undone." tone="danger">
+      <SettingsCard id="danger" title={msg("Delete account")} description={msg("Permanently deletes your account, designs, uploads and brand kits. This can’t be undone.")} tone="danger">
         <div>
           <Button variant="danger" leftIcon={<Trash2 size={16} />} onClick={() => setOpen(true)}>
-            Delete my account…
-          </Button>
+            {msg("Delete my account…")}</Button>
         </div>
       </SettingsCard>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Delete your account?" description="Everything you’ve made in Doory will be erased for good." size="sm">
+      <Dialog open={open} onClose={() => setOpen(false)} title={msg("Delete your account?")} description={msg("Everything you’ve made in Doory will be erased for good.")} size="sm">
         {open ? (
           <DeleteForm
             hasPassword={user.has_password}
@@ -55,7 +54,7 @@ export function DangerSection() {
             onDeleted={() => {
               navigate('/', { replace: true })
               clearSession()
-              toast({ title: 'Your account was deleted', description: 'Thanks for trying Doory.' })
+              toast({ title: msg("Your account was deleted"), description: msg("Thanks for trying Doory.") })
             }}
           />
         ) : null}
@@ -95,14 +94,12 @@ function DeleteForm({ hasPassword, email, onCancel, onDeleted }: { hasPassword: 
         </p>
       ) : null}
       <Input label={hasPassword ? `Type ${DELETE_PHRASE} to confirm` : 'Type your email address to confirm'} value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" spellCheck={false} autoFocus />
-      {hasPassword ? <PasswordInput label="Your password" name="current-password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /> : null}
+      {hasPassword ? <PasswordInput label={msg("Your password")} name="current-password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /> : null}
       <div className={styles.dialogFooter}>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
-          Cancel
-        </Button>
+          {msg("Cancel")}</Button>
         <Button type="submit" variant="danger" loading={busy} disabled={!ready}>
-          Delete account
-        </Button>
+          {msg("Delete account")}</Button>
       </div>
     </form>
   )

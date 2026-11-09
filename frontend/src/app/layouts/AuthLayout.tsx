@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Suspense } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { PageLoader } from '@/app/PageLoader'
@@ -11,7 +12,7 @@ export function AuthLayout() {
     <div className={styles.page}>
       <div className={styles.formSide}>
         <header className={styles.top}>
-          <Link to="/" aria-label="Doory home" className={styles.logo}>
+          <Link to="/" aria-label={msg("Doory home")} className={styles.logo}>
             <Logo height={30} />
           </Link>
         </header>

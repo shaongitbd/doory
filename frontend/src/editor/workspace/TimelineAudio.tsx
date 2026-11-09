@@ -8,6 +8,7 @@
  * Tracks of the whole design are drawn here too, where they reach this page: a piece of music that began on an earlier
  * page enters from the left edge, and a bar cut by the end of the page says so.
  */
+import { msg } from '@/i18n/catalog'
 import { Headphones, Layers, File, FileAudio, Mic, Music, Plus, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { AudioTrack, AudioTrackKind } from '@/types/document'
@@ -294,7 +295,7 @@ export function AudioList({ pageId, readOnly }: { pageId: string; readOnly: bool
           <li key={track.id} className={styles.listItem} data-muted={track.muted || undefined}>
             <span className={styles.listName}>{name}</span>
             <span className={styles.listMeta}>
-              {scopeLabel(track, pages)} · {formatTime(Math.max(0, startMs), true)} to {formatTime(Math.min(endMs, scopeEndMs), true)}
+              {scopeLabel(track, pages)} · {formatTime(Math.max(0, startMs), true)} {msg('to')} {formatTime(Math.min(endMs, scopeEndMs), true)}
             </span>
             {readOnly ? null : (
               <button type="button" className={styles.switch} aria-pressed={track.muted} aria-label={track.muted ? t.audio.tracks.unmute(name) : t.audio.tracks.mute(name)} onClick={() => editor.audio.setMuted(track.id, !track.muted)}>

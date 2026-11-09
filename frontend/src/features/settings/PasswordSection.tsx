@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { describeFormError } from '@/features/auth/errors'
@@ -51,8 +52,8 @@ export function PasswordSection() {
             {formError}
           </p>
         ) : null}
-        {hasPassword ? <PasswordInput label="Current password" name="current-password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} error={errors.old_password} /> : null}
-        <PasswordInput label="New password" name="new-password" autoComplete="new-password" value={next} onChange={(event) => setNext(event.target.value)} error={errors.new_password} showStrength />
+        {hasPassword ? <PasswordInput label={msg("Current password")} name="current-password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} error={errors.old_password} /> : null}
+        <PasswordInput label={msg("New password")} name="new-password" autoComplete="new-password" value={next} onChange={(event) => setNext(event.target.value)} error={errors.new_password} showStrength />
         <div>
           <Button type="submit" loading={busy}>
             {hasPassword ? 'Change password' : 'Set password'}

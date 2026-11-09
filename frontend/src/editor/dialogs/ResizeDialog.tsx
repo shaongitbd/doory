@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Lock, LockOpen } from 'lucide-react'
 import { useState } from 'react'
 import { findPresetBySize, quickPresets, useSizePresets, type SizePresetCatalogue } from '@/lib/sizePresets'
@@ -121,7 +122,7 @@ export function ResizeDialog({ props }: { props?: Record<string, unknown> }) {
             <NumberField label={t.dialog.resizeHeight} showLabel value={show(h)} decimals={dec} min={range.min} max={range.max} hint={rangeHint(range, unit)} step={range.step} suffix={unit} onChange={(v) => setHeight(unitToPx(v, unit))} />
           </div>
           <p className={styles.muted}>
-            {t.dialog.resizeCurrent}: {current.width} × {current.height} px · New: {next.width} × {next.height} px
+            {t.dialog.resizeCurrent}: {current.width} × {current.height} px · {msg('New')}: {next.width} × {next.height} px
           </p>
           {multiple ? (
             <div role="radiogroup" aria-label={t.dialog.resizeScope} className={scopeStyles.scope}>

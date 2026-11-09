@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Accent, PageIntro } from '@/features/marketing/PageIntro'
@@ -21,7 +22,7 @@ const FAQ_ITEMS: FaqItem[] = [
 export default function FaqPage() {
   usePageMeta({
     title: 'FAQ',
-    description: 'Answers to common questions about Doory: accounts, pricing, where designs are stored, exporting and self-hosting.',
+    description: msg("Answers to common questions about Doory: accounts, pricing, where designs are stored, exporting and self-hosting."),
     canonical: '/faq',
   })
   return (
@@ -30,7 +31,7 @@ export default function FaqPage() {
         eyebrow="questions?"
         title={
           <>
-            Frequently asked <Accent>questions</Accent>
+            {msg("Frequently asked ")}<Accent>{msg("questions")}</Accent>
           </>
         }
         lead="The short answers to what people ask us most. If yours isn’t here, just ask."
@@ -38,10 +39,9 @@ export default function FaqPage() {
       />
       <FaqList items={FAQ_ITEMS} />
       <p className={styles.more}>
-        <span className={styles.hand}>still curious?</span>{' '}
+        <span className={styles.hand}>{msg("still curious?")}</span>{' '}
         <Link to="/contact" className={styles.moreLink}>
-          Get in touch
-        </Link>
+          {msg("Get in touch")}</Link>
       </p>
     </div>
   )

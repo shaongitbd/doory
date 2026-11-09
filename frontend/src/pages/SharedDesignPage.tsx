@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useQuery } from '@tanstack/react-query'
 import { KeyRound, LinkIcon, PencilLine } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
@@ -91,7 +92,7 @@ export default function SharedDesignPage() {
     return () => room?.early.release()
   }, [adapter])
 
-  if (query.isPending) return <EditorSkeleton label="Opening the shared design" />
+  if (query.isPending) return <EditorSkeleton label={msg("Opening the shared design")} />
 
   if (query.isError) {
     if (isPasswordProblem(query.error)) {
@@ -102,10 +103,10 @@ export default function SharedDesignPage() {
         <main id="main" tabIndex={-1} className={styles.center}>
           <EmptyState
             icon={<LinkIcon size={28} />}
-            title="This link doesn’t work"
-            description="It may have been turned off, it may have expired, or it was never valid. Ask the owner for a new link."
+            title={msg("This link doesn’t work")}
+            description={msg("It may have been turned off, it may have expired, or it was never valid. Ask the owner for a new link.")}
             role="alert"
-            action={<LinkButton to="/create">Design something of your own</LinkButton>}
+            action={<LinkButton to="/create">{msg("Design something of your own")}</LinkButton>}
           />
         </main>
       )
@@ -122,7 +123,7 @@ export default function SharedDesignPage() {
           icon={<PencilLine size={28} />}
           title={`Sign in to edit “${shared.title}”`}
           description={`${shared.owner.name} invited you to edit this design. Log in or create a free account to continue.`}
-          action={<Button onClick={() => void openAuthModal({ reason: 'generic', tab: 'login' })}>Sign in to edit</Button>}
+          action={<Button onClick={() => void openAuthModal({ reason: 'generic', tab: 'login' })}>{msg("Sign in to edit")}</Button>}
         />
       </main>
     )
@@ -142,11 +143,10 @@ export default function SharedDesignPage() {
         <div className={styles.topEnd}>
           <span className={styles.owner}>
             <Avatar name={shared.owner.name} src={shared.owner.avatar_url} size={24} />
-            <span>Shared by {shared.owner.name}</span>
+            <span>{msg("Shared by ")}{shared.owner.name}</span>
           </span>
           <LinkButton to="/create" size="sm" variant="secondary">
-            Design your own
-          </LinkButton>
+            {msg("Design your own")}</LinkButton>
         </div>
       }
     />
@@ -155,7 +155,7 @@ export default function SharedDesignPage() {
 
 function PasswordGate({ error, busy, onSubmit }: { error?: string; busy: boolean; onSubmit(password: string): void }) {
   const [value, setValue] = useState('')
-  usePageMeta({ title: 'Password required', noindex: true })
+  usePageMeta({ title: msg("Password required"), noindex: true })
   function submit(event: FormEvent) {
     event.preventDefault()
     if (value) onSubmit(value)
@@ -166,12 +166,11 @@ function PasswordGate({ error, busy, onSubmit }: { error?: string; busy: boolean
         <span className={styles.gateIcon} aria-hidden="true">
           <KeyRound size={28} />
         </span>
-        <h1 className={styles.gateTitle}>This design is protected</h1>
-        <p className={styles.gateLead}>Enter the password the owner shared with you.</p>
-        <Input label="Password" type="password" name="share-password" autoComplete="off" autoFocus value={value} onChange={(event) => setValue(event.target.value)} error={error} />
+        <h1 className={styles.gateTitle}>{msg("This design is protected")}</h1>
+        <p className={styles.gateLead}>{msg("Enter the password the owner shared with you.")}</p>
+        <Input label={msg("Password")} type="password" name="share-password" autoComplete="off" autoFocus value={value} onChange={(event) => setValue(event.target.value)} error={error} />
         <Button type="submit" size="lg" fullWidth loading={busy} disabled={!value}>
-          Open design
-        </Button>
+          {msg("Open design")}</Button>
       </form>
     </main>
   )

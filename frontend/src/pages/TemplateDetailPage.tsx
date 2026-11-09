@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { ArrowLeft, Sparkles } from 'lucide-react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -31,7 +32,7 @@ export default function TemplateDetailPage() {
   const use = useMutation({
     mutationFn: () => templatesApi.use(slug),
     onSuccess: (design) => navigate(`/design/${design.id}`),
-    onError: (error) => toast({ title: 'Couldn’t use this template', description: isApiError(error) ? error.message : 'Please try again.', variant: 'error' }),
+    onError: (error) => toast({ title: msg("Couldn’t use this template"), description: isApiError(error) ? error.message : 'Please try again.', variant: 'error' }),
   })
 
   if (query.isPending) {
@@ -58,10 +59,9 @@ export default function TemplateDetailPage() {
         role="alert"
         action={
           <>
-            {notFound ? null : <Button onClick={() => void query.refetch()}>Try again</Button>}
+            {notFound ? null : <Button onClick={() => void query.refetch()}>{msg("Try again")}</Button>}
             <LinkButton to="/templates" variant="secondary">
-              Browse templates
-            </LinkButton>
+              {msg("Browse templates")}</LinkButton>
           </>
         }
       />
@@ -78,8 +78,7 @@ export default function TemplateDetailPage() {
   return (
     <div className={styles.page}>
       <Link to="/templates" className={styles.back}>
-        <ArrowLeft size={16} aria-hidden="true" /> All templates
-      </Link>
+        <ArrowLeft size={16} aria-hidden="true" /> {msg("All templates")}</Link>
       <div className={styles.layout}>
         <div className={styles.preview}>
           <Thumbnail src={template.thumbnail_url} alt={`${template.title} template preview`} aspect={Math.min(Math.max(aspect, 0.45), 2.2)} fit="contain" className={styles.previewImage} />
@@ -88,11 +87,11 @@ export default function TemplateDetailPage() {
           {template.category ? <Badge tone="brand">{template.category.name}</Badge> : null}
           <h1 className={styles.title}>{template.title}</h1>
           <p className={styles.facts}>
-            {template.width} × {template.height} px · {template.page_count} {template.page_count === 1 ? 'page' : 'pages'}
+            {template.width} × {template.height} {msg("px · ")}{template.page_count} {template.page_count === 1 ? 'page' : 'pages'}
           </p>
           {template.description ? <p className={styles.description}>{template.description}</p> : null}
           {template.tags.length > 0 ? (
-            <ul className={styles.tags} aria-label="Tags">
+            <ul className={styles.tags} aria-label={msg("Tags")}>
               {template.tags.map((tag) => (
                 <li key={tag}>
                   <Link to={`/templates?q=${encodeURIComponent(tag)}`} className={styles.tag}>
@@ -104,8 +103,7 @@ export default function TemplateDetailPage() {
           ) : null}
           <div className={styles.actions}>
             <Button size="lg" leftIcon={<Sparkles size={18} />} loading={use.isPending} onClick={startFromTemplate}>
-              Use this template
-            </Button>
+              {msg("Use this template")}</Button>
             <p className={styles.hint}>{status === 'authenticated' ? 'We’ll add a copy to your designs.' : 'No account needed. It opens right in your browser.'}</p>
           </div>
         </div>
@@ -114,8 +112,7 @@ export default function TemplateDetailPage() {
       {relatedItems.length > 0 ? (
         <section className={styles.related} aria-labelledby="related-title">
           <h2 id="related-title" className={styles.relatedTitle}>
-            More like this
-          </h2>
+            {msg("More like this")}</h2>
           <ul className={styles.relatedGrid}>
             {relatedItems.map((item) => (
               <li key={item.id}>

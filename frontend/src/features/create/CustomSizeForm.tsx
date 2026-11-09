@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Link2, Unlink2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { CUSTOM_UNITS, formatUnitValue, lockedCounterpart, MAX_DIMENSION, parseCustomSize, pxToUnit, unitToPx, type CustomUnit } from '@/features/presets'
@@ -69,10 +70,10 @@ export function CustomSizeForm({ onSubmit, submitLabel = 'Create design' }: Cust
   const preview = parseCustomSize({ width, height, unit })
 
   return (
-    <form className={styles.form} onSubmit={submit} noValidate aria-label="Custom size">
+    <form className={styles.form} onSubmit={submit} noValidate aria-label={msg("Custom size")}>
       <div className={styles.fields}>
         <div className={styles.row}>
-          <Input label="Width" inputMode="decimal" value={width} onChange={(event) => changeDimension('width', event.target.value)} error={error?.field === 'width' ? error.message : undefined} />
+          <Input label={msg("Width")} inputMode="decimal" value={width} onChange={(event) => changeDimension('width', event.target.value)} error={error?.field === 'width' ? error.message : undefined} />
           <IconButton
             className={styles.lock}
             label={locked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
@@ -80,13 +81,13 @@ export function CustomSizeForm({ onSubmit, submitLabel = 'Create design' }: Cust
             icon={locked ? <Link2 size={18} /> : <Unlink2 size={18} />}
             onClick={toggleLock}
           />
-          <Input label="Height" inputMode="decimal" value={height} onChange={(event) => changeDimension('height', event.target.value)} error={error?.field === 'height' ? error.message : undefined} />
-          <Select label="Unit" value={unit} onChange={(event) => changeUnit(event.target.value as CustomUnit)} options={CUSTOM_UNITS.map((value) => ({ value, label: value }))} />
+          <Input label={msg("Height")} inputMode="decimal" value={height} onChange={(event) => changeDimension('height', event.target.value)} error={error?.field === 'height' ? error.message : undefined} />
+          <Select label={msg("Unit")} value={unit} onChange={(event) => changeUnit(event.target.value as CustomUnit)} options={CUSTOM_UNITS.map((value) => ({ value, label: value }))} />
         </div>
         <p className={styles.hint}>{maxHint}</p>
         <Button type="submit">{submitLabel}</Button>
       </div>
-      <figure className={styles.preview} aria-label="Preview">
+      <figure className={styles.preview} aria-label={msg("Preview")}>
         {preview.ok ? <PresetShape preset={preview} size={140} /> : null}
         <figcaption>{preview.ok ? `${width} × ${height} ${unit}` : 'Enter a width and a height'}</figcaption>
       </figure>

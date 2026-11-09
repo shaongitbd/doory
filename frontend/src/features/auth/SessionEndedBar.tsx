@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useEffect } from 'react'
 import { Button } from '@/ui'
 import { useAuthModal } from './AuthModalProvider'
@@ -21,11 +22,10 @@ export function SessionEndedBar() {
   return (
     <div className={styles.bar} role="alert">
       <p className={styles.text}>
-        <strong>Your session ended.</strong> Changes are kept on this page but can’t be saved until you sign in{lostSession ? ` as ${lostSession.email}` : ''}.
+        <strong>{msg("Your session ended.")}</strong> {msg("Changes are kept on this page but can’t be saved until you sign in")}{lostSession ? ` as ${lostSession.email}` : ''}.
       </p>
       <Button size="sm" onClick={() => void openAuthModal({ reason: 'session-expired', tab: 'login' })}>
-        Sign in
-      </Button>
+        {msg("Sign in")}</Button>
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Trash2, Type, Upload } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { t } from '@/editor/strings'
@@ -58,7 +59,7 @@ export function BrandFonts() {
           <h2 id="brand-fonts-title" className={styles.title}>
             {t.userFonts.manage}
           </h2>
-          <p className={styles.lead}>Upload fonts you have the right to use, then pick them in the editor and in your brand kits.</p>
+          <p className={styles.lead}>{msg("Upload fonts you have the right to use, then pick them in the editor and in your brand kits.")}</p>
         </div>
         {items.length > 0 ? upload : null}
       </header>
@@ -75,7 +76,7 @@ export function BrandFonts() {
         ) : fonts.isError ? (
           <EmptyState title={t.userFonts.manageLoadFailed} description={errorMessage(fonts.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void fonts.refetch()}>{t.userFonts.retry}</Button>} />
         ) : items.length === 0 ? (
-          <EmptyState icon={<Type size={28} />} title="Bring your own fonts" description={t.userFonts.manageEmpty} action={upload} />
+          <EmptyState icon={<Type size={28} />} title={msg("Bring your own fonts")} description={t.userFonts.manageEmpty} action={upload} />
         ) : (
           <ul className={styles.grid}>
             {items.map((family) => (
@@ -85,15 +86,13 @@ export function BrandFonts() {
                     {family.family}
                   </div>
                   <p className={styles.sample} style={{ fontFamily: `"${family.family}", sans-serif` }} aria-hidden="true">
-                    The quick brown fox jumps over the lazy dog
-                  </p>
+                    {msg("The quick brown fox jumps over the lazy dog")}</p>
                   <p className={styles.meta}>
                     {t.userFonts.styles(family.variants.length)}: {family.variants.map((v) => variantLabel(v.weight, v.style)).join(' · ')}
                   </p>
                   <div className={styles.actions}>
                     <Button size="sm" variant="ghost" leftIcon={<Trash2 size={14} />} onClick={() => setDeleting(family)} aria-label={t.userFonts.deleteFont(family.family)}>
-                      Delete
-                    </Button>
+                      {msg("Delete")}</Button>
                   </div>
                 </Card>
               </li>

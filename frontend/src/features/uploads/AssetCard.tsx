@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { MoreHorizontal, Pencil, Tag, Trash2 } from 'lucide-react'
 import { formatBytes } from '@/lib/time'
 import type { Asset } from '@/types/api'
@@ -24,7 +25,7 @@ export function AssetCard({ asset, onEdit, onDelete }: AssetCardProps) {
           {asset.kind === 'svg' ? ' · SVG' : ''}
         </p>
         {asset.tags.length > 0 ? (
-          <ul className={styles.tags} aria-label="Tags">
+          <ul className={styles.tags} aria-label={msg("Tags")}>
             {asset.tags.slice(0, 3).map((tag) => (
               <li key={tag}>
                 <Badge>{tag}</Badge>
@@ -37,14 +38,11 @@ export function AssetCard({ asset, onEdit, onDelete }: AssetCardProps) {
       <div className={styles.menu}>
         <Menu label={`Actions for ${asset.name}`} placement="bottom-end" trigger={<IconButton size="sm" variant="secondary" label={`More actions for ${asset.name}`} icon={<MoreHorizontal size={18} />} />}>
           <MenuItem icon={<Pencil size={16} />} onSelect={() => onEdit(asset)}>
-            Rename
-          </MenuItem>
+            {msg("Rename")}</MenuItem>
           <MenuItem icon={<Tag size={16} />} onSelect={() => onEdit(asset)}>
-            Edit tags
-          </MenuItem>
+            {msg("Edit tags")}</MenuItem>
           <MenuItem icon={<Trash2 size={16} />} danger onSelect={() => onDelete(asset)}>
-            Delete
-          </MenuItem>
+            {msg("Delete")}</MenuItem>
         </Menu>
       </div>
     </article>

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Plus, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { newId } from '@/lib/document'
@@ -9,9 +10,9 @@ import styles from './BrandKitEditor.module.css'
 
 export const MAX_BRAND_COLORS = 20
 const ROLES: Array<{ role: BrandFont['role']; label: string }> = [
-  { role: 'heading', label: 'Heading font' },
-  { role: 'subheading', label: 'Subheading font' },
-  { role: 'body', label: 'Body font' },
+  { role: 'heading', label: msg("Heading font") },
+  { role: 'subheading', label: msg("Subheading font") },
+  { role: 'body', label: msg("Body font") },
 ]
 
 export interface BrandKitEditorProps {
@@ -25,7 +26,7 @@ export interface BrandKitEditorProps {
 
 export function BrandKitEditor({ kit, busy, error, onClose, onSave }: BrandKitEditorProps) {
   return (
-    <Dialog open={kit !== undefined} onClose={onClose} title={kit ? 'Edit brand kit' : 'New brand kit'} description="Colours, fonts and logos you can reuse in every design." size="lg">
+    <Dialog open={kit !== undefined} onClose={onClose} title={kit ? 'Edit brand kit' : 'New brand kit'} description={msg("Colours, fonts and logos you can reuse in every design.")} size="lg">
       {kit !== undefined ? <EditorForm key={kit?.id ?? 'new'} kit={kit} busy={busy} error={error} onClose={onClose} onSave={onSave} /> : null}
     </Dialog>
   )
@@ -59,7 +60,7 @@ function ColorRow({ color, onChange, onRemove, index }: { color: BrandColor; onC
         }}
         spellCheck={false}
       />
-      <Input label={`Colour ${index + 1} name`} hideLabel placeholder="Name (optional)" value={color.name} maxLength={40} onChange={(event) => onChange({ ...color, name: event.target.value })} />
+      <Input label={`Colour ${index + 1} name`} hideLabel placeholder={msg("Name (optional)")} value={color.name} maxLength={40} onChange={(event) => onChange({ ...color, name: event.target.value })} />
       <IconButton label={`Remove colour ${index + 1}`} size="sm" variant="danger" icon={<Trash2 size={16} />} onClick={onRemove} />
     </li>
   )
@@ -81,7 +82,7 @@ function EditorForm({ kit, busy, error, onClose, onSave }: { kit: BrandKit | nul
   const families = new Set((fontList.data ?? []).map((font) => font.family))
   for (const family of uploaded) families.add(family)
   for (const font of fonts) families.add(font.family)
-  const fontOptions = [{ value: '', label: 'Default' }, ...[...families].sort((a, b) => a.localeCompare(b)).map((family) => ({ value: family, label: uploaded.has(family) ? `${family} (uploaded)` : family }))]
+  const fontOptions = [{ value: '', label: msg("Default") }, ...[...families].sort((a, b) => a.localeCompare(b)).map((family) => ({ value: family, label: uploaded.has(family) ? `${family} (uploaded)` : family }))]
   const fontFor = (role: BrandFont['role']) => fonts.find((font) => font.role === role)?.family ?? ''
 
   const nameError = name.trim() ? undefined : 'Give your kit a name.'
@@ -111,38 +112,37 @@ function EditorForm({ kit, busy, error, onClose, onSave }: { kit: BrandKit | nul
         </p>
       ) : null}
       <div className={styles.row}>
-        <Input label="Kit name" value={name} maxLength={60} autoFocus onChange={(event) => setName(event.target.value)} error={nameError && name.length === 0 ? undefined : nameError} />
-        <Switch label="Use as my default kit" description="Applied to new designs." checked={isDefault} onChange={(event) => setIsDefault(event.target.checked)} />
+        <Input label={msg("Kit name")} value={name} maxLength={60} autoFocus onChange={(event) => setName(event.target.value)} error={nameError && name.length === 0 ? undefined : nameError} />
+        <Switch label={msg("Use as my default kit")} description={msg("Applied to new designs.")} checked={isDefault} onChange={(event) => setIsDefault(event.target.checked)} />
       </div>
 
       <fieldset className={styles.fieldset}>
-        <legend>Colours</legend>
+        <legend>{msg("Colours")}</legend>
         <ul className={styles.colors}>
           {colors.map((color, index) => (
             <ColorRow key={color.id} color={color} index={index} onChange={(next) => setColors((current) => current.map((item) => (item.id === color.id ? next : item)))} onRemove={() => setColors((current) => current.filter((item) => item.id !== color.id))} />
           ))}
         </ul>
         <Button variant="secondary" size="sm" leftIcon={<Plus size={14} />} disabled={colors.length >= MAX_BRAND_COLORS} onClick={() => setColors((current) => [...current, { id: newId(), name: '', hex: '#1c1517' }])}>
-          Add colour
-        </Button>
+          {msg("Add colour")}</Button>
       </fieldset>
 
       <fieldset className={styles.fieldset}>
-        <legend>Fonts</legend>
+        <legend>{msg("Fonts")}</legend>
         <div className={styles.fonts}>
           {ROLES.map(({ role, label }) => (
             <Select key={role} label={label} value={fontFor(role)} onChange={(event) => setFont(role, event.target.value)} options={fontOptions} />
           ))}
         </div>
-        {fontList.isError ? <p className={styles.hint}>The font list couldn’t be loaded right now.</p> : null}
+        {fontList.isError ? <p className={styles.hint}>{msg("The font list couldn’t be loaded right now.")}</p> : null}
       </fieldset>
 
       <fieldset className={styles.fieldset}>
-        <legend>Logos</legend>
+        <legend>{msg("Logos")}</legend>
         {assets.isPending ? (
           <Skeleton height="5rem" />
         ) : libraryWithSelected.length === 0 ? (
-          <p className={styles.hint}>Upload images on the Uploads page, then pick your logos here.</p>
+          <p className={styles.hint}>{msg("Upload images on the Uploads page, then pick your logos here.")}</p>
         ) : (
           <ul className={styles.logos}>
             {libraryWithSelected.map((asset) => (
@@ -161,8 +161,7 @@ function EditorForm({ kit, busy, error, onClose, onSave }: { kit: BrandKit | nul
 
       <div className={styles.footer}>
         <Button variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
+          {msg("Cancel")}</Button>
         <Button type="submit" loading={busy} disabled={Boolean(nameError) || hasInvalidColor}>
           {kit ? 'Save changes' : 'Create kit'}
         </Button>

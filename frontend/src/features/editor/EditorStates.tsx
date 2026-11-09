@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { FileQuestion, Lock, ServerCrash, Trash2, WifiOff } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
@@ -27,16 +28,16 @@ export function EditorSkeleton({ label = 'Opening the editor' }: { label?: strin
 export type EditorProblem = 'not-found' | 'forbidden' | 'offline' | 'error' | 'local-missing' | 'trashed'
 
 const COPY: Record<EditorProblem, { icon: ReactNode; title: string; description: string }> = {
-  'not-found': { icon: <FileQuestion size={28} />, title: 'We can’t find that design', description: 'It may have been deleted, or the link is wrong.' },
-  forbidden: { icon: <Lock size={28} />, title: 'You don’t have access to this design', description: 'Ask the owner to share it with you, or sign in with a different account.' },
-  offline: { icon: <WifiOff size={28} />, title: 'You’re offline', description: 'Reconnect to the internet to open this design. Nothing has been lost.' },
-  error: { icon: <ServerCrash size={28} />, title: 'This design didn’t load', description: 'Something went wrong on our side. Your work is safe. Try again in a moment.' },
+  'not-found': { icon: <FileQuestion size={28} />, title: msg("We can’t find that design"), description: msg("It may have been deleted, or the link is wrong.") },
+  forbidden: { icon: <Lock size={28} />, title: msg("You don’t have access to this design"), description: msg("Ask the owner to share it with you, or sign in with a different account.") },
+  offline: { icon: <WifiOff size={28} />, title: msg("You’re offline"), description: msg("Reconnect to the internet to open this design. Nothing has been lost.") },
+  error: { icon: <ServerCrash size={28} />, title: msg("This design didn’t load"), description: msg("Something went wrong on our side. Your work is safe. Try again in a moment.") },
   'local-missing': {
     icon: <FileQuestion size={28} />,
-    title: 'This design isn’t in this browser',
-    description: 'Guest designs are stored in the browser they were made in. If you started it on another device or cleared your browsing data, it’s no longer here. Signed-in designs follow you everywhere.',
+    title: msg("This design isn’t in this browser"),
+    description: msg("Guest designs are stored in the browser they were made in. If you started it on another device or cleared your browsing data, it’s no longer here. Signed-in designs follow you everywhere."),
   },
-  trashed: { icon: <Trash2 size={28} />, title: 'This design is in the trash', description: 'Restore it from the trash to keep editing.' },
+  trashed: { icon: <Trash2 size={28} />, title: msg("This design is in the trash"), description: msg("Restore it from the trash to keep editing.") },
 }
 
 export function EditorProblemPage({ problem, onRetry, extraAction }: { problem: EditorProblem; onRetry?: () => void; extraAction?: ReactNode }) {
@@ -50,12 +51,11 @@ export function EditorProblemPage({ problem, onRetry, extraAction }: { problem: 
         role="alert"
         action={
           <>
-            {onRetry && (problem === 'offline' || problem === 'error') ? <Button onClick={onRetry}>Try again</Button> : null}
+            {onRetry && (problem === 'offline' || problem === 'error') ? <Button onClick={onRetry}>{msg("Try again")}</Button> : null}
             {extraAction}
             <LinkButton to="/create" variant={problem === 'local-missing' ? 'primary' : 'secondary'}>
-              Start a new design
-            </LinkButton>
-            <Link to="/">Back to home</Link>
+              {msg("Start a new design")}</LinkButton>
+            <Link to="/">{msg("Back to home")}</Link>
           </>
         }
       />
