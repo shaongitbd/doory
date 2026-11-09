@@ -12,10 +12,10 @@ import styles from './TemplatesBrowser.module.css'
 type Orientation = 'all' | NonNullable<TemplateQuery['orientation']>
 
 const ORIENTATIONS: Array<{ value: Orientation; label: string }> = [
-  { value: 'all', label: msg("All") },
-  { value: 'landscape', label: msg("Landscape") },
-  { value: 'portrait', label: msg("Portrait") },
-  { value: 'square', label: msg("Square") },
+  { value: 'all', label: "All" },
+  { value: 'landscape', label: "Landscape" },
+  { value: 'portrait', label: "Portrait" },
+  { value: 'square', label: "Square" },
 ]
 
 function isOrientation(value: string | null): value is NonNullable<TemplateQuery['orientation']> {
@@ -86,7 +86,7 @@ export function TemplatesBrowser() {
           onChange={(event) => setText(event.target.value)}
           rightSlot={text ? <Button variant="ghost" size="sm" aria-label={msg("Clear search")} onClick={() => setText('')} leftIcon={<X size={14} />} /> : undefined}
         />
-        <SegmentedControl label={msg("Orientation")} value={orientation} onChange={(value) => setParam('orientation', value === 'all' ? null : value)} options={ORIENTATIONS} />
+        <SegmentedControl label={msg("Orientation")} value={orientation} onChange={(value) => setParam('orientation', value === 'all' ? null : value)} options={ORIENTATIONS.map((option) => ({ ...option, label: msg(option.label) }))} />
       </div>
 
       <div className={styles.chips} role="group" aria-label={msg("Categories")}>

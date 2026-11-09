@@ -14,9 +14,9 @@ import styles from './Settings.module.css'
 
 const DEFAULT_SCOPES = ['designs:read', 'designs:write']
 const EXPIRY_OPTIONS = [
-  { value: '30', label: msg("30 days") },
-  { value: '90', label: msg("90 days") },
-  { value: '365', label: msg("1 year") },
+  { value: '30', label: "30 days" },
+  { value: '90', label: "90 days" },
+  { value: '365', label: "1 year" },
 ]
 
 async function copy(text: string): Promise<boolean> {
@@ -172,7 +172,7 @@ function CreateTokenForm({ scopes, onCreated }: { scopes: ApiTokenScope[]; onCre
           {errors.scopes ? <p className={styles.error}>{errors.scopes}</p> : null}
         </fieldset>
       ) : null}
-      <Select label={msg("Expires after")} options={EXPIRY_OPTIONS} value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+      <Select label={msg("Expires after")} options={EXPIRY_OPTIONS.map((option) => ({ ...option, label: msg(option.label) }))} value={expiry} onChange={(event) => setExpiry(event.target.value)} />
       {hasPassword ? (
         <PasswordInput label={msg("Your password")} name="current-password" autoComplete="current-password" value={secret} onChange={(event) => setSecret(event.target.value)} error={errors.password} />
       ) : (

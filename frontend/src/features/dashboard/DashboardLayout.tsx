@@ -15,18 +15,18 @@ import styles from './DashboardLayout.module.css'
 type NavItem = { to: string; label: string; icon: typeof Home; end: boolean }
 
 const MAIN: NavItem[] = [
-  { to: '/dashboard', label: msg("Home"), icon: Home, end: true },
-  { to: '/dashboard/designs', label: msg("Designs"), icon: Folder, end: false },
-  { to: '/dashboard/starred', label: msg("Starred"), icon: Star, end: false },
-  { to: '/dashboard/templates', label: msg("Templates"), icon: LayoutTemplate, end: false },
+  { to: '/dashboard', label: "Home", icon: Home, end: true },
+  { to: '/dashboard/designs', label: "Designs", icon: Folder, end: false },
+  { to: '/dashboard/starred', label: "Starred", icon: Star, end: false },
+  { to: '/dashboard/templates', label: "Templates", icon: LayoutTemplate, end: false },
 ]
 const LIBRARY: NavItem[] = [
-  { to: '/dashboard/brand', label: msg("Brand"), icon: Palette, end: false },
-  { to: '/dashboard/uploads', label: msg("Uploads"), icon: Upload, end: false },
+  { to: '/dashboard/brand', label: "Brand", icon: Palette, end: false },
+  { to: '/dashboard/uploads', label: "Uploads", icon: Upload, end: false },
 ]
 const FOOT: NavItem[] = [
-  { to: '/dashboard/trash', label: msg("Trash"), icon: Trash2, end: false },
-  { to: '/settings', label: msg("Settings"), icon: Settings, end: false },
+  { to: '/dashboard/trash', label: "Trash", icon: Trash2, end: false },
+  { to: '/settings', label: "Settings", icon: Settings, end: false },
 ]
 /** The tab bar on small screens has room for the main places only. */
 const TABS: NavItem[] = [...MAIN, ...LIBRARY, ...FOOT]
@@ -38,7 +38,7 @@ function NavLinks({ items }: { items: NavItem[] }) {
       {items.map(({ to, label, icon: Icon, end }) => (
         <NavLink key={to} to={to} end={end} className={styles.link}>
           <Icon size={18} aria-hidden="true" />
-          <span>{label}</span>
+          <span>{msg(label)}</span>
         </NavLink>
       ))}
     </>
@@ -131,7 +131,7 @@ export default function DashboardLayout() {
           {TABS.map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} className={styles.tab}>
               <Icon size={16} aria-hidden="true" />
-              {label}
+              {msg(label)}
             </NavLink>
           ))}
         </nav>

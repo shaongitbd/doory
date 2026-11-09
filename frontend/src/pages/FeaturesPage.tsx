@@ -6,20 +6,20 @@ import { LinkButton } from '@/ui'
 import styles from './FeaturesPage.module.css'
 
 const FEATURES = [
-  { icon: PenTool, title: msg("The editor"), text: 'Layers, text effects, shapes, masks, filters, snapping and several pages per design. Undo goes back at least 100 steps.' },
-  { icon: LayoutTemplate, title: msg("Templates"), text: 'Ready-made layouts for social posts, slides, posters, cards and more.' },
-  { icon: Palette, title: msg("Brand kits"), text: 'Save your colours, fonts and logos once and use them in every design.' },
-  { icon: Share2, title: msg("Sharing and comments"), text: 'Share a view, comment or edit link, with a password if you want one.' },
-  { icon: Download, title: msg("Export"), text: 'PNG, JPG, SVG and PDF, made in your browser. No watermark.' },
-  { icon: ShieldCheck, title: msg("No account needed"), text: 'Designs you make without an account stay in your browser until you sign up.' },
-  { icon: GitBranch, title: msg("Open source"), text: 'The code is on GitHub. Report bugs or send fixes there.' },
-  { icon: Server, title: msg("Self-hosting"), text: 'Run Doory on your own server, with Docker or without it.' },
+  { icon: PenTool, title: "The editor", text: 'Layers, text effects, shapes, masks, filters, snapping and several pages per design. Undo goes back at least 100 steps.' },
+  { icon: LayoutTemplate, title: "Templates", text: 'Ready-made layouts for social posts, slides, posters, cards and more.' },
+  { icon: Palette, title: "Brand kits", text: 'Save your colours, fonts and logos once and use them in every design.' },
+  { icon: Share2, title: "Sharing and comments", text: 'Share a view, comment or edit link, with a password if you want one.' },
+  { icon: Download, title: "Export", text: 'PNG, JPG, SVG and PDF, made in your browser. No watermark.' },
+  { icon: ShieldCheck, title: "No account needed", text: 'Designs you make without an account stay in your browser until you sign up.' },
+  { icon: GitBranch, title: "Open source", text: 'The code is on GitHub. Report bugs or send fixes there.' },
+  { icon: Server, title: "Self-hosting", text: 'Run Doory on your own server, with Docker or without it.' },
 ]
 
 const STEPS = [
-  { title: msg("Start without an account"), text: 'Pick a size or a template. Your design saves in this browser as you go.' },
-  { title: msg("Design"), text: 'Add text, photos, shapes and your brand colours. Images you upload stay on your device until you sign up.' },
-  { title: msg("Save it to an account"), text: 'Create a free account and Doory moves the design and its images to it in one step.' },
+  { title: "Start without an account", text: 'Pick a size or a template. Your design saves in this browser as you go.' },
+  { title: "Design", text: 'Add text, photos, shapes and your brand colours. Images you upload stay on your device until you sign up.' },
+  { title: "Save it to an account", text: 'Create a free account and Doory moves the design and its images to it in one step.' },
 ]
 
 export default function FeaturesPage() {
@@ -49,7 +49,7 @@ export default function FeaturesPage() {
               <span className={styles.icon} aria-hidden="true">
                 <Icon size={20} />
               </span>
-              <h3 className={styles.noteTitle}>{title}</h3>
+              <h3 className={styles.noteTitle}>{msg(title)}</h3>
               <p className={styles.noteText}>{text}</p>
             </li>
           ))}
@@ -68,7 +68,7 @@ export default function FeaturesPage() {
               </span>
               <h3 className={styles.stepTitle}>
                 <span className={styles.visuallyHidden}>{msg("Step ")}{index + 1}: </span>
-                {step.title}
+                {msg(step.title)}
               </h3>
               <p className={styles.stepText}>{step.text}</p>
             </li>

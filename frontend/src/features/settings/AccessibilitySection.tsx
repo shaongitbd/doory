@@ -5,10 +5,11 @@ import { useSyncExternalStore } from 'react'
 import { RadioGroup, type RadioOption } from '@/ui'
 import { SettingsCard } from './SettingsCard'
 
-const CONTRAST_OPTIONS: RadioOption<ContrastPreference>[] = [
-  { value: 'system', label: msg("Match my device"), description: msg("Uses high contrast when your device asks for more contrast.") },
-  { value: 'standard', label: msg("Standard") },
-  { value: 'more', label: msg("High contrast"), description: msg("Darker text, borders and focus rings across Doory. Your designs are not changed.") },
+/** In English: `msg` translates them where they are shown, in the language chosen at the time. */
+const CONTRAST_OPTIONS: Array<{ value: ContrastPreference; label: string; description?: string }> = [
+  { value: 'system', label: "Match my device", description: "Uses high contrast when your device asks for more contrast." },
+  { value: 'standard', label: "Standard" },
+  { value: 'more', label: "High contrast", description: "Darker text, borders and focus rings across Doory. Your designs are not changed." },
 ]
 
 /** Kept in this browser (src/lib/contrast.ts), so it applies at once with no request, and also for signed-out pages. */
@@ -23,7 +24,7 @@ export function AccessibilitySection() {
         <option value="zh-CN">简体中文</option>
         <option value="zh-TW">繁體中文</option>
       </select>
-      <RadioGroup legend={msg("Contrast")} options={CONTRAST_OPTIONS} value={preference} onChange={setContrastPreference} />
+      <RadioGroup legend={msg("Contrast")} options={CONTRAST_OPTIONS.map((option): RadioOption<ContrastPreference> => ({ ...option, label: msg(option.label), description: option.description && msg(option.description) }))} value={preference} onChange={setContrastPreference} />
     </SettingsCard>
   )
 }

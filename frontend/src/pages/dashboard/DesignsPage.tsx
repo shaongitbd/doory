@@ -17,10 +17,10 @@ import { Button, ConfirmDialog, Dialog, EmptyState, Input, LinkButton, Segmented
 import styles from './pageStyles.module.css'
 
 const SORTS: Array<{ value: NonNullable<DesignQuery['ordering']>; label: string }> = [
-  { value: '-updated_at', label: msg("Last modified") },
-  { value: '-created_at', label: msg("Newest first") },
-  { value: 'title', label: msg("Title A–Z") },
-  { value: '-title', label: msg("Title Z–A") },
+  { value: '-updated_at', label: "Last modified" },
+  { value: '-created_at', label: "Newest first" },
+  { value: 'title', label: "Title A–Z" },
+  { value: '-title', label: "Title Z–A" },
 ]
 const LAYOUTS = ['grid', 'list'] as const
 const EMPTY_SELECTION: ReadonlySet<string> = new Set()
@@ -143,7 +143,7 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
             <Button variant="secondary" rightIcon={<X size={14} />} onClick={() => setParam('q', null)}>
               {msg("Clear search")}</Button>
           ) : null}
-          <Select label={msg("Sort by")} hideLabel value={ordering} onChange={(event) => setParam('sort', event.target.value === '-updated_at' ? null : event.target.value)} options={SORTS} />
+          <Select label={msg("Sort by")} hideLabel value={ordering} onChange={(event) => setParam('sort', event.target.value === '-updated_at' ? null : event.target.value)} options={SORTS.map((sort) => ({ ...sort, label: msg(sort.label) }))} />
           <SegmentedControl
             label={msg("Layout")}
             value={layout}
