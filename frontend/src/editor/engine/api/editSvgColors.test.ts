@@ -85,8 +85,9 @@ describe('StyleApi.editSvgColors', () => {
     const { engine, view } = await setup()
     await engine.style.editSvgColors()
     const group = view.canvas.getObjects()[0] as Group
-    expect(group.interactive).toBe(true)
-    expect(group.subTargetCheck).toBe(true)
+    // A click still picks the whole drawing (to move or resize it); a double-click enters it to pick one shape.
+    expect(group.interactive).toBe(false)
+    view.enterGroup(group)
     const red = group.getObjects().find((child) => asDory(child).origFill === '#ff0000')!
     view.selectObjects([red])
     engine.style.setFill({ type: 'solid', color: '#00ff00' })
@@ -101,7 +102,6 @@ describe('StyleApi.editSvgColors', () => {
     again.mountPage(pageId, host)
     const loaded = await again.whenView(pageId)
     const restored = loaded.canvas.getObjects()[0] as Group
-    expect(restored.interactive).toBe(true)
     expect(restored.getObjects().map((child) => child.fill)).toContain('#00ff00')
     again.dispose()
   })
