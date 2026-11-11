@@ -11,6 +11,7 @@ import { Registry } from '../registry'
 import { getSizePresets } from '@/lib/sizePresets'
 import { type FileNaming, SIMPLE_NAMING, documentFilename } from './filenames'
 import type { VideoOptions } from './video/options'
+import type { Binding, FoldLayout } from './imposition'
 
 /** The quality stops of the Download dialog, by the name REST and MCP exports take too. */
 export const QUALITY_PRESETS = { small: 65, balanced: 82, best: 95, original: 100 } as const
@@ -41,6 +42,8 @@ export interface ExportOptions {
   bleedMm: number
   /** Print crop marks around the trim (PDF); the pages grow by a margin that carries them. */
   cropMarks: boolean
+  /** Two design pages on each side of a folded sheet. Omitted for ordinary PDFs. */
+  imposition?: { layout: FoldLayout; signaturePages: number; binding: Binding }
   /** Video and GIF: size, frame rate, quality, sound. A video format without it uses its defaults. */
   video?: VideoOptions
 }

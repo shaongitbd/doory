@@ -3,6 +3,7 @@ import { fontsInObjects, pageSize } from '../docOps'
 import { renderPageToCanvas, renderPageToSvg } from '../render'
 import { mmToPx } from '../units'
 import { documentLanguage } from './language'
+import { imposePages } from './imposition'
 import { MARK_STROKE_PX, type PrintGeometry, cropMarkSegments, printGeometry } from './printGeometry'
 import {
   type ExportContext,
@@ -82,6 +83,33 @@ async function pdfFile(ctx: ExportContext): Promise<ExportFile[]> {
   const mm = (px: number): number => (px / PX_PER_INCH) * MM_PER_INCH
   const orientation = (w: number, h: number): 'p' | 'l' => (w > h ? 'l' : 'p')
   const { bleedMm, cropMarks } = ctx.options
+  if (ctx.options.imposition) {
+    if (bleedMm > 0 || cropMarks) throw new Error('Folded sheets cannot use bleed or crop marks at this paper size.')
+    const sizes = ctx.pages.map(({ page }) => pageSize(ctx.document, page))
+    const first = sizes[0]
+    if (first.width >= first.height || sizes.some((size) => size.width !== first.width || size.height !== first.height)) {
+      throw new Error('Folded sheets need portrait pages of one size.')
+    }
+    const { layout, signaturePages, binding } = ctx.options.imposition
+    const sides = imposePages(ctx.pages.length, layout, signaturePages, binding)
+    const sheetWidth = first.width * 2
+    const pdf = new jsPDF({ unit: 'mm', format: [mm(sheetWidth), mm(first.height)], orientation: orientation(sheetWidth, first.height), compress: true })
+    pdf.setProperties({ title: ctx.title, creator: 'Doory' })
+    pdf.setLanguage(documentLanguage() as Parameters<typeof pdf.setLanguage>[0])
+    let drawn = 0
+    for (const [sideIndex, side] of sides.entries()) {
+      throwIfAborted(ctx.signal)
+      if (sideIndex > 0) pdf.addPage([mm(sheetWidth), mm(first.height)], orientation(sheetWidth, first.height))
+      for (const [index, x] of [[side.left, 0], [side.right, first.width]] as const) {
+        if (index === null) continue
+        const canvas = await renderPageToCanvas(ctx.pages[index].page, first, ctx.engine.loadContext, { multiplier: PDF_DPI / PX_PER_INCH })
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', mm(x), 0, mm(first.width), mm(first.height), undefined, 'FAST')
+        ctx.onProgress(++drawn / ctx.pages.length, 'rendering')
+      }
+    }
+    const name = `${sanitizeFilename(ctx.title) || 'design'}-${layout}.pdf`
+    return [{ blob: pdf.output('blob'), filename: exportFilename(ctx, name, 'pdf', first, null, layout) }]
+  }
   const geometries = ctx.pages.map(({ page }) => printGeometry(pageSize(ctx.document, page), bleedMm, cropMarks))
   const first = geometries[0]
   const pdf = new jsPDF({ unit: 'mm', format: [mm(first.sheetWidth), mm(first.sheetHeight)], orientation: orientation(first.sheetWidth, first.sheetHeight), compress: true })
