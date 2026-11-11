@@ -126,6 +126,48 @@ describe('editor chrome', () => {
     expect(within(view).getByRole('menuitem', { name: /Keyboard shortcuts/ })).toBeInTheDocument()
   })
 
+  it('updates the Edit menu with the selection and runs existing edit actions', async () => {
+    engine = await mount()
+    await userEvent.click(screen.getByRole('button', { name: t.topbar.edit }))
+    let menu = screen.getByRole('menu', { name: t.topbar.edit })
+    expect(within(menu).getByRole('menuitem', { name: /^Undo/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(within(menu).getByRole('menuitem', { name: /^Paste/ })).toBeInTheDocument()
+    expect(within(menu).queryByRole('menuitem', { name: /^Duplicate/ })).not.toBeInTheDocument()
+
+    await act(async () => { await engine!.insert.shape('rect') })
+    menu = screen.getByRole('menu', { name: t.topbar.edit })
+    expect(within(menu).getByRole('menuitem', { name: /^Undo/ })).not.toHaveAttribute('aria-disabled', 'true')
+    expect(within(menu).getByRole('menuitem', { name: /^Copy/ })).toBeInTheDocument()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: /^Duplicate/ }))
+    await waitFor(() => expect(objectCount(engine!)).toBe(2))
+    expect(screen.queryByRole('menu', { name: t.topbar.edit })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: t.topbar.edit }))
+    await userEvent.click(within(screen.getByRole('menu', { name: t.topbar.edit })).getByRole('menuitem', { name: /^Undo/ }))
+    await waitFor(() => expect(objectCount(engine!)).toBe(1))
+    await userEvent.click(screen.getByRole('button', { name: t.topbar.edit }))
+    expect(within(screen.getByRole('menu', { name: t.topbar.edit })).getByRole('menuitem', { name: /^Redo/ })).not.toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('includes Edit actions in the compact menu on narrow screens', async () => {
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+      observe(): void { this.callback([{ contentRect: { width: 400 } } as ResizeObserverEntry], this as unknown as ResizeObserver) }
+      disconnect(): void {}
+      unobserve(): void {}
+    })
+    engine = await mount()
+    await userEvent.click(screen.getByTestId('ed-more'))
+    const menu = screen.getByRole('menu', { name: t.topbar.menu })
+    expect(within(menu).getByText(t.topbar.edit)).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: /^Paste/ })).toBeInTheDocument()
+  })
+
+  it('does not expose Edit actions in view-only mode', async () => {
+    engine = await mount('shared-view')
+    expect(screen.queryByTestId('ed-menu-edit')).not.toBeInTheDocument()
+  })
+
   it('downloads a portable project backup from the File menu for a guest design', async () => {
     const exportProject = vi.fn(async () => ({ blob: new Blob(['project']), filename: 'Test.doory' }))
     const createObjectURL = vi.fn(() => 'blob:project')
