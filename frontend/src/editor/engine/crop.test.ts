@@ -4,6 +4,7 @@ import { createMemoryAdapter } from '../dev/memoryAdapter'
 import { installImageStub } from '../test/imageStub'
 import { type CropGeometry, clampCrop, cropToFrame, fitAspect, frameToCrop, trimCrop } from './crop'
 import { EditorEngine } from './editor'
+import { asDory } from './objects/dory'
 
 const base: CropGeometry = { natW: 400, natH: 200, sx: 0.5, sy: 0.5, angle: 0, flipX: false, flipY: false, ghostCenter: { x: 300, y: 200 } }
 
@@ -90,7 +91,7 @@ describe('crop session', () => {
     document.body.innerHTML = ''
   })
 
-  async function setup() {
+  async function mountImage() {
     const engine = new EditorEngine({ adapter: createMemoryAdapter().adapter, document: createBlankDocument(800, 600), meta: { id: 'd', title: 'T', mode: 'guest' }, ephemeral: true })
     const host = document.createElement('div')
     document.body.appendChild(host)
@@ -102,6 +103,12 @@ describe('crop session', () => {
     await vi.waitFor(() => expect(view.canvas.getObjects()).toHaveLength(1))
     const img = view.canvas.getObjects()[0] as FabricImage
     view.selectObjects([img])
+    const doubleClick = (): void => void view.canvas.fire('mouse:dblclick', { target: img, scenePoint: img.getCenterPoint() } as never)
+    return { engine, view, img, doubleClick }
+  }
+
+  async function setup() {
+    const { engine, view, img } = await mountImage()
     await engine.crop.start()
     const frame = view.canvas.getActiveObject() as FabricObject
     // Alt held, so snapping stays out of the way.
@@ -153,6 +160,33 @@ describe('crop session', () => {
     release()
     expect(img.cropX).toBeCloseTo(0)
     expect(img.width).toBeCloseTo(100)
+    engine.dispose()
+  })
+
+  it('starts cropping when the selected picture is double-clicked', async () => {
+    const { engine, img, doubleClick } = await mountImage()
+    doubleClick()
+    await vi.waitFor(() => expect(engine.crop.active).toBe(true))
+    expect(engine.state.ui.cropping).toMatchObject({ id: asDory(img).id })
+    engine.dispose()
+  })
+
+  it('does not crop a picture that is not selected on double-click', async () => {
+    const { engine, view, doubleClick } = await mountImage()
+    view.canvas.discardActiveObject()
+    doubleClick()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(engine.state.ui.cropping).toBeNull()
+    engine.dispose()
+  })
+
+  it('does not crop a locked picture on double-click', async () => {
+    const { engine, img, doubleClick } = await mountImage()
+    engine.arrange.toggleLock()
+    expect(asDory(img).locked).toBe(true)
+    doubleClick()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(engine.state.ui.cropping).toBeNull()
     engine.dispose()
   })
 })
