@@ -173,6 +173,18 @@ def export_design(
         Field(ge=0, le=10, description="PDF: the bleed around every page, in mm (3 is usual for print)."),
     ] = 0,
     crop_marks: Annotated[bool, Field(description="PDF: crop marks in a margin around the bleed.")] = False,
+    layout: Annotated[
+        Literal["normal", "booklet", "book"],
+        Field(description="PDF: normal pages, one folded booklet, or separate book signatures."),
+    ] = "normal",
+    signature_pages: Annotated[
+        int, Field(ge=4, le=32, description="Book layout: pages in each signature, in multiples of four.")
+    ] = 4,
+    binding: Annotated[Literal["left", "right"], Field(description="Folded PDF: binding edge.")] = "left",
+    print_sides: Annotated[
+        Literal["both", "front", "back"],
+        Field(description="Folded PDF: both sides, or fronts/backs alone for manual duplex printing."),
+    ] = "both",
     cmyk: Annotated[
         bool,
         Field(description="CMYK colours. Not offered: PDFs are RGB, as on screen; true is refused."),
@@ -249,6 +261,10 @@ def export_design(
         optimize=optimize,
         bleed_mm=bleed_mm,
         crop_marks=crop_marks,
+        layout=layout,
+        signature_pages=signature_pages,
+        binding=binding,
+        print_sides=print_sides,
         cmyk=cmyk,
         resolution=resolution,
         fps=fps,
