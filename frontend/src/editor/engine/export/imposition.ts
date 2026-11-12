@@ -10,6 +10,15 @@ export interface SheetSide {
   right: number | null
 }
 
+/** A5 leaves sit at full size on an exact A4 sheet; other sizes use a sheet twice as wide. */
+export function foldedSheet(width: number, height: number): { width: number; height: number; x: number; y: number } {
+  const pxPerMm = 96 / 25.4
+  const a5 = Math.abs(width - 148 * pxPerMm) < 2 && Math.abs(height - 210 * pxPerMm) < 2
+  const sheetWidth = a5 ? 297 * pxPerMm : width * 2
+  const sheetHeight = a5 ? 210 * pxPerMm : height
+  return { width: sheetWidth, height: sheetHeight, x: (sheetWidth - width * 2) / 2, y: (sheetHeight - height) / 2 }
+}
+
 /** Pair the outside of each signature first, then work inward toward its centre fold. */
 export function imposePages(pageCount: number, layout: FoldLayout, signaturePages: number, binding: Binding): SheetSide[] {
   if (!Number.isSafeInteger(pageCount) || pageCount < 1) throw new Error('Select at least one page.')

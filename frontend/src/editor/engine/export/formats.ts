@@ -3,7 +3,7 @@ import { fontsInObjects, pageSize } from '../docOps'
 import { renderPageToCanvas, renderPageToSvg } from '../render'
 import { mmToPx } from '../units'
 import { documentLanguage } from './language'
-import { imposePages } from './imposition'
+import { foldedSheet, imposePages } from './imposition'
 import { MARK_STROKE_PX, type PrintGeometry, cropMarkSegments, printGeometry } from './printGeometry'
 import {
   type ExportContext,
@@ -90,25 +90,28 @@ async function pdfFile(ctx: ExportContext): Promise<ExportFile[]> {
     if (first.width >= first.height || sizes.some((size) => size.width !== first.width || size.height !== first.height)) {
       throw new Error('Folded sheets need portrait pages of one size.')
     }
-    const { layout, signaturePages, binding } = ctx.options.imposition
+    const { layout, signaturePages, binding, sides: selectedSides = 'both' } = ctx.options.imposition
     const sides = imposePages(ctx.pages.length, layout, signaturePages, binding)
-    const sheetWidth = first.width * 2
-    const pdf = new jsPDF({ unit: 'mm', format: [mm(sheetWidth), mm(first.height)], orientation: orientation(sheetWidth, first.height), compress: true })
+      .filter((side) => selectedSides === 'both' || side.side === selectedSides)
+    const renderedPages = sides.reduce((count, side) => count + Number(side.left !== null) + Number(side.right !== null), 0)
+    const sheet = foldedSheet(first.width, first.height)
+    const pdf = new jsPDF({ unit: 'mm', format: [mm(sheet.width), mm(sheet.height)], orientation: orientation(sheet.width, sheet.height), compress: true })
     pdf.setProperties({ title: ctx.title, creator: 'Doory' })
     pdf.setLanguage(documentLanguage() as Parameters<typeof pdf.setLanguage>[0])
     let drawn = 0
     for (const [sideIndex, side] of sides.entries()) {
       throwIfAborted(ctx.signal)
-      if (sideIndex > 0) pdf.addPage([mm(sheetWidth), mm(first.height)], orientation(sheetWidth, first.height))
-      for (const [index, x] of [[side.left, 0], [side.right, first.width]] as const) {
+      if (sideIndex > 0) pdf.addPage([mm(sheet.width), mm(sheet.height)], orientation(sheet.width, sheet.height))
+      for (const [index, x] of [[side.left, sheet.x], [side.right, sheet.x + first.width]] as const) {
         if (index === null) continue
         const canvas = await renderPageToCanvas(ctx.pages[index].page, first, ctx.engine.loadContext, { multiplier: PDF_DPI / PX_PER_INCH })
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', mm(x), 0, mm(first.width), mm(first.height), undefined, 'FAST')
-        ctx.onProgress(++drawn / ctx.pages.length, 'rendering')
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', mm(x), mm(sheet.y), mm(first.width), mm(first.height), undefined, 'FAST')
+        ctx.onProgress(++drawn / renderedPages, 'rendering')
       }
     }
-    const name = `${sanitizeFilename(ctx.title) || 'design'}-${layout}.pdf`
-    return [{ blob: pdf.output('blob'), filename: exportFilename(ctx, name, 'pdf', first, null, layout) }]
+    const suffix = `${layout}${selectedSides === 'both' ? '' : `-${selectedSides}`}`
+    const name = `${sanitizeFilename(ctx.title) || 'design'}-${suffix}.pdf`
+    return [{ blob: pdf.output('blob'), filename: exportFilename(ctx, name, 'pdf', first, null, suffix) }]
   }
   const geometries = ctx.pages.map(({ page }) => printGeometry(pageSize(ctx.document, page), bleedMm, cropMarks))
   const first = geometries[0]
@@ -167,6 +170,7 @@ async function serverPdfFile(ctx: ExportContext): Promise<ExportFile[]> {
     sizes,
     bleedMm,
     cropMarks,
+    imposition: ctx.options.imposition,
     title: ctx.title,
     lang: documentLanguage(),
     fonts,
@@ -174,7 +178,9 @@ async function serverPdfFile(ctx: ExportContext): Promise<ExportFile[]> {
     onUploadProgress: (fraction) => ctx.onProgress(0.5 + fraction * 0.4, fraction >= 1 ? 'printing' : 'uploading'),
   })
   ctx.onProgress(1)
-  return [{ blob, filename: exportFilename(ctx, `${sanitizeFilename(ctx.title) || 'design'}-print.pdf`, 'pdf', size, null, 'print') }]
+  const imposed = ctx.options.imposition
+  const suffix = imposed ? `${imposed.layout}${!imposed.sides || imposed.sides === 'both' ? '' : `-${imposed.sides}`}` : 'print'
+  return [{ blob, filename: exportFilename(ctx, `${sanitizeFilename(ctx.title) || 'design'}-${suffix}.pdf`, 'pdf', size, null, suffix) }]
 }
 
 export function registerBuiltinExportFormats(): void {

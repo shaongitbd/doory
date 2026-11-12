@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { imposePages } from './imposition'
+import { foldedSheet, imposePages } from './imposition'
 
 const labels = (count: number, layout: 'book' | 'booklet', signaturePages = 4, binding: 'left' | 'right' = 'left') =>
   imposePages(count, layout, signaturePages, binding).map(({ left, right }) => [left === null ? null : left + 1, right === null ? null : right + 1])
@@ -27,5 +27,12 @@ describe('folded sheet order', () => {
     expect(() => imposePages(0, 'booklet', 4, 'left')).toThrow()
     expect(() => imposePages(4, 'book', 6, 'left')).toThrow()
     expect(() => imposePages(4, 'book', 36, 'left')).toThrow()
+  })
+
+  it('places A5 leaves on an exact landscape A4 sheet', () => {
+    const sheet = foldedSheet(559, 794)
+    expect(sheet.width).toBeCloseTo(297 * 96 / 25.4)
+    expect(sheet.height).toBeCloseTo(210 * 96 / 25.4)
+    expect(sheet.x).toBeGreaterThan(0)
   })
 })

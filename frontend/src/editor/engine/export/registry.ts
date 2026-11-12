@@ -43,7 +43,7 @@ export interface ExportOptions {
   /** Print crop marks around the trim (PDF); the pages grow by a margin that carries them. */
   cropMarks: boolean
   /** Two design pages on each side of a folded sheet. Omitted for ordinary PDFs. */
-  imposition?: { layout: FoldLayout; signaturePages: number; binding: Binding }
+  imposition?: { layout: FoldLayout; signaturePages: number; binding: Binding; sides?: 'both' | 'front' | 'back' }
   /** Video and GIF: size, frame rate, quality, sound. A video format without it uses its defaults. */
   video?: VideoOptions
 }
