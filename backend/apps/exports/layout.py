@@ -213,3 +213,36 @@ def build_document_html(
         f"<title>{html.escape(title)}</title>"
         f"<style>{font_face_css(fonts or [])}{page_css}</style></head><body>{sections}</body></html>"
     )
+
+
+def build_imposed_html(svgs, sides, leaf_width: float, leaf_height: float, title, fonts, lang):
+    """Each printer spread has two isolated SVG leaves and one PDF sheet side."""
+    from .imposition import folded_sheet
+
+    sheet_width, sheet_height, offset_x, offset_y = folded_sheet(leaf_width, leaf_height)
+    sheet = PageGeometry.create(sheet_width, sheet_height)
+    css = (
+        f"@page{{size:{fmt(sheet.sheet_width)}px {fmt(sheet.sheet_height)}px;margin:0}}"
+        "html,body{margin:0;padding:0;background:#fff}"
+        f".page{{position:relative;width:{fmt(sheet.page_width)}px;height:{fmt(sheet.page_height)}px;"
+        "break-after:page;break-inside:avoid;overflow:hidden}"
+        ".page:last-child{break-after:auto}"
+        f".leaf{{position:absolute;top:{fmt(offset_y)}px;width:{fmt(leaf_width)}px;"
+        f"height:{fmt(leaf_height)}px}}"
+    )
+    pages = []
+    for side in sides:
+        leaves = []
+        for index, x in ((side.left, offset_x), (side.right, offset_x + leaf_width)):
+            if index is not None:
+                leaves.append(
+                    f'<div class="leaf" style="left:{fmt(x)}px"><template shadowrootmode="open">'
+                    f"<style>:host{{display:block}}svg{{display:block}}</style>{svgs[index]}</template></div>"
+                )
+        pages.append(f'<section class="page">{"".join(leaves)}</section>')
+    document = (
+        f'<!doctype html><html lang="{html.escape(lang)}"><head><meta charset="utf-8">'
+        f"<title>{html.escape(title)}</title><style>{font_face_css(fonts)}{css}</style></head>"
+        f"<body>{''.join(pages)}</body></html>"
+    )
+    return document, [sheet] * len(sides)

@@ -15,6 +15,7 @@ from apps.apitokens.scopes import DESIGNS_READ
 from apps.designs.doc.ops import PageRef
 from apps.exports.delivery import store_image
 from apps.exports.filenames import FILE_NAMES, unix_now
+from apps.exports.imposition import impose_pages
 from apps.exports.services import VIDEO_FORMATS, ImageBundle, ImageResult, export_images, page_index
 from apps.exports.throttling import ExportRateThrottle, OffsiteOptimizeRateThrottle
 
@@ -70,13 +71,29 @@ def _pdf_info(bundle: ImageBundle) -> dict[str, Any]:
         }
         for image in bundle.images
     ]
-    return {
+    info = {
         "format": "pdf",
         "bytes": len(bundle.data),
         "filename": bundle.filename,
         "pages": pages,
         "options": bundle.options,
     }
+    layout = bundle.options.get("layout")
+    if layout in {"booklet", "book"}:
+        sides = impose_pages(len(pages), layout, bundle.options["signature_pages"], bundle.options["binding"])
+        selected = bundle.options["print_sides"]
+        info["sheet_sides"] = [
+            {
+                "sheet": side.sheet + 1,
+                "signature": side.signature,
+                "side": side.side,
+                "left_page": pages[side.left]["page"] if side.left is not None else None,
+                "right_page": pages[side.right]["page"] if side.right is not None else None,
+            }
+            for side in sides
+            if selected == "both" or side.side == selected
+        ]
+    return info
 
 
 def _video_info(bundle: ImageBundle) -> dict[str, Any]:
@@ -105,8 +122,9 @@ def export_design(
         Field(
             description=(
                 'Several pages instead of `page`: "all", or a list of page ids and numbers counting from 1. '
-                "They come back as one ZIP (always a link); each page after the first counts as one call. "
-                "A video plays all pages unless `page` or `pages` says otherwise."
+                "Several images or SVGs come back as a ZIP; PDFs stay one file. Each page after the first "
+                "counts as one call. Videos and folded PDFs use all pages unless `page` or `pages` says "
+                "otherwise."
             )
         ),
     ] = None,
@@ -116,7 +134,8 @@ def export_design(
             description=(
                 "auto: the smallest image of all formats (no JPG when transparent, no AVIF above 8 million "
                 "pixels). svg: one vector file per page, with its pictures and fonts inside. pdf: one PDF of "
-                "all pages, each a 300 dpi picture (as the editor's PDF download). pdf-print: one vector PDF "
+                "the selected pages, each a 300 dpi picture (as the editor's PDF download). "
+                "pdf-print: one vector PDF "
                 "for printing (the editor's print-quality PDF). mp4, webm, gif: a video of the pages one "
                 "after another, with their animations, transitions and (mp4, webm) the design's sound, as "
                 "the editor's video download; each started 10 s after the first counts as one more call. "
@@ -173,6 +192,21 @@ def export_design(
         Field(ge=0, le=10, description="PDF: the bleed around every page, in mm (3 is usual for print)."),
     ] = 0,
     crop_marks: Annotated[bool, Field(description="PDF: crop marks in a margin around the bleed.")] = False,
+    layout: Annotated[
+        Literal["normal", "booklet", "book"],
+        Field(
+            description="PDF: normal pages, one folded booklet, or separate book signatures. "
+            "Folded layouts use all pages by default."
+        ),
+    ] = "normal",
+    signature_pages: Annotated[
+        int, Field(ge=4, le=32, description="Book layout: pages in each signature, in multiples of four.")
+    ] = 4,
+    binding: Annotated[Literal["left", "right"], Field(description="Folded PDF: binding edge.")] = "left",
+    print_sides: Annotated[
+        Literal["both", "front", "back"],
+        Field(description="Folded PDF: both sides, or fronts/backs alone for manual duplex printing."),
+    ] = "both",
     cmyk: Annotated[
         bool,
         Field(description="CMYK colours. Not offered: PDFs are RGB, as on screen; true is refused."),
@@ -223,11 +257,15 @@ def export_design(
 ) -> list[ImageContent | TextContent]:
     """Render pages of a design as images, exactly as the editor draws them, to check how they look (after
     edit_design, for example) or to hand them on; or export them as SVG files, a PDF or a video (MP4, WebM,
-    GIF), as the editor's Download makes them. It shows the live state when the design is open in the
-    editor."""
+    GIF), as the editor's Download makes them. A PDF may use normal pages, a folded booklet or book
+    signatures. The export shows the live state when the design is open in the editor."""
     throttle(ExportRateThrottle())
     design = _design(design_id)
-    if format in VIDEO_FORMATS and pages is None and page is None:
+    if (
+        pages is None
+        and page is None
+        and (format in VIDEO_FORMATS or (format in {"pdf", "pdf-print"} and layout != "normal"))
+    ):
         pages = "all"
     bundle = export_images(
         design,
@@ -249,6 +287,10 @@ def export_design(
         optimize=optimize,
         bleed_mm=bleed_mm,
         crop_marks=crop_marks,
+        layout=layout,
+        signature_pages=signature_pages,
+        binding=binding,
+        print_sides=print_sides,
         cmyk=cmyk,
         resolution=resolution,
         fps=fps,

@@ -75,6 +75,19 @@ both **Edit designs** and **Add uploads**, and the encoded file must fit `MCP_MA
 backups can be restored in the editor. Designs are also available as MCP resources
 (`doory://designs/{id}`), and the server offers two prompts.
 
+For a folded PDF, call `export_design` with the design id and booklet options, for example:
+
+```json
+{"design_id": "<design-id>", "format": "pdf-print", "layout": "booklet", "binding": "left"}
+```
+
+The tool uses all pages when a folded layout is requested without `page` or `pages`. The result contains a
+short-lived PDF download link and `sheet_sides`, the front and back page pairs in print order; `null` means a
+blank leaf added to complete a sheet. Use `layout: "book"` with `signature_pages` (4–32, in multiples of four)
+for separate signatures. `print_sides: "front"` or `"back"` makes one side set for manual duplex printing. The
+pages must be portrait and the same size, and folded PDFs cannot use bleed or crop marks. Print the resulting
+PDF as ordinary double-sided sheets with short-edge flipping, without a second booklet setting in the printer.
+
 Some actions are protected:
 
 - Creating or changing a share link is marked as destructive, so clients ask the user first.

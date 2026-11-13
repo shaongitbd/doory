@@ -63,6 +63,8 @@ COPY_CHUNK_BYTES = 1024 * 1024
 _ENV_ALLOWLIST = (
     "PATH",
     "HOME",
+    "SYSTEMROOT",  # Windows needs these to load its network providers in the worker.
+    "WINDIR",
     "LANG",
     "LC_ALL",
     "PLAYWRIGHT_BROWSERS_PATH",
@@ -216,10 +218,23 @@ def _worker_env(workdir: Path) -> dict[str, str]:
     is deleted with it even when the worker has to be killed."""
     env = {key: os.environ[key] for key in _ENV_ALLOWLIST if key in os.environ}
     env["TMPDIR"] = str(workdir)
+    if os.name == "nt":
+        # Chromium uses TEMP and TMP for PDF streams on Windows, even with TMPDIR set.
+        env["TEMP"] = env["TMP"] = str(workdir)
     return env
 
 
 def _kill_group(process: subprocess.Popen) -> None:
+    if os.name == "nt":
+        # Windows has no killpg; taskkill also stops Chromium and other worker children.
+        taskkill = Path(os.environ["SYSTEMROOT"]) / "System32" / "taskkill.exe"
+        subprocess.run(  # noqa: S603 - fixed executable and PID from our own worker
+            [str(taskkill), "/PID", str(process.pid), "/T", "/F"], check=False, capture_output=True
+        )
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        return
     with contextlib.suppress(ProcessLookupError, PermissionError):
         os.killpg(process.pid, signal.SIGKILL)
     process.wait()

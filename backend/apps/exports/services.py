@@ -46,7 +46,15 @@ from .exceptions import (
 )
 from .filenames import document_filename, export_filename, page_filename, unique_names
 from .fonts import load_fonts
-from .layout import MAX_BLEED_MM, PX_PER_MM, PageGeometry, build_document_html, prepare_page_svg
+from .imposition import validate_fold
+from .layout import (
+    MAX_BLEED_MM,
+    PX_PER_MM,
+    PageGeometry,
+    build_document_html,
+    build_imposed_html,
+    prepare_page_svg,
+)
 from .layout import fmt as svg_number
 from .pdfmeta import finalize_pdf
 from .renderer import (
@@ -71,6 +79,10 @@ class ExportRequest:
     sizes: Sequence[tuple[float, float]] | None = None  # trim size per page; None: `width` x `height`
     bleed_mm: float = 0.0
     crop_marks: bool = False
+    layout: str = "normal"
+    signature_pages: int = 4
+    binding: str = "left"
+    print_sides: str = "both"
     title: str = ""
     lang: str = "en"
     fonts: Sequence[dict] = ()
@@ -99,18 +111,29 @@ def export_pdf(request: ExportRequest) -> RenderResult:
     sizes = request.page_sizes()
     if len(sizes) != len(request.pages):
         raise InvalidExport("invalid_sizes", "Give exactly one size per page.")
+    sides = validate_fold(
+        sizes,
+        request.layout,
+        request.signature_pages,
+        request.binding,
+        request.bleed_mm,
+        request.crop_marks,
+        request.print_sides,
+    )
     geometries = [
         PageGeometry.create(width, height, request.bleed_mm, request.crop_marks) for width, height in sizes
     ]
     with render_slot(request.owner):
         sanitized = sanitize_pages(request.pages)
-        result = _print(
-            [prepare_page_svg(svg, geometry) for svg, geometry in zip(sanitized, geometries, strict=True)],
-            geometries,
-            title=request.title,
-            lang=request.lang,
-            fonts=request.fonts,
-        )
+        prepared = [
+            prepare_page_svg(svg, geometry) for svg, geometry in zip(sanitized, geometries, strict=True)
+        ]
+        if sides is None:
+            result = _print(prepared, geometries, title=request.title, lang=request.lang, fonts=request.fonts)
+        else:
+            result, geometries = _print_folded(
+                prepared, sides, sizes[0], title=request.title, lang=request.lang, fonts=request.fonts
+            )
     return _finished(result, geometries, title=request.title, lang=request.lang)
 
 
@@ -120,6 +143,15 @@ def _print(
     """Print pages already sized to their artwork box (`prepare_page_svg`) with the `fonts` embedded."""
     document = build_document_html(svgs, geometries, title, load_fonts(fonts, allowed_origins()), lang)
     return render_pdf(document, width_px=geometries[0].page_width, height_px=geometries[0].page_height)
+
+
+def _print_folded(svgs, sides, size, *, title, lang, fonts):
+    width, height = size
+    document, geometries = build_imposed_html(
+        svgs, sides, width, height, title, load_fonts(fonts, allowed_origins()), lang
+    )
+    sheet = geometries[0]
+    return render_pdf(document, width_px=sheet.page_width, height_px=sheet.page_height), geometries
 
 
 def _finished(result: RenderResult, geometries: list[PageGeometry], *, title: str, lang: str) -> RenderResult:
@@ -957,6 +989,10 @@ def export_images(
     bleed_mm: float = 0,
     crop_marks: bool = False,
     cmyk: bool = False,
+    layout: str = "normal",
+    signature_pages: int = 4,
+    binding: str = "left",
+    print_sides: str = "both",
     **options: Any,
 ) -> ImageBundle:
     """Draw `pages` (see `pick_pages`) of `design` with `export_image` and its `options`, one render at a
@@ -975,6 +1011,8 @@ def export_images(
     for them."""
     fmt = str(options.get("format", "png")).lower()
     bleed, marks = _print_options(bleed_mm, crop_marks, cmyk)
+    if fmt not in DOCUMENT_FORMATS and (layout != "normal" or print_sides != "both"):
+        raise InvalidExport("invalid_imposition", "Folded layout is available for PDFs only.")
     video_options = {key: options.pop(key) for key in VIDEO_OPTIONS if key in options}
     if fmt in VIDEO_FORMATS:
         return export_video(
@@ -994,6 +1032,10 @@ def export_images(
             pages=pages,
             bleed_mm=bleed,
             crop_marks=marks,
+            layout=layout,
+            signature_pages=signature_pages,
+            binding=binding,
+            print_sides=print_sides,
             filename_style=filename_style,
             unix=unix,
             charge=charge,
@@ -1105,6 +1147,10 @@ def export_document(
     bleed_mm: float = 0,
     crop_marks: bool = False,
     cmyk: bool = False,
+    layout: str = "normal",
+    signature_pages: int = 4,
+    binding: str = "left",
+    print_sides: str = "both",
     filename_style: str | None = None,
     unix: int | None = None,
     charge: Callable[[int], None] | None = None,
@@ -1132,6 +1178,13 @@ def export_document(
     indexes = _page_indexes(document, pages)
     chosen = [document["pages"][index] for index in indexes]
     sizes = [_page_size(document, page) for page in chosen]
+    sides = (
+        validate_fold(sizes, layout, signature_pages, binding, bleed, marks, print_sides)
+        if fmt_id != "svg"
+        else None
+    )
+    if fmt_id == "svg" and (layout != "normal" or print_sides != "both"):
+        raise InvalidExport("invalid_imposition", "Folded layout is available for PDFs only.")
     if charge is not None and len(indexes) > 1:
         charge(len(indexes) - 1)
     output = _PAGE_OUTPUT[fmt_id]
@@ -1158,27 +1211,40 @@ def export_document(
         printed = None
         if output == "print":
             svgs = sanitize_pages([page.data for page in drawn.pages])
-            printed = _print(
-                [prepare_page_svg(svg, geometry) for svg, geometry in zip(svgs, geometries, strict=True)],
-                geometries,
-                title=design.title,
-                lang=PDF_LANG,
-                fonts=_font_specs(drawn.font_files),
-            )
+            prepared = [
+                prepare_page_svg(svg, geometry) for svg, geometry in zip(svgs, geometries, strict=True)
+            ]
+            if sides is None:
+                printed = _print(
+                    prepared,
+                    geometries,
+                    title=design.title,
+                    lang=PDF_LANG,
+                    fonts=_font_specs(drawn.font_files),
+                )
+            else:
+                printed, geometries = _print_folded(
+                    prepared,
+                    sides,
+                    sizes[0],
+                    title=design.title,
+                    lang=PDF_LANG,
+                    fonts=_font_specs(drawn.font_files),
+                )
         elif output == "picture":
-            printed = _print(
-                [
-                    _picture_svg(page, geometry)
-                    for page, geometry in zip(drawn.pages, geometries, strict=True)
-                ],
-                geometries,
-                title=design.title,
-                lang=PDF_LANG,
-                fonts=(),
-            )
+            prepared = [
+                _picture_svg(page, geometry) for page, geometry in zip(drawn.pages, geometries, strict=True)
+            ]
+            if sides is None:
+                printed = _print(prepared, geometries, title=design.title, lang=PDF_LANG, fonts=())
+            else:
+                printed, geometries = _print_folded(
+                    prepared, sides, sizes[0], title=design.title, lang=PDF_LANG, fonts=()
+                )
     preset = _preset_id(document) or design.preset
     images = []
-    for page, geometry in zip(drawn.pages, geometries, strict=True):
+    for page, size in zip(drawn.pages, sizes, strict=True):
+        geometry = PageGeometry.create(*size, bleed, marks)
         warnings = _drawing_warnings(page.placeholders, page.missing_fonts)
         options: dict[str, Any] = {"format": fmt_id}
         if output == "picture":
@@ -1222,15 +1288,24 @@ def export_document(
     if printed is None:
         return _bundle(design, tuple(images), style=style, unix=unix)
     result = _finished(printed, geometries, title=design.title, lang=PDF_LANG)
+    suffix = None
+    if sides is not None:
+        suffix = layout if print_sides == "both" else f"{layout}-{print_sides}"
+    elif fmt_id == "pdf-print":
+        suffix = "print"
     name = document_filename(
         design.title,
         "pdf",
         images[0],
         style=style,
         unix=unix,
-        suffix="print" if fmt_id == "pdf-print" else None,
+        suffix=suffix,
     )
     options = {"format": fmt_id, "bleed_mm": bleed, "crop_marks": marks, "cmyk": False}
+    if sides is not None:
+        options.update(
+            layout=layout, signature_pages=signature_pages, binding=binding, print_sides=print_sides
+        )
     if output == "picture":
         options["dpi"] = min(image.options_used["dpi"] for image in images)
     return ImageBundle(result.data, "pdf", PDF_MIME, name, tuple(images), (name,), options)

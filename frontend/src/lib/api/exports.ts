@@ -29,6 +29,12 @@ export const exportsApi = {
     if (input.sizes?.length) form.append('sizes', JSON.stringify(input.sizes.map((s) => ({ width: Math.round(s.width), height: Math.round(s.height) }))))
     if (input.bleedMm !== undefined) form.append('bleed_mm', String(input.bleedMm))
     if (input.cropMarks !== undefined) form.append('crop_marks', input.cropMarks ? 'true' : 'false')
+    if (input.imposition) {
+      form.append('layout', input.imposition.layout)
+      form.append('signature_pages', String(input.imposition.signaturePages))
+      form.append('binding', input.imposition.binding)
+      if (input.imposition.sides) form.append('print_sides', input.imposition.sides)
+    }
     if (input.title) form.append('title', input.title)
     if (input.lang) form.append('lang', input.lang)
     if (input.fonts?.length) form.append('fonts', JSON.stringify(input.fonts))

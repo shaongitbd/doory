@@ -34,6 +34,13 @@ describe('the API / MCP preview', () => {
     expect(exportArguments({ ...base, fileNames: 'structured', formatId: 'svg', options })).toEqual({ design_id: 'd1', format: 'svg', pages: 'all', file_names: 'detailed' })
   })
 
+  it('includes the chosen side in folded PDF examples', () => {
+    const options = { ...DEFAULT_EXPORT_OPTIONS, imposition: { layout: 'booklet' as const, signaturePages: 8, binding: 'right' as const, sides: 'back' as const } }
+    expect(exportArguments({ ...base, formatId: 'pdf-server', options })).toMatchObject({
+      layout: 'booklet', signature_pages: 8, binding: 'right', print_sides: 'back',
+    })
+  })
+
   it('knows which formats the API makes', () => {
     expect(['png', 'avif', 'svg', 'pdf', 'pdf-server', 'mp4', 'toString'].map(apiFormat)).toEqual(['png', 'avif', 'svg', 'pdf', 'pdf-print', null, null])
   })

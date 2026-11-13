@@ -564,6 +564,7 @@ export interface PdfExportInput {
   sizes?: { width: number; height: number }[]
   bleedMm?: number
   cropMarks?: boolean
+  imposition?: { layout: 'booklet' | 'book'; signaturePages: number; binding: 'left' | 'right'; sides?: 'both' | 'front' | 'back' }
   title?: string
   lang?: string
   fonts?: PdfFontFile[]
