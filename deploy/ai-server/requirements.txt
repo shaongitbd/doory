@@ -20,7 +20,7 @@ networkx==3.7
 numba==0.68.0
 numpy==2.5.4
 onnxruntime==1.31.0
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
 packaging==26.3
 pillow==13.0.0
 platformdirs==4.13.4
