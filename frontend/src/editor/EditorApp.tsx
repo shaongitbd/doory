@@ -1,4 +1,5 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from 'react'
+import { getLocale, subscribeLocale } from '@/i18n/locale'
 import type { EditorAppProps, EditorHandle } from '@/types/adapter'
 import './builtins/commands'
 import './builtins/audio'
@@ -53,6 +54,8 @@ function LiveRegion() {
  * panels, history, export, autosave triggering) lives inside.
  */
 export const EditorApp = forwardRef<EditorHandle, EditorAppProps>(function EditorApp(props, ref) {
+  // Update display labels while retaining this mounted editor's engine, selection and history.
+  useSyncExternalStore(subscribeLocale, getLocale, () => 'en')
   const { document: doc, meta, adapter, onTitleChange, onSaveStateChange, onConflictResolve, topBarStart, topBarEnd } = props
   const [engine] = useState(() => new EditorEngine({ adapter, document: doc, meta }))
   const [root, setRoot] = useState<HTMLDivElement | null>(null)

@@ -2,6 +2,8 @@
  * The emphasis presets that ship with the editor: one cycle each (`p` = 0..1), at rest at both ends so that a loop
  * is seamless. `c.k` is the strength, `c.u` a typical travel length for the page.
  */
+import { localized } from '@/i18n/catalog'
+import { writableMetadata } from '@/i18n/metadata'
 import { keyframes, rotateAbout } from './effectMath'
 import { type EffectFn, registerEmphasisPreset } from './presets'
 import { animationStrings as a } from './strings'
@@ -67,20 +69,20 @@ const breathe: EffectFn = (p, c) => {
 }
 
 export function registerBuiltinEmphasis(): void {
-  const n = a.emphasis
+  const n = localized(a.emphasis, 'animation.emphasis')
   const reg = registerEmphasisPreset
-  reg({ id: 'pulse', label: n.pulse, order: 10, defaults: { durationMs: 800, easing: 'ease-in-out' }, effect: pulse })
-  reg({ id: 'wiggle', label: n.wiggle, order: 20, defaults: { durationMs: 700, easing: 'linear' }, effect: wiggle })
-  reg({ id: 'float', label: n.float, order: 30, defaults: { durationMs: 2400, easing: 'linear', loop: true }, effect: float })
-  reg({ id: 'shake', label: n.shake, order: 40, defaults: { durationMs: 600, easing: 'linear' }, effect: shake })
-  reg({ id: 'flash', label: n.flash, order: 50, defaults: { durationMs: 900, easing: 'linear' }, effect: flash })
-  reg({ id: 'heartbeat', label: n.heartbeat, order: 60, defaults: { durationMs: 1200, easing: 'linear' }, effect: heartbeat })
-  reg({ id: 'tada', label: n.tada, order: 70, defaults: { durationMs: 1000, easing: 'linear' }, effect: tada })
-  reg({ id: 'spin', label: n.spin, order: 80, defaults: { durationMs: 1000, easing: 'ease-in-out' }, effect: spinOnce })
-  reg({ id: 'hop', label: n.hop, order: 90, defaults: { durationMs: 900, easing: 'linear' }, effect: hop })
-  reg({ id: 'jello', label: n.jello, order: 100, defaults: { durationMs: 1000, easing: 'linear' }, effect: jello })
-  reg({ id: 'swing', label: n.swing, order: 110, defaults: { durationMs: 1400, easing: 'linear' }, effect: swingOnce })
-  reg({ id: 'breathe', label: n.breathe, order: 120, defaults: { durationMs: 3000, easing: 'ease-in-out', loop: true }, effect: breathe })
+  reg(writableMetadata({ id: 'pulse', get label() { return n.pulse }, order: 10, defaults: { durationMs: 800, easing: 'ease-in-out' }, effect: pulse }))
+  reg(writableMetadata({ id: 'wiggle', get label() { return n.wiggle }, order: 20, defaults: { durationMs: 700, easing: 'linear' }, effect: wiggle }))
+  reg(writableMetadata({ id: 'float', get label() { return n.float }, order: 30, defaults: { durationMs: 2400, easing: 'linear', loop: true }, effect: float }))
+  reg(writableMetadata({ id: 'shake', get label() { return n.shake }, order: 40, defaults: { durationMs: 600, easing: 'linear' }, effect: shake }))
+  reg(writableMetadata({ id: 'flash', get label() { return n.flash }, order: 50, defaults: { durationMs: 900, easing: 'linear' }, effect: flash }))
+  reg(writableMetadata({ id: 'heartbeat', get label() { return n.heartbeat }, order: 60, defaults: { durationMs: 1200, easing: 'linear' }, effect: heartbeat }))
+  reg(writableMetadata({ id: 'tada', get label() { return n.tada }, order: 70, defaults: { durationMs: 1000, easing: 'linear' }, effect: tada }))
+  reg(writableMetadata({ id: 'spin', get label() { return n.spin }, order: 80, defaults: { durationMs: 1000, easing: 'ease-in-out' }, effect: spinOnce }))
+  reg(writableMetadata({ id: 'hop', get label() { return n.hop }, order: 90, defaults: { durationMs: 900, easing: 'linear' }, effect: hop }))
+  reg(writableMetadata({ id: 'jello', get label() { return n.jello }, order: 100, defaults: { durationMs: 1000, easing: 'linear' }, effect: jello }))
+  reg(writableMetadata({ id: 'swing', get label() { return n.swing }, order: 110, defaults: { durationMs: 1400, easing: 'linear' }, effect: swingOnce }))
+  reg(writableMetadata({ id: 'breathe', get label() { return n.breathe }, order: 120, defaults: { durationMs: 3000, easing: 'ease-in-out', loop: true }, effect: breathe }))
 }
 
 registerBuiltinEmphasis()

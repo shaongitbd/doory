@@ -50,21 +50,21 @@ export default function TrashPage() {
           <ul className={styles.list}>
             {designs.map((design) => {
               const days = design.trashed_at ? daysUntilPurge(design.trashed_at) : TRASH_RETENTION_DAYS
-              const title = design.title || 'Untitled design'
+              const title = design.title || msg('Untitled design')
               return (
                 <li key={design.id} className={trashStyles.row}>
                   <Thumbnail src={design.thumbnail_url} alt="" aspect={1.4} className={trashStyles.thumb} />
                   <div className={trashStyles.info}>
                     <p className={trashStyles.title}>{title}</p>
                     <p className={trashStyles.meta}>
-                      {msg("Deleted ")}{design.trashed_at ? formatRelative(design.trashed_at) : 'recently'} · {days === 0 ? 'removed today' : `${days} ${days === 1 ? 'day' : 'days'} left`}
+                      {msg("Deleted ")}{design.trashed_at ? formatRelative(design.trashed_at) : msg('recently')} · {days === 0 ? msg('removed today') : days === 1 ? msg('{count} day left', { count: days }) : msg('{count} days left', { count: days })}
                     </p>
                   </div>
                   <div className={trashStyles.actions}>
                     <Button size="sm" variant="secondary" leftIcon={<RotateCcw size={14} />} onClick={() => actions.restore(design)}>
                       {msg("Restore")}</Button>
-                    <Tooltip content="Delete forever">
-                      <IconButton size="sm" variant="danger" label={`Delete ${title} forever`} icon={<Trash2 size={16} />} onClick={() => setToDelete(design)} />
+                    <Tooltip content={msg("Delete forever")}>
+                      <IconButton size="sm" variant="danger" label={msg('Delete {title} forever', { title })} icon={<Trash2 size={16} />} onClick={() => setToDelete(design)} />
                     </Tooltip>
                   </div>
                 </li>
@@ -84,7 +84,7 @@ export default function TrashPage() {
         open={confirmEmpty}
         title={msg("Empty the trash?")}
         description={msg("Every design in the trash will be deleted permanently. This can’t be undone.")}
-        confirmLabel="Empty trash"
+        confirmLabel={msg("Empty trash")}
         tone="danger"
         loading={emptyTrash.isPending}
         onCancel={() => setConfirmEmpty(false)}
@@ -100,9 +100,9 @@ export default function TrashPage() {
       />
       <ConfirmDialog
         open={toDelete !== null}
-        title={`Delete “${toDelete?.title || 'Untitled design'}” forever?`}
+        title={msg('Delete “{title}” forever?', { title: toDelete?.title || msg('Untitled design') })}
         description={msg("This permanently deletes the design and can’t be undone.")}
-        confirmLabel="Delete forever"
+        confirmLabel={msg("Delete forever")}
         tone="danger"
         onCancel={() => setToDelete(null)}
         onConfirm={() => {

@@ -27,7 +27,7 @@ export interface DesignCardProps {
 export function DesignCard({ design, layout, selected, selectionActive, dragIds, onSelectChange, actions, onMoveRequest }: DesignCardProps) {
   const [renaming, setRenaming] = useState(false)
   const catalogue = useSizePresets()
-  const title = design.title || 'Untitled design'
+  const title = design.title || msg('Untitled design')
 
   return (
     <article className={styles.card} data-layout={layout} data-selected={selected || undefined} data-selecting={selectionActive || undefined} draggable={!renaming} onDragStart={(event) => setDraggedDesigns(event, dragIds())}>
@@ -36,13 +36,13 @@ export function DesignCard({ design, layout, selected, selectionActive, dragIds,
           <Thumbnail src={design.thumbnail_url} alt="" aspect={layout === 'list' ? 1.4 : 4 / 3} fit="contain" page={design} className={styles.thumb} />
         </Link>
         <div className={styles.select}>
-          <Checkbox aria-label={`Select ${title}`} checked={selected} onChange={(event) => onSelectChange(event.target.checked)} />
+          <Checkbox aria-label={msg('Select {title}', { title })} checked={selected} onChange={(event) => onSelectChange(event.target.checked)} />
         </div>
         <div className={styles.quick}>
           <IconButton
             size="sm"
             variant="secondary"
-            label={design.starred ? `Remove ${title} from starred` : `Star ${title}`}
+            label={design.starred ? msg('Remove {title} from starred', { title }) : msg('Star {title}', { title })}
             pressed={design.starred}
             icon={<Star size={16} fill={design.starred ? 'currentColor' : 'none'} />}
             className={styles.star}
@@ -54,7 +54,7 @@ export function DesignCard({ design, layout, selected, selectionActive, dragIds,
         {renaming ? (
           <InlineRename
             value={design.title}
-            label={`Rename ${title}`}
+            label={msg('Rename {title}', { title })}
             onCommit={(next) => {
               setRenaming(false)
               actions.rename(design, next)
@@ -70,12 +70,12 @@ export function DesignCard({ design, layout, selected, selectionActive, dragIds,
           {designKind(design, catalogue)} · {formatRelative(design.updated_at)}
           <span className={styles.extra}>
             {getPreset(design.preset, catalogue) ? ` · ${design.width} × ${design.height}` : ''}
-            {design.page_count > 1 ? ` · ${design.page_count} pages` : ''}
+            {design.page_count > 1 ? ` · ${msg('{count} pages', { count: design.page_count })}` : ''}
           </span>
         </p>
       </div>
       <div className={styles.menu}>
-        <Menu label={`Actions for ${title}`} placement="bottom-end" trigger={<IconButton size="sm" label={`More actions for ${title}`} icon={<MoreHorizontal size={18} />} />}>
+        <Menu label={msg('Actions for {title}', { title })} placement="bottom-end" trigger={<IconButton size="sm" label={msg('More actions for {title}', { title })} icon={<MoreHorizontal size={18} />} />}>
           <MenuItem icon={<ExternalLink size={16} />} onSelect={() => actions.open(design)}>
             {msg("Open")}</MenuItem>
           <MenuItem icon={<Pencil size={16} />} onSelect={() => setRenaming(true)}>
@@ -83,7 +83,7 @@ export function DesignCard({ design, layout, selected, selectionActive, dragIds,
           <MenuItem icon={<Copy size={16} />} onSelect={() => actions.duplicate(design)}>
             {msg("Duplicate")}</MenuItem>
           <MenuItem icon={<Star size={16} />} onSelect={() => actions.toggleStar(design)}>
-            {design.starred ? 'Remove star' : 'Star'}
+            {design.starred ? msg('Unstar') : msg('Star')}
           </MenuItem>
           <MenuItem icon={<FolderInput size={16} />} onSelect={() => onMoveRequest(design)}>
             {msg("Move to folder…")}</MenuItem>

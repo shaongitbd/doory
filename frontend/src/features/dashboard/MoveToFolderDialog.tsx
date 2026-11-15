@@ -60,9 +60,9 @@ export function MoveToFolderDialog({ open, count, currentFolder, onClose, onMove
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={count === 1 ? 'Move design' : `Move ${count} designs`} description={msg("Choose a folder.")} size="sm">
+    <Dialog open={open} onClose={onClose} title={count === 1 ? msg('Move design') : msg('Move {count} designs', { count })} description={msg("Choose a folder.")} size="sm">
       <div className={styles.list}>
-        <button type="button" className={styles.row} disabled={currentFolder === null} onClick={() => onMove(null, 'All designs')}>
+        <button type="button" className={styles.row} disabled={currentFolder === null} onClick={() => onMove(null, msg('All designs'))}>
           <Home size={18} aria-hidden="true" />
           <span>{msg("All designs (top level)")}</span>
         </button>

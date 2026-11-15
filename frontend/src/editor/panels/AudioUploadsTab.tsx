@@ -10,11 +10,11 @@ import type { Asset } from '@/types/api'
 import { useEditor, useEditorState } from '../context'
 import { useAsyncList } from '../hooks/useAsyncList'
 import { formatSeconds } from '../animation/timelineMath'
-import { AUDIO_ACCEPT, AudioFileError, audioFilesFrom } from '../audio/files'
-import { AudioLoadError } from '../audio/sources'
+import { AUDIO_ACCEPT, audioFilesFrom } from '../audio/files'
 import { audioRuntime, usePreview } from '../audio/runtime'
 import { uploadsOf, useUploads } from '../audio/uploads'
 import { t } from '../strings'
+import { audioErrorMessage } from '../audio/messages'
 import { Button, IconButton } from '../ui/Button'
 import styles from './Audio.module.css'
 
@@ -108,7 +108,7 @@ export function AudioUploadsTab() {
         const { ref, durationMs } = await editor.audio.upload(file)
         store.add({ ref, durationMs, size: file.size })
       } catch (error) {
-        setProblem(error instanceof AudioFileError || error instanceof AudioLoadError ? error.message : error instanceof Error && error.message ? error.message : t.audio.errors.upload)
+        setProblem(audioErrorMessage(error, t.audio.errors.upload))
       } finally {
         store.end()
       }
@@ -122,7 +122,7 @@ export function AudioUploadsTab() {
         const durationMs = item.durationMs ?? (await editor.audio.measure(item.ref))
         editor.audio.addFromAsset(item.ref, 'upload', durationMs, target)
       } catch (error) {
-        editor.toast(error instanceof AudioLoadError ? error.message : t.audio.errors.unreadable, 'error')
+        editor.toast(audioErrorMessage(error, t.audio.errors.unreadable), 'error')
       }
     })()
   }

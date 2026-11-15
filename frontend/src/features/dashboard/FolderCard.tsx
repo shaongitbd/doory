@@ -44,7 +44,7 @@ export function FolderCard({ folder, onRename, onDelete, onDropDesigns }: Folder
         {renaming ? (
           <InlineRename
             value={folder.name}
-            label={`Rename folder ${folder.name}`}
+            label={msg('Rename {title}', { title: folder.name })}
             maxLength={80}
             onCommit={(next) => {
               setRenaming(false)
@@ -58,10 +58,10 @@ export function FolderCard({ folder, onRename, onDelete, onDropDesigns }: Folder
           </Link>
         )}
         <span className={styles.count}>
-          {folder.design_count} {folder.design_count === 1 ? 'design' : 'designs'}
+          {folder.design_count} {folder.design_count === 1 ? msg('design') : msg('designs')}
         </span>
       </div>
-      <Menu label={`Actions for folder ${folder.name}`} placement="bottom-end" trigger={<IconButton size="sm" label={`More actions for folder ${folder.name}`} icon={<MoreHorizontal size={18} />} />}>
+      <Menu label={msg('Actions for {title}', { title: folder.name })} placement="bottom-end" trigger={<IconButton size="sm" label={msg('More actions for {title}', { title: folder.name })} icon={<MoreHorizontal size={18} />} />}>
         <MenuItem icon={<Pencil size={16} />} onSelect={() => setRenaming(true)}>
           {msg("Rename")}</MenuItem>
         <MenuItem icon={<Trash2 size={16} />} danger onSelect={() => onDelete(folder)}>

@@ -119,9 +119,9 @@ export default function UploadsPage() {
       />
       <ConfirmDialog
         open={deleting !== null}
-        title={`Delete “${deleting?.name ?? ''}”?`}
+        title={msg('Delete “{title}”?', { title: deleting?.name ?? '' })}
         description={msg("The file is removed from your account. Designs that still use this image will no longer show it.")}
-        confirmLabel="Delete image"
+        confirmLabel={msg("Delete image")}
         tone="danger"
         loading={remove.isPending}
         onCancel={() => setDeleting(null)}

@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     throw new ApiError({
       status: 409,
       code: 'wrong_account',
-      message: lost ? `That is not the account this design belongs to. Sign in as ${lost.email} to keep saving.` : 'That is not the account this design belongs to.',
+      message: lost ? msg('That is not the account this design belongs to. Sign in as {email} to keep saving.', { email: lost.email }) : msg('That is not the account this design belongs to.'),
     })
   }, [])
 

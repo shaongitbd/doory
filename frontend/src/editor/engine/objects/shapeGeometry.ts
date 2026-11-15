@@ -2,6 +2,7 @@
  * Pure geometry for built-in shapes and image mask frames. All paths use a 100 x 100 viewBox so they
  * can be stretched into any bounding box.
  */
+import { writableMetadata } from '@/i18n/metadata'
 import type { MaskShapeId } from '@/types/document'
 import { t } from '../../strings'
 
@@ -66,46 +67,46 @@ export interface PathShape {
 
 /** Built-in vector shapes (originals, CC0). They work with no server. */
 export const PATH_SHAPES: readonly PathShape[] = [
-  {
+  writableMetadata({
     id: 'heart',
-    label: t.shapes.heart,
+    get label() { return t.shapes.heart },
     path: 'M50 90 C18 66 4 48 4 31 C4 17 15 7 29 7 C38 7 46 12 50 20 C54 12 62 7 71 7 C85 7 96 17 96 31 C96 48 82 66 50 90 Z',
     keywords: ['love', 'valentine'],
-  },
-  {
+  }),
+  writableMetadata({
     id: 'speech',
-    label: t.shapes.speech,
+    get label() { return t.shapes.speech },
     path: 'M16 6 H84 Q94 6 94 16 V58 Q94 68 84 68 H46 L26 92 V68 H16 Q6 68 6 58 V16 Q6 6 16 6 Z',
     keywords: ['chat', 'comment', 'callout'],
-  },
-  { id: 'arrow-right', label: t.shapes.arrowRight, path: 'M4 36 H56 V12 L96 50 L56 88 V64 H4 Z', keywords: ['arrow', 'direction'] },
-  { id: 'cross', label: t.shapes.cross, path: 'M36 4 H64 V36 H96 V64 H64 V96 H36 V64 H4 V36 H36 Z', keywords: ['add', 'plus', 'medical'] },
-  { id: 'diamond', label: t.shapes.diamond, path: 'M50 2 L98 50 L50 98 L2 50 Z', keywords: ['rhombus'] },
-  { id: 'trapezoid', label: t.shapes.trapezoid, path: 'M22 18 H78 L98 82 H2 Z', keywords: [] },
-  { id: 'parallelogram', label: t.shapes.parallelogram, path: 'M26 18 H98 L74 82 H2 Z', keywords: [] },
-  {
+  }),
+  writableMetadata({ id: 'arrow-right', get label() { return t.shapes.arrowRight }, path: 'M4 36 H56 V12 L96 50 L56 88 V64 H4 Z', keywords: ['arrow', 'direction'] }),
+  writableMetadata({ id: 'cross', get label() { return t.shapes.cross }, path: 'M36 4 H64 V36 H96 V64 H64 V96 H36 V64 H4 V36 H36 Z', keywords: ['add', 'plus', 'medical'] }),
+  writableMetadata({ id: 'diamond', get label() { return t.shapes.diamond }, path: 'M50 2 L98 50 L50 98 L2 50 Z', keywords: ['rhombus'] }),
+  writableMetadata({ id: 'trapezoid', get label() { return t.shapes.trapezoid }, path: 'M22 18 H78 L98 82 H2 Z', keywords: [] }),
+  writableMetadata({ id: 'parallelogram', get label() { return t.shapes.parallelogram }, path: 'M26 18 H98 L74 82 H2 Z', keywords: [] }),
+  writableMetadata({
     id: 'ring',
-    label: t.shapes.ring,
+    get label() { return t.shapes.ring },
     path: 'M50 2 A48 48 0 1 1 49.99 2 Z M50 24 A26 26 0 1 0 50.01 24 Z',
     evenOdd: true,
     keywords: ['donut', 'circle'],
-  },
-  {
+  }),
+  writableMetadata({
     id: 'cloud',
-    label: t.shapes.cloud,
+    get label() { return t.shapes.cloud },
     path: 'M26 82 C10 82 2 70 6 57 C8 47 18 42 25 44 C25 27 41 16 56 23 C64 11 85 16 86 35 C99 37 101 56 91 67 C87 77 79 82 70 82 Z',
     keywords: ['weather', 'sky'],
-  },
-  { id: 'bolt', label: t.shapes.bolt, path: 'M58 2 L16 56 H44 L36 98 L84 40 H56 Z', keywords: ['energy', 'flash'] },
-  { id: 'chevron', label: t.shapes.chevron, path: 'M18 6 H66 L96 50 L66 94 H18 L48 50 Z', keywords: ['arrow'] },
-  { id: 'banner', label: t.shapes.banner, path: 'M2 22 H98 L86 50 L98 78 H2 L14 50 Z', keywords: ['ribbon', 'label'] },
-  {
+  }),
+  writableMetadata({ id: 'bolt', get label() { return t.shapes.bolt }, path: 'M58 2 L16 56 H44 L36 98 L84 40 H56 Z', keywords: ['energy', 'flash'] }),
+  writableMetadata({ id: 'chevron', get label() { return t.shapes.chevron }, path: 'M18 6 H66 L96 50 L66 94 H18 L48 50 Z', keywords: ['arrow'] }),
+  writableMetadata({ id: 'banner', get label() { return t.shapes.banner }, path: 'M2 22 H98 L86 50 L98 78 H2 L14 50 Z', keywords: ['ribbon', 'label'] }),
+  writableMetadata({
     id: 'moon',
-    label: t.shapes.moon,
+    get label() { return t.shapes.moon },
     path: 'M62 4 A46 46 0 1 0 96 66 A36 36 0 0 1 62 4 Z',
     keywords: ['night'],
-  },
-  { id: 'drop', label: t.shapes.drop, path: 'M50 2 C50 2 14 42 14 64 A36 36 0 0 0 86 64 C86 42 50 2 50 2 Z', keywords: ['water'] },
+  }),
+  writableMetadata({ id: 'drop', get label() { return t.shapes.drop }, path: 'M50 2 C50 2 14 42 14 64 A36 36 0 0 0 86 64 C86 42 50 2 50 2 Z', keywords: ['water'] }),
 ]
 
 const MASK_PATHS: Record<Exclude<MaskShapeId, 'circle' | 'rounded'>, string> = {

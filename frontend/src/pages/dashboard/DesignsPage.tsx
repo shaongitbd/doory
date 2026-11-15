@@ -45,7 +45,7 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
 
   const folders = useFolders()
   const currentFolder = folderId ? folders.data?.find((folder) => folder.id === folderId) : undefined
-  usePageTitle(starred ? 'Starred' : (currentFolder?.name ?? 'Designs'))
+  usePageTitle(starred ? msg('Starred') : (currentFolder?.name ?? msg('Designs')))
 
   const query: DesignQuery = useMemo(
     () => (starred ? { q: q || undefined, starred: true, ordering } : { q: q || undefined, folder: q ? undefined : (folderId ?? 'root'), ordering }),
@@ -136,7 +136,7 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
               </span>
             ))}
           </nav>
-          <h1 className={styles.title}>{q ? `Results for “${q}”` : starred ? 'Starred' : (currentFolder?.name ?? 'Your designs')}</h1>
+          <h1 className={styles.title}>{q ? msg('Results for “{query}”', { query: q }) : starred ? msg('Starred') : (currentFolder?.name ?? msg('Your designs'))}</h1>
         </div>
         <div className={styles.tools}>
           {q ? (
@@ -149,8 +149,8 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
             value={layout}
             onChange={setLayout}
             options={[
-              { value: 'grid', label: <LayoutGrid size={16} />, ariaLabel: 'Grid view' },
-              { value: 'list', label: <List size={16} />, ariaLabel: 'List view' },
+              { value: 'grid', label: <LayoutGrid size={16} />, ariaLabel: msg('Grid view') },
+              { value: 'list', label: <List size={16} />, ariaLabel: msg('List view') },
             ]}
           />
           {starred ? null : (
@@ -191,7 +191,7 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
           <EmptyState title={msg("Your designs didn’t load")} description={errorMessage(list.error, 'Check your connection and try again.')} role="alert" action={<Button onClick={() => void list.refetch()}>{msg("Try again")}</Button>} />
         ) : empty ? (
           q ? (
-            <EmptyState icon={<Search size={28} />} title={`No designs match “${q}”`} description={msg("Check the spelling, or try a shorter search.")} action={<Button variant="secondary" onClick={() => setParam('q', null)}>{msg("Clear search")}</Button>} />
+            <EmptyState icon={<Search size={28} />} title={msg('No designs match “{query}”', { query: q })} description={msg("Check the spelling, or try a shorter search.")} action={<Button variant="secondary" onClick={() => setParam('q', null)}>{msg("Clear search")}</Button>} />
           ) : starred ? (
             <EmptyState icon={<Star size={28} />} title={msg("Nothing starred yet")} description={msg("Star a design from its menu or its card to keep it here, whatever folder it is in.")} />
           ) : folderId ? (
@@ -267,9 +267,9 @@ export default function DesignsPage({ starred = false }: { starred?: boolean }) 
 
       <ConfirmDialog
         open={folderToDelete !== null}
-        title={`Delete folder “${folderToDelete?.name ?? ''}”?`}
+        title={msg('Delete “{title}”?', { title: folderToDelete?.name ?? '' })}
         description={msg("The designs and folders inside move up to the parent folder. Nothing is deleted.")}
-        confirmLabel="Delete folder"
+        confirmLabel={msg("Delete folder")}
         tone="danger"
         loading={deleteFolder.isPending}
         onCancel={() => setFolderToDelete(null)}

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { Eye, EyeOff } from 'lucide-react'
 import { useId, useState } from 'react'
 import { IconButton, Input, type InputProps } from '@/ui'
@@ -22,7 +23,7 @@ export function PasswordInput({ showStrength, value, id, ...rest }: PasswordInpu
         type={visible ? 'text' : 'password'}
         spellCheck={false}
         autoCapitalize="none"
-        rightSlot={<IconButton label={visible ? 'Hide password' : 'Show password'} size="sm" pressed={visible} icon={visible ? <EyeOff size={18} /> : <Eye size={18} />} onClick={() => setVisible((v) => !v)} />}
+        rightSlot={<IconButton label={visible ? msg('Hide password') : msg('Show password')} size="sm" pressed={visible} icon={visible ? <EyeOff size={18} /> : <Eye size={18} />} onClick={() => setVisible((v) => !v)} />}
       />
       {showStrength ? <PasswordStrengthMeter password={value} /> : null}
     </div>

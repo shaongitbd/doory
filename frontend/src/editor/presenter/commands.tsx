@@ -3,6 +3,7 @@
  * dialog one place to learn about them. Their ids start with `file.` / `view.` so they stay available in view-only
  * and comment-only links (anyone who can open the design can present it and read its notes).
  */
+import { writableMetadata } from '@/i18n/metadata'
 import { Download, Presentation, StickyNote } from 'lucide-react'
 import { registerCommand } from '../commands'
 import type { EditorEngine } from '../engine/editor'
@@ -34,8 +35,8 @@ function presentWithNotes(editor: EditorEngine): void {
   editor.openDialog('presenter', { session, withNotes: true })
 }
 
-registerCommand({ id: 'file.present', label: t.cmd.filePresent, shortcut: 'Shift+P', group: t.cmdGroup.file, icon: <Presentation size={18} />, run: (e) => e.openDialog('presenter') })
-registerCommand({ id: 'file.presentNotes', label: t.cmd.filePresentNotes, group: t.cmdGroup.file, icon: <Presentation size={18} />, run: presentWithNotes })
-registerCommand({ id: 'view.notes', label: t.cmd.viewNotes, shortcut: 'Shift+N', group: t.cmdGroup.view, icon: <StickyNote size={18} />, run: toggleNotes })
-registerCommand({ id: 'file.notesMarkdown', label: t.notes.downloadMarkdown, group: t.cmdGroup.file, icon: <Download size={18} />, run: (e) => downloadNotes(e, 'markdown') })
-registerCommand({ id: 'file.notesText', label: t.notes.downloadText, group: t.cmdGroup.file, icon: <Download size={18} />, run: (e) => downloadNotes(e, 'text') })
+registerCommand(writableMetadata({ id: 'file.present', get label() { return t.cmd.filePresent }, shortcut: 'Shift+P', get group() { return t.cmdGroup.file }, icon: <Presentation size={18} />, run: (e) => e.openDialog('presenter') }))
+registerCommand(writableMetadata({ id: 'file.presentNotes', get label() { return t.cmd.filePresentNotes }, get group() { return t.cmdGroup.file }, icon: <Presentation size={18} />, run: presentWithNotes }))
+registerCommand(writableMetadata({ id: 'view.notes', get label() { return t.cmd.viewNotes }, shortcut: 'Shift+N', get group() { return t.cmdGroup.view }, icon: <StickyNote size={18} />, run: toggleNotes }))
+registerCommand(writableMetadata({ id: 'file.notesMarkdown', get label() { return t.notes.downloadMarkdown }, get group() { return t.cmdGroup.file }, icon: <Download size={18} />, run: (e) => downloadNotes(e, 'markdown') }))
+registerCommand(writableMetadata({ id: 'file.notesText', get label() { return t.notes.downloadText }, get group() { return t.cmdGroup.file }, icon: <Download size={18} />, run: (e) => downloadNotes(e, 'text') }))

@@ -1,4 +1,6 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { activateLocale } from '@/i18n/catalog'
+import { setLocale } from '@/i18n/locale'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '@/test/app'
@@ -29,6 +31,27 @@ function token(overrides: Partial<ApiToken> = {}): ApiToken {
 }
 
 describe('settings: AI assistant tokens', () => {
+  it.each([
+    ['en', 'never', 'Never expires'],
+    ['de', 'nie', 'Läuft nie ab'],
+    ['zh-CN', '从未', '永不到期'],
+    ['zh-TW', '從未', '永不到期'],
+  ] as const)('distinguishes unused tokens from tokens without expiry in %s', async (locale, unused, expiry) => {
+    await activateLocale(locale)
+    try {
+      renderApp('/settings', { user: makeUser(), config: MCP_ON, handlers: [
+        http.get('*/api/v1/auth/tokens/', () => HttpResponse.json([token({ name: 'User {name}' })])),
+      ] })
+      const row = (await screen.findByText('User {name}')).closest('li')!
+      expect(row).toHaveTextContent(unused)
+      expect(row).toHaveTextContent(expiry)
+      expect(row).toHaveTextContent('doory_abc123_…')
+    } finally {
+      cleanup()
+      setLocale('en')
+    }
+  })
+
   it('creates a token and shows it once with the Claude Code command', async () => {
     const bodies: unknown[] = []
     renderApp('/settings', {

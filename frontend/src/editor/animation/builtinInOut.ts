@@ -3,6 +3,8 @@
  * of an object from hidden (`p = 0`) to resting (`p = 1`); an exit plays it backwards. `c.k` is the strength
  * (intensity times two), `c.u` a typical travel length for the page.
  */
+import { localized } from '@/i18n/catalog'
+import { writableMetadata } from '@/i18n/metadata'
 import { clamp01, mix } from './easing'
 import { hash01, rotateAbout, sideVector } from './effectMath'
 import { type Clip, type Effect, type EffectContext, type EffectFn, registerInOutPreset } from './presets'
@@ -178,38 +180,38 @@ const whip: EffectFn = (p, c) => {
 }
 
 export function registerBuiltinInOut(): void {
-  const n = a.presets
+  const n = localized(a.presets, 'animation.presets')
   const reg = registerInOutPreset
-  reg({ id: 'fade', label: n.fade, group: 'basic', order: 10, defaults: { durationMs: 600, easing: 'ease-out' }, textUnits: true, effect: fade })
-  reg({ id: 'rise', label: n.rise, group: 'basic', order: 20, defaults: { durationMs: 700, easing: 'ease-out' }, textUnits: true, effect: rise })
-  reg({ id: 'drop', label: n.drop, group: 'basic', order: 30, defaults: { durationMs: 700, easing: 'ease-out' }, textUnits: true, effect: drop })
-  reg({ id: 'pop', label: n.pop, group: 'basic', order: 40, defaults: { durationMs: 550, easing: 'spring' }, textUnits: true, effect: pop })
-  reg({ id: 'scale', label: n.scale, group: 'basic', order: 50, defaults: { durationMs: 600, easing: 'ease-out' }, textUnits: true, effect: grow })
-  reg({ id: 'zoom', label: n.zoom, group: 'basic', order: 60, defaults: { durationMs: 800, easing: 'ease-out', direction: 'in' }, directions: ['in', 'out'], effect: zoom })
-  reg({ id: 'blur', label: n.blur, group: 'basic', order: 70, defaults: { durationMs: 800, easing: 'ease-out' }, textUnits: true, effect: blur })
-  reg({ id: 'focus', label: n.focus, group: 'basic', order: 80, defaults: { durationMs: 900, easing: 'ease-out' }, textUnits: true, effect: focus })
+  reg(writableMetadata({ id: 'fade', get label() { return n.fade }, group: 'basic', order: 10, defaults: { durationMs: 600, easing: 'ease-out' }, textUnits: true, effect: fade }))
+  reg(writableMetadata({ id: 'rise', get label() { return n.rise }, group: 'basic', order: 20, defaults: { durationMs: 700, easing: 'ease-out' }, textUnits: true, effect: rise }))
+  reg(writableMetadata({ id: 'drop', get label() { return n.drop }, group: 'basic', order: 30, defaults: { durationMs: 700, easing: 'ease-out' }, textUnits: true, effect: drop }))
+  reg(writableMetadata({ id: 'pop', get label() { return n.pop }, group: 'basic', order: 40, defaults: { durationMs: 550, easing: 'spring' }, textUnits: true, effect: pop }))
+  reg(writableMetadata({ id: 'scale', get label() { return n.scale }, group: 'basic', order: 50, defaults: { durationMs: 600, easing: 'ease-out' }, textUnits: true, effect: grow }))
+  reg(writableMetadata({ id: 'zoom', get label() { return n.zoom }, group: 'basic', order: 60, defaults: { durationMs: 800, easing: 'ease-out', direction: 'in' }, directions: ['in', 'out'], effect: zoom }))
+  reg(writableMetadata({ id: 'blur', get label() { return n.blur }, group: 'basic', order: 70, defaults: { durationMs: 800, easing: 'ease-out' }, textUnits: true, effect: blur }))
+  reg(writableMetadata({ id: 'focus', get label() { return n.focus }, group: 'basic', order: 80, defaults: { durationMs: 900, easing: 'ease-out' }, textUnits: true, effect: focus }))
 
-  reg({ id: 'slide', label: n.slide, group: 'motion', order: 100, defaults: { durationMs: 700, easing: 'ease-out' }, directions: MOVES, effect: slide })
-  reg({ id: 'drift', label: n.drift, group: 'motion', order: 110, defaults: { durationMs: 1200, easing: 'ease-out' }, directions: MOVES, textUnits: true, effect: drift })
-  reg({ id: 'bounce', label: n.bounce, group: 'motion', order: 120, defaults: { durationMs: 1000, easing: 'bounce' }, textUnits: true, effect: bounce })
-  reg({ id: 'roll', label: n.roll, group: 'motion', order: 130, defaults: { durationMs: 1100, easing: 'ease-out' }, directions: ['left', 'right'], effect: roll })
-  reg({ id: 'whip', label: n.whip, group: 'motion', order: 140, defaults: { durationMs: 450, easing: 'ease-out' }, directions: MOVES, effect: whip })
-  reg({ id: 'tumble', label: n.tumble, group: 'motion', order: 150, defaults: { durationMs: 900, easing: 'ease-out' }, textUnits: true, effect: tumble })
+  reg(writableMetadata({ id: 'slide', get label() { return n.slide }, group: 'motion', order: 100, defaults: { durationMs: 700, easing: 'ease-out' }, directions: MOVES, effect: slide }))
+  reg(writableMetadata({ id: 'drift', get label() { return n.drift }, group: 'motion', order: 110, defaults: { durationMs: 1200, easing: 'ease-out' }, directions: MOVES, textUnits: true, effect: drift }))
+  reg(writableMetadata({ id: 'bounce', get label() { return n.bounce }, group: 'motion', order: 120, defaults: { durationMs: 1000, easing: 'bounce' }, textUnits: true, effect: bounce }))
+  reg(writableMetadata({ id: 'roll', get label() { return n.roll }, group: 'motion', order: 130, defaults: { durationMs: 1100, easing: 'ease-out' }, directions: ['left', 'right'], effect: roll }))
+  reg(writableMetadata({ id: 'whip', get label() { return n.whip }, group: 'motion', order: 140, defaults: { durationMs: 450, easing: 'ease-out' }, directions: MOVES, effect: whip }))
+  reg(writableMetadata({ id: 'tumble', get label() { return n.tumble }, group: 'motion', order: 150, defaults: { durationMs: 900, easing: 'ease-out' }, textUnits: true, effect: tumble }))
 
-  reg({ id: 'wipe', label: n.wipe, group: 'reveal', order: 200, defaults: { durationMs: 700, easing: 'ease-in-out' }, directions: MOVES, effect: wipe })
-  reg({ id: 'curtain', label: n.curtain, group: 'reveal', order: 210, defaults: { durationMs: 700, easing: 'ease-in-out' }, effect: curtain })
-  reg({ id: 'iris', label: n.iris, group: 'reveal', order: 220, defaults: { durationMs: 800, easing: 'ease-in-out' }, effect: iris })
-  reg({ id: 'unfold', label: n.unfold, group: 'reveal', order: 230, defaults: { durationMs: 700, easing: 'ease-out' }, effect: unfold })
-  reg({ id: 'typewriter', label: n.typewriter, group: 'reveal', order: 240, defaults: { durationMs: 1500, easing: 'linear' }, textUnits: true, textDefault: 'letter', stagger: 1, effect: typewriter })
-  reg({ id: 'baseline', label: n.baseline, group: 'reveal', order: 250, defaults: { durationMs: 800, easing: 'ease-out' }, textUnits: true, textDefault: 'line', stagger: 0.6, effect: baseline })
+  reg(writableMetadata({ id: 'wipe', get label() { return n.wipe }, group: 'reveal', order: 200, defaults: { durationMs: 700, easing: 'ease-in-out' }, directions: MOVES, effect: wipe }))
+  reg(writableMetadata({ id: 'curtain', get label() { return n.curtain }, group: 'reveal', order: 210, defaults: { durationMs: 700, easing: 'ease-in-out' }, effect: curtain }))
+  reg(writableMetadata({ id: 'iris', get label() { return n.iris }, group: 'reveal', order: 220, defaults: { durationMs: 800, easing: 'ease-in-out' }, effect: iris }))
+  reg(writableMetadata({ id: 'unfold', get label() { return n.unfold }, group: 'reveal', order: 230, defaults: { durationMs: 700, easing: 'ease-out' }, effect: unfold }))
+  reg(writableMetadata({ id: 'typewriter', get label() { return n.typewriter }, group: 'reveal', order: 240, defaults: { durationMs: 1500, easing: 'linear' }, textUnits: true, textDefault: 'letter', stagger: 1, effect: typewriter }))
+  reg(writableMetadata({ id: 'baseline', get label() { return n.baseline }, group: 'reveal', order: 250, defaults: { durationMs: 800, easing: 'ease-out' }, textUnits: true, textDefault: 'line', stagger: 0.6, effect: baseline }))
 
-  reg({ id: 'spin', label: n.spin, group: 'bold', order: 300, defaults: { durationMs: 900, easing: 'ease-out' }, textUnits: true, effect: spin })
-  reg({ id: 'flip', label: n.flip, group: 'bold', order: 310, defaults: { durationMs: 800, easing: 'ease-out' }, directions: MOVES, effect: flip })
-  reg({ id: 'swing', label: n.swing, group: 'bold', order: 320, defaults: { durationMs: 900, easing: 'ease-out' }, effect: swing })
-  reg({ id: 'elastic', label: n.elastic, group: 'bold', order: 330, defaults: { durationMs: 900, easing: 'spring' }, effect: elastic })
-  reg({ id: 'stomp', label: n.stomp, group: 'bold', order: 340, defaults: { durationMs: 500, easing: 'ease-in' }, effect: stomp })
-  reg({ id: 'glitch', label: n.glitch, group: 'bold', order: 350, defaults: { durationMs: 700, easing: 'linear' }, textUnits: true, effect: glitch })
-  reg({ id: 'neon-flicker', label: n.neonFlicker, group: 'bold', order: 360, defaults: { durationMs: 900, easing: 'linear' }, textUnits: true, effect: neon })
+  reg(writableMetadata({ id: 'spin', get label() { return n.spin }, group: 'bold', order: 300, defaults: { durationMs: 900, easing: 'ease-out' }, textUnits: true, effect: spin }))
+  reg(writableMetadata({ id: 'flip', get label() { return n.flip }, group: 'bold', order: 310, defaults: { durationMs: 800, easing: 'ease-out' }, directions: MOVES, effect: flip }))
+  reg(writableMetadata({ id: 'swing', get label() { return n.swing }, group: 'bold', order: 320, defaults: { durationMs: 900, easing: 'ease-out' }, effect: swing }))
+  reg(writableMetadata({ id: 'elastic', get label() { return n.elastic }, group: 'bold', order: 330, defaults: { durationMs: 900, easing: 'spring' }, effect: elastic }))
+  reg(writableMetadata({ id: 'stomp', get label() { return n.stomp }, group: 'bold', order: 340, defaults: { durationMs: 500, easing: 'ease-in' }, effect: stomp }))
+  reg(writableMetadata({ id: 'glitch', get label() { return n.glitch }, group: 'bold', order: 350, defaults: { durationMs: 700, easing: 'linear' }, textUnits: true, effect: glitch }))
+  reg(writableMetadata({ id: 'neon-flicker', get label() { return n.neonFlicker }, group: 'bold', order: 360, defaults: { durationMs: 900, easing: 'linear' }, textUnits: true, effect: neon }))
 }
 
 registerBuiltinInOut()

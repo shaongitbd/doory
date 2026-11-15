@@ -1,8 +1,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { activateLocale } from '@/i18n/catalog'
+import { setLocale } from '@/i18n/locale'
 import type { ObjectAnimation } from '@/types/document'
 import { enter, rectObject, setupEditor, textObject } from '../animation/testing'
+import { emphasisPresets, inOutPresets } from '../animation/presets'
 import { EditorProvider } from '../EditorProvider'
 import { t } from '../strings'
 import { AnimatePanel } from './AnimatePanel'
@@ -36,6 +39,71 @@ describe('AnimatePanel', () => {
     engine = null
     vi.restoreAllMocks()
     document.body.innerHTML = ''
+    setLocale('en')
+  })
+
+  it('refreshes page animation wording and transitions in the already mounted panel', async () => {
+    const ctx = await open({ objects: [rectObject('User {name}', 100, 100)] })
+    engine = ctx.engine
+    const panel = screen.getByTestId('animate-panel')
+    const before = engine.state.doc
+    for (const locale of ['en', 'de', 'en'] as const) {
+      await act(async () => activateLocale(locale))
+      expect(screen.getByTestId('animate-style-rise')).toHaveTextContent(locale === 'de' ? 'Von unten einblenden' : 'Rise')
+      expect(screen.getByTestId('animate-transition-push')).toHaveTextContent(locale === 'de' ? 'Verschieben' : 'Push')
+      expect(screen.getByTestId('animate-transition-uncover')).toHaveTextContent(locale === 'de' ? 'Freilegen' : 'Uncover')
+      if (locale === 'de') expect(screen.getByText('Wähle einen Effekt, um alle Elemente dieser Seite nacheinander zu animieren.')).toBeInTheDocument()
+      expect(screen.getByTestId('animate-panel')).toBe(panel)
+      expect(engine.state.doc).toBe(before)
+    }
+  })
+
+  it('refreshes the cached element grid label for Rise when the language changes', async () => {
+    const ctx = await open({ objects: [rectObject('a', 100, 100)] }, ['a'])
+    engine = ctx.engine
+    for (const locale of ['en', 'de', 'en'] as const) {
+      await act(async () => activateLocale(locale))
+      expect(screen.getByTestId('animate-enter-rise')).toHaveTextContent(locale === 'de' ? 'Von unten einblenden' : 'Rise')
+    }
+  })
+
+  it.each([
+    ['enter', 'fade', 'Einblenden'],
+    ['exit', 'bounce', 'Hüpfen'],
+    ['emphasis', 'wiggle', 'Wackeln'],
+  ] as const)('refreshes %s cards, accessibility and selected settings in the mounted panel', async (slot, preset, german) => {
+    const selected = { preset, durationMs: 1700, delayMs: 300, easing: 'linear' as const, intensity: 0.75, ...(slot === 'emphasis' ? { loop: true } : {}) }
+    const ctx = await open({ objects: [rectObject('User {name}.png', 100, 100, { [slot]: selected })] }, ['User {name}.png'])
+    engine = ctx.engine
+    await userEvent.click(within(screen.getByRole('radiogroup', { name: COPY.slots })).getByRole('radio', { name: new RegExp(`${COPY.slot[slot]}$`) }))
+    const panel = screen.getByTestId('animate-panel')
+    const settings = screen.getByTestId('animate-settings')
+    const duration = screen.getByRole('textbox', { name: 'Duration' })
+    const before = engine.getDocument()
+    const history = engine.state.history
+    const entries = slot === 'emphasis' ? emphasisPresets.list() : inOutPresets.list()
+    const english = entries.find(entry => entry.id === preset)!.label
+    for (const locale of ['en', 'de', 'en'] as const) {
+      await act(async () => activateLocale(locale))
+      for (const entry of entries) {
+        const card = screen.getByTestId(`animate-${slot}-${entry.id}`)
+        expect(card).toHaveTextContent(entry.label)
+        expect(card).toHaveAccessibleName(entry.label)
+        expect(card).toHaveAttribute('title', COPY.preview(entry.label))
+      }
+      expect(screen.getByTestId(`animate-${slot}-${preset}`)).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('heading', { name: `${COPY.settings}: ${locale === 'de' ? german : english}` })).toBeInTheDocument()
+      expect(screen.getByRole('textbox', { name: COPY.duration })).toBe(duration)
+      expect(duration).toHaveValue('1.7')
+      expect(screen.getByRole('textbox', { name: COPY.delay })).toHaveValue('0.3')
+      expect(screen.getByTestId('animate-easing')).toHaveValue('linear')
+      expect(screen.getByRole('slider', { name: COPY.intensity })).toHaveValue('75')
+      if (slot === 'emphasis') expect(screen.getByRole('switch', { name: new RegExp(COPY.loop) })).toBeChecked()
+      expect(screen.getByTestId('animate-panel')).toBe(panel)
+      expect(screen.getByTestId('animate-settings')).toBe(settings)
+      expect(engine.getDocument()).toEqual(before)
+      expect(engine.state.history).toBe(history)
+    }
   })
 
   it('starts on the page when nothing is selected and says so on the element tab', async () => {

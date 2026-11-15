@@ -2,6 +2,7 @@
  * Built-in object kinds, registered through the same public registry third parties use.
  * Importing this module registers them (idempotent).
  */
+import { writableMetadata } from '@/i18n/metadata'
 import { type FabricImage, type FabricObject, Group, IText } from 'fabric'
 import type { DocObject } from '@/types/document'
 import { applyColorMap } from './elements'
@@ -46,9 +47,9 @@ function hydrateImage(obj: FabricObject): void {
 }
 
 export function registerBuiltinKinds(): void {
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'qr',
-    label: t.kinds.qr,
+    get label() { return t.kinds.qr },
     priority: 100,
     matches: (o) => !!o.qr,
     async prepare(json) {
@@ -62,11 +63,11 @@ export function registerBuiltinKinds(): void {
       delete out.src
       delete out.docSrc
     },
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'image-grid',
-    label: t.kinds['image-grid'],
+    get label() { return t.kinds['image-grid'] },
     priority: 95,
     matches: (o) => typeOf(o) === 'group' && readImageGridSpec(o.imageGrid) !== null,
     extraProps: ['imageGrid', 'gridCellId'],
@@ -77,51 +78,51 @@ export function registerBuiltinKinds(): void {
       asDory(obj).imageGrid = spec
       reconcileImageGridChildren(obj, spec)
     },
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'placeholder',
-    label: t.kinds.placeholder,
+    get label() { return t.kinds.placeholder },
     priority: 90,
     matches: (o) => o.isPlaceholder === true,
     hydrate: (obj) => applyMask(obj),
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'element',
-    label: t.kinds.element,
+    get label() { return t.kinds.element },
     priority: 80,
     matches: (o) => typeof o.elementId === 'string',
     hydrate(obj) {
       const map = asDory(obj).colorMap
       if (map) applyColorMap(obj, map)
     },
-  })
+  }))
 
   // A video clip is a picture (its poster) that names a clip; it ranks above `image` so picture tools leave it alone.
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'video',
-    label: t.kinds.video,
+    get label() { return t.kinds.video },
     priority: 60,
     matches: (o) => isClip(o),
     extraProps: [...CLIP_PROPS],
     prepare: prepareImage,
     // Adjustments show on the poster here; the frame renderer draws them on every picture of the clip.
     hydrate: hydrateImage,
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'image',
-    label: t.kinds.image,
+    get label() { return t.kinds.image },
     priority: 50,
     matches: (o) => typeOf(o) === 'image',
     prepare: prepareImage,
     hydrate: hydrateImage,
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'text',
-    label: t.kinds.text,
+    get label() { return t.kinds.text },
     priority: 50,
     matches: (o) => TEXT_TYPES.has(typeOf(o)),
     hydrate(obj, json) {
@@ -163,32 +164,32 @@ export function registerBuiltinKinds(): void {
         delete out.fitFontSize
       }
     },
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'line',
-    label: t.kinds.line,
+    get label() { return t.kinds.line },
     priority: 50,
     matches: (o) => typeOf(o) === 'doryline' || typeOf(o) === 'line',
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'shape',
-    label: t.kinds.shape,
+    get label() { return t.kinds.shape },
     priority: 40,
     matches: (o) => SHAPE_TYPES.has(typeOf(o)),
     hydrate(obj) {
       const effects = asDory(obj).effects
       if (effects) applyEffects(obj, effects)
     },
-  })
+  }))
 
-  registerObjectKind({
+  registerObjectKind(writableMetadata({
     id: 'group',
-    label: t.kinds.group,
+    get label() { return t.kinds.group },
     priority: 30,
     matches: (o) => typeOf(o) === 'group' || typeOf(o) === 'activeselection',
-  })
+  }))
 }
 
 registerBuiltinKinds()

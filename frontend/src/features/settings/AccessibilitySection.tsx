@@ -24,6 +24,7 @@ export function AccessibilitySection() {
         onChange={(event) => void activateLocale(event.target.value as Locale)}
         options={[
           { value: 'en', label: msg("English") },
+          { value: 'de', label: 'Deutsch' },
           { value: 'zh-CN', label: '简体中文' },
           { value: 'zh-TW', label: '繁體中文' },
         ]}

@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setError('Enter the email address you signed up with.')
+      setError(email.trim() ? msg('That doesn’t look like an email address.') : msg('Enter your email address.'))
       return
     }
     setError('')

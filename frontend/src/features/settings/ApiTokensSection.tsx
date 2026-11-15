@@ -59,7 +59,7 @@ export function ApiTokensSection() {
     try {
       await tokensApi.revoke(token.id)
       setTokens((list) => (list ?? []).filter((item) => item.id !== token.id))
-      toast({ title: msg("Token revoked"), description: `${token.name} can no longer reach your designs.` })
+      toast({ title: msg("Token revoked"), description: msg('{name} can no longer reach your designs.', { name: token.name }) })
     } catch {
       toast({ title: msg("Couldn’t revoke the token"), description: msg("Please try again."), variant: 'error' })
     } finally {
@@ -95,10 +95,10 @@ export function ApiTokensSection() {
                   <KeyRound size={14} aria-hidden /> {token.name} <code className={styles.tokenPrefix}>doory_{token.prefix}_…</code>
                 </p>
                 <p className={styles.hint}>
-                  {token.scopes.join(', ')} {msg("· last used ")}{when(token.last_used_at, 'never')} {msg("· expires ")}{when(token.expires_at, 'never')}
+                  {token.scopes.join(', ')} {msg("· last used ")}{when(token.last_used_at, msg('never'))} {token.expires_at ? <>{msg("· expires ")}{when(token.expires_at, '')}</> : <>· {msg('Never expires')}</>}
                 </p>
               </div>
-              <Button variant="ghost" size="sm" leftIcon={<Trash2 size={14} />} onClick={() => setRevoking(token)} aria-label={`Revoke ${token.name}`}>
+              <Button variant="ghost" size="sm" leftIcon={<Trash2 size={14} />} onClick={() => setRevoking(token)} aria-label={msg('Revoke {name}', { name: token.name })}>
                 {msg("Revoke")}</Button>
             </li>
           ))}
@@ -107,8 +107,8 @@ export function ApiTokensSection() {
       <ConfirmDialog
         open={revoking !== null}
         title={msg("Revoke this token?")}
-        description={revoking ? `Assistants using “${revoking.name}” will lose access at once.` : undefined}
-        confirmLabel="Revoke"
+        description={revoking ? msg('Assistants using “{name}” will lose access at once.', { name: revoking.name }) : undefined}
+        confirmLabel={msg("Revoke")}
         tone="danger"
         loading={busy}
         onConfirm={() => (revoking ? revoke(revoking) : undefined)}
@@ -132,9 +132,9 @@ function CreateTokenForm({ scopes, onCreated }: { scopes: ApiTokenScope[]; onCre
   async function submit(event: FormEvent) {
     event.preventDefault()
     const found: Record<string, string> = {}
-    if (!name.trim()) found.name = 'Name the token after the assistant that will use it.'
-    if (chosen.length === 0) found.scopes = 'Choose at least one permission.'
-    if (!secret) found[hasPassword ? 'password' : 'confirm_email'] = hasPassword ? 'Enter your password.' : 'Type your email address.'
+    if (!name.trim()) found.name = msg('Name the token after the assistant that will use it.')
+    if (chosen.length === 0) found.scopes = msg('Choose at least one permission.')
+    if (!secret) found[hasPassword ? 'password' : 'confirm_email'] = hasPassword ? msg('Enter your password.') : msg('Type your email address.')
     setErrors(found)
     setFormError('')
     if (Object.keys(found).length > 0) return
@@ -202,7 +202,7 @@ function IssuedToken({ issued, onDone }: { issued: IssuedApiToken; onDone(): voi
       <div className={styles.inline}>
         <code className={styles.secret}>{issued.token}</code>
         <Button size="sm" variant="secondary" leftIcon={copied === 'token' ? <Check size={14} /> : <Copy size={14} />} onClick={() => void copyValue('token', issued.token)}>
-          {copied === 'token' ? 'Copied' : 'Copy token'}
+          {copied === 'token' ? msg('Copied') : msg('Copy token')}
         </Button>
       </div>
       <p className={styles.hint}>
@@ -210,7 +210,7 @@ function IssuedToken({ issued, onDone }: { issued: IssuedApiToken; onDone(): voi
       <div className={styles.inline}>
         <code className={styles.secret}>{claudeCodeCommand(issued.token)}</code>
         <Button size="sm" variant="secondary" leftIcon={copied === 'command' ? <Check size={14} /> : <Copy size={14} />} onClick={() => void copyValue('command', claudeCodeCommand(issued.token))}>
-          {copied === 'command' ? 'Copied' : 'Copy command'}
+          {copied === 'command' ? msg('Copied') : msg('Copy command')}
         </Button>
       </div>
       <div>

@@ -18,9 +18,9 @@ export function EmailSection() {
     setBusy(true)
     try {
       await authApi.resendVerification()
-      toast({ title: msg("Verification email sent"), description: `Check ${user?.email}.`, variant: 'success' })
+      toast({ title: msg("Verification email sent"), description: msg('Check {email}.', { email: user?.email ?? '' }), variant: 'success' })
     } catch (error) {
-      toast({ title: msg("Couldn’t send the email"), description: isApiError(error) && error.isRateLimited ? rateLimitMessage(error.retryAfter) : 'Please try again shortly.', variant: 'error' })
+      toast({ title: msg("Couldn’t send the email"), description: isApiError(error) && error.isRateLimited ? rateLimitMessage(error.retryAfter) : msg('Please try again shortly.'), variant: 'error' })
     } finally {
       setBusy(false)
     }

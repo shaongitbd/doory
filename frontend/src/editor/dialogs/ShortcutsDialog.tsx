@@ -1,4 +1,5 @@
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
+import { getLocale, subscribeLocale } from '@/i18n/locale'
 import { commands } from '../commands'
 import { useEditor } from '../context'
 import { formatShortcut } from '../shortcuts'
@@ -20,9 +21,10 @@ function compactKeys(keys: string[]): string[] {
 
 export function ShortcutsDialog() {
   const editor = useEditor()
+  useSyncExternalStore(subscribeLocale, getLocale, () => 'en')
   const all = useSyncExternalStore(commands.subscribe, commands.getSnapshot)
   const [filter, setFilter] = useState('')
-  const groups = useMemo(() => {
+  const groups = (() => {
     const needle = filter.trim().toLowerCase()
     const map = new Map<string, { label: string; keys: string[] }[]>()
     for (const c of all) {
@@ -37,7 +39,7 @@ export function ShortcutsDialog() {
       map.set(g, rows)
     }
     return [...map.entries()].map(([group, rows]) => [group, rows.map((r) => ({ label: r.label, keys: compactKeys(r.keys.map((k) => formatShortcut(k))) }))] as const)
-  }, [all, filter])
+  })()
   return (
     <Dialog title={t.dialog.shortcutsTitle} onClose={() => editor.closeDialog()} width={640}>
       <input className={styles.filter} type="search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t.dialog.shortcutsFilter} aria-label={t.dialog.shortcutsFilter} data-autofocus />

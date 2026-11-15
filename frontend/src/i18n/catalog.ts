@@ -1,15 +1,17 @@
 import { getLocale, setLocale, type Locale } from './locale'
 
-const catalogs: Record<'zh-CN' | 'zh-TW', Record<string, string>> = { 'zh-CN': {}, 'zh-TW': {} }
-const functions: Record<'zh-CN' | 'zh-TW', Record<string, (...args: never[]) => string>> = { 'zh-CN': {}, 'zh-TW': {} }
+const catalogs: Record<Exclude<Locale, 'en'>, Record<string, string>> = { de: {}, 'zh-CN': {}, 'zh-TW': {} }
+const functions: Record<Exclude<Locale, 'en'>, Record<string, (...args: never[]) => string>> = { de: {}, 'zh-CN': {}, 'zh-TW': {} }
 const pending = new Map<Locale, Promise<void>>()
 
-/** The default English bundle never downloads both Chinese catalogs. */
+/** English uses its source messages without downloading translation bundles. */
 export function loadLocale(locale: Locale): Promise<void> {
   if (locale === 'en' || Object.keys(catalogs[locale]).length) return Promise.resolve()
   const existing = pending.get(locale)
   if (existing) return existing
-  const load = (locale === 'zh-CN'
+  const load = (locale === 'de'
+    ? Promise.all([import('./de.json'), import('./functions-de')])
+    : locale === 'zh-CN'
     ? Promise.all([import('./zh-CN.json'), import('./functions-zh-CN')])
     : Promise.all([import('./zh-TW.json'), import('./functions-zh-TW')]))
     .then(([messages, dynamic]) => {
@@ -42,7 +44,8 @@ export function localized<T extends object>(english: T, prefix = ''): T {
 }
 
 /** Plain-language messages outside the editor use the same catalog. */
-export function msg(english: string): string {
+export function msg(english: string, values?: Readonly<Record<string, string | number>>): string {
   const locale = getLocale()
-  return locale === 'en' ? english : (catalogs[locale][`app.${english}`] ?? english)
+  const message = locale === 'en' ? english : (catalogs[locale][`app.${english}`] ?? english)
+  return values ? message.replace(/\{(\w+)\}/g, (token, key: string) => Object.hasOwn(values, key) ? String(values[key]) : token) : message
 }

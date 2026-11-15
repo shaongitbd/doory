@@ -1,6 +1,8 @@
 import { setLocale } from '@/i18n/locale'
 import { formatBytes, formatRelative } from './time'
 
+afterEach(() => setLocale('en'))
+
 describe('formatRelative', () => {
   const now = Date.parse('2025-06-15T12:00:00Z')
 
@@ -16,6 +18,19 @@ describe('formatRelative', () => {
   it('accepts ISO strings and ignores garbage', () => {
     expect(formatRelative('2025-06-15T11:00:00Z', now)).toBe('1 hour ago')
     expect(formatRelative('not a date', now)).toBe('')
+  })
+
+  it('formats German past and future times without changing the input', () => {
+    setLocale('de')
+    const date = new Date(now - 24 * 3600_000)
+    expect(formatRelative(now - 10_000, now)).toBe('gerade eben')
+    expect(formatRelative('2025-06-15T11:00:00Z', now)).toBe('vor 1 Stunde')
+    expect(formatRelative(now - 5 * 60_000, now)).toBe('vor 5 Minuten')
+    expect(formatRelative(date, now)).toBe('gestern')
+    expect(formatRelative(now + 24 * 3600_000, now)).toBe('morgen')
+    expect(formatRelative(now + 2 * 3600_000, now)).toBe('in 2 Stunden')
+    expect(date.toISOString()).toBe('2025-06-14T12:00:00.000Z')
+    expect(formatRelative('invalid', now)).toBe('')
   })
 
   it('formats Chinese relative time with the active choice', () => {

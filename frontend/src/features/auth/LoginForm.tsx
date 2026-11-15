@@ -43,9 +43,9 @@ export function LoginForm({ onSuccess, onNavigate, autoFocus = true, lockedEmail
   async function submit(event: FormEvent) {
     event.preventDefault()
     const errors: Record<string, string> = {}
-    if (!email.trim()) errors.email = 'Enter your email address.'
-    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = 'That doesn’t look like an email address.'
-    if (!password) errors.password = 'Enter your password.'
+    if (!email.trim()) errors.email = msg('Enter your email address.')
+    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = msg('That doesn’t look like an email address.')
+    if (!password) errors.password = msg('Enter your password.')
     setFieldErrors(errors)
     setFormError('')
     if (Object.keys(errors).length > 0) return
@@ -96,7 +96,7 @@ export function LoginForm({ onSuccess, onNavigate, autoFocus = true, lockedEmail
           {msg("Log in")}</Button>
       </form>
       <SignInDivider sso={offerSso} />
-      {offerSso ? <SsoButton next={ssoNext} note={lockedEmail ? 'This leaves the page, so changes that aren’t saved yet may be lost.' : undefined} /> : null}
+      {offerSso ? <SsoButton next={ssoNext} note={lockedEmail ? msg('This leaves the page, so changes that aren’t saved yet may be lost.') : undefined} /> : null}
       <GoogleButton onCredential={handleGoogle} text="signin_with" />
     </div>
   )

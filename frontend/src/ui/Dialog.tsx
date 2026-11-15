@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { X } from 'lucide-react'
 import { useEffect, useId, useRef, type KeyboardEvent, type MouseEvent, type ReactNode, type RefObject } from 'react'
 import { cx } from '@/lib/cx'
@@ -131,7 +132,7 @@ function DialogContent({ onClose, title, description, children, footer, size = '
               </p>
             ) : null}
           </div>
-          {dismissible ? <IconButton label="Close dialog" size="sm" icon={<X size={18} />} onClick={() => onCloseRef.current()} data-dialog-close="" /> : null}
+          {dismissible ? <IconButton label={msg("Close dialog")} size="sm" icon={<X size={18} />} onClick={() => onCloseRef.current()} data-dialog-close="" /> : null}
         </header>
         <div className={styles.body}>{children}</div>
         {footer ? <footer className={styles.footer}>{footer}</footer> : null}

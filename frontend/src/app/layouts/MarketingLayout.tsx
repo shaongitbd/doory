@@ -55,6 +55,7 @@ export function MarketingHeader() {
         <div className={styles.actions}>
           <select aria-label={msg("Language")} className={styles.language} value={locale} onChange={event => { void activateLocale(event.target.value as Locale) }}>
             <option value="en">{msg("English")}</option>
+            <option value="de">Deutsch</option>
             <option value="zh-CN">简体中文</option>
             <option value="zh-TW">繁體中文</option>
           </select>
@@ -74,7 +75,7 @@ export function MarketingHeader() {
           )}
           <IconButton
             className={styles.menuButton}
-            label={open ? 'Close menu' : 'Open menu'}
+            label={open ? msg('Close menu') : msg('Open menu')}
             icon={open ? <X size={20} /> : <MenuIcon size={20} />}
             aria-expanded={open}
             aria-controls="mobile-nav"

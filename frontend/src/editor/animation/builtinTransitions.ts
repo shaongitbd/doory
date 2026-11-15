@@ -3,6 +3,8 @@
  * is left is on screen, 1 = the page that comes in is) and says what each page looks like. The direction is the side
  * the new page comes from; going back through a deck plays a transition the other way round (`reverseDirection`).
  */
+import { localized } from '@/i18n/catalog'
+import { writableMetadata } from '@/i18n/metadata'
 import { mix } from './easing'
 import { sideVector } from './effectMath'
 import { type PageClip, type TransitionPreset, registerTransitionPreset } from './presets'
@@ -75,24 +77,24 @@ const blinds: Compose = (p, d) => {
 }
 
 export function registerBuiltinTransitions(): void {
-  const n = a.transitions
+  const n = localized(a.transitions, 'animation.transitions')
   const reg = registerTransitionPreset
-  reg({ id: 'none', label: n.none, order: 0, defaults: { durationMs: 200, easing: 'linear' }, compose: none })
-  reg({ id: 'fade', label: n.fade, order: 10, defaults: { durationMs: 700, easing: 'ease-in-out' }, compose: fade })
-  reg({ id: 'fade-black', label: n.fadeBlack, order: 20, defaults: { durationMs: 1000, easing: 'ease-in-out' }, compose: dip })
-  reg({ id: 'dissolve', label: n.dissolve, order: 30, defaults: { durationMs: 900, easing: 'linear' }, compose: dissolve })
-  reg({ id: 'blur', label: n.blur, order: 40, defaults: { durationMs: 800, easing: 'ease-in-out' }, compose: blur })
-  reg({ id: 'slide', label: n.slide, order: 50, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: slide })
-  reg({ id: 'push', label: n.push, order: 60, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: push })
-  reg({ id: 'cover', label: n.cover, order: 70, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: cover })
-  reg({ id: 'uncover', label: n.uncover, order: 80, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: uncover })
-  reg({ id: 'zoom-in', label: n.zoomIn, order: 90, defaults: { durationMs: 800, easing: 'ease-in-out' }, compose: zoomIn })
-  reg({ id: 'zoom-out', label: n.zoomOut, order: 100, defaults: { durationMs: 800, easing: 'ease-in-out' }, compose: zoomOut })
-  reg({ id: 'wipe', label: n.wipe, order: 110, defaults: { durationMs: 800, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: wipe })
-  reg({ id: 'circle', label: n.circle, order: 120, defaults: { durationMs: 900, easing: 'ease-in-out' }, compose: circle })
-  reg({ id: 'flip', label: n.flip, order: 130, defaults: { durationMs: 900, easing: 'ease-in-out', direction: 'left' }, directions: FLIPS, compose: flip })
-  reg({ id: 'spin', label: n.spin, order: 140, defaults: { durationMs: 900, easing: 'ease-in-out', direction: 'right' }, directions: ['right', 'left'], compose: spin })
-  reg({ id: 'blinds', label: n.blinds, order: 150, defaults: { durationMs: 900, easing: 'ease-in-out', direction: 'left' }, directions: MOVES, compose: blinds })
+  reg(writableMetadata({ id: 'none', get label() { return n.none }, order: 0, defaults: { durationMs: 200, easing: 'linear' }, compose: none }))
+  reg(writableMetadata({ id: 'fade', get label() { return n.fade }, order: 10, defaults: { durationMs: 700, easing: 'ease-in-out' }, compose: fade }))
+  reg(writableMetadata({ id: 'fade-black', get label() { return n.fadeBlack }, order: 20, defaults: { durationMs: 1000, easing: 'ease-in-out' }, compose: dip }))
+  reg(writableMetadata({ id: 'dissolve', get label() { return n.dissolve }, order: 30, defaults: { durationMs: 900, easing: 'linear' }, compose: dissolve }))
+  reg(writableMetadata({ id: 'blur', get label() { return n.blur }, order: 40, defaults: { durationMs: 800, easing: 'ease-in-out' }, compose: blur }))
+  reg(writableMetadata({ id: 'slide', get label() { return n.slide }, order: 50, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: slide }))
+  reg(writableMetadata({ id: 'push', get label() { return n.push }, order: 60, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: push }))
+  reg(writableMetadata({ id: 'cover', get label() { return n.cover }, order: 70, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: cover }))
+  reg(writableMetadata({ id: 'uncover', get label() { return n.uncover }, order: 80, defaults: { durationMs: 700, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: uncover }))
+  reg(writableMetadata({ id: 'zoom-in', get label() { return n.zoomIn }, order: 90, defaults: { durationMs: 800, easing: 'ease-in-out' }, compose: zoomIn }))
+  reg(writableMetadata({ id: 'zoom-out', get label() { return n.zoomOut }, order: 100, defaults: { durationMs: 800, easing: 'ease-in-out' }, compose: zoomOut }))
+  reg(writableMetadata({ id: 'wipe', get label() { return n.wipe }, order: 110, defaults: { durationMs: 800, easing: 'ease-in-out', direction: 'right' }, directions: MOVES, compose: wipe }))
+  reg(writableMetadata({ id: 'circle', get label() { return n.circle }, order: 120, defaults: { durationMs: 900, easing: 'ease-in-out' }, compose: circle }))
+  reg(writableMetadata({ id: 'flip', get label() { return n.flip }, order: 130, defaults: { durationMs: 900, easing: 'ease-in-out', direction: 'left' }, directions: FLIPS, compose: flip }))
+  reg(writableMetadata({ id: 'spin', get label() { return n.spin }, order: 140, defaults: { durationMs: 900, easing: 'ease-in-out', direction: 'right' }, directions: ['right', 'left'], compose: spin }))
+  reg(writableMetadata({ id: 'blinds', get label() { return n.blinds }, order: 150, defaults: { durationMs: 900, easing: 'ease-in-out', direction: 'left' }, directions: MOVES, compose: blinds }))
 }
 
 registerBuiltinTransitions()

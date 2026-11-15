@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { Button } from './Button'
 import { Dialog } from './Dialog'
@@ -18,7 +19,7 @@ export interface ConfirmDialogProps {
   children?: ReactNode
 }
 
-export function ConfirmDialog({ open, title, description, confirmLabel = 'Confirm', cancelLabel = 'Cancel', tone = 'default', requireText, loading, onConfirm, onCancel, children }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, title, description, confirmLabel = msg('Confirm'), cancelLabel = msg('Cancel'), tone = 'default', requireText, loading, onConfirm, onCancel, children }: ConfirmDialogProps) {
   const [typed, setTyped] = useState('')
   const cancelRef = useRef<HTMLButtonElement>(null)
   const inputId = useId()
@@ -61,7 +62,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel = 'Confir
       {requireText ? (
         <Input
           id={inputId}
-          label={`Type "${requireText}" to confirm`}
+          label={msg('Type "{token}" to confirm', { token: requireText })}
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
           autoComplete="off"

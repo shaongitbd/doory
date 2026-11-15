@@ -2,6 +2,7 @@
  * Image adjustments. The document stores a plain list of `{type, value}` specs; this module turns them
  * into Fabric filters (WebGL when available, 2D otherwise) and defines the one-click presets.
  */
+import { writableMetadata } from '@/i18n/metadata'
 import { classRegistry, type FabricImage, filters as F } from 'fabric'
 import type { ImageFilterSpec, ImageFilterType } from '@/types/document'
 import { t } from '../../strings'
@@ -140,71 +141,71 @@ export interface FilterPreset {
 }
 
 export const FILTER_PRESETS: readonly FilterPreset[] = [
-  { id: 'none', label: t.filterPresets.none, specs: [] },
-  {
+  writableMetadata({ id: 'none', get label() { return t.filterPresets.none }, specs: [] }),
+  writableMetadata({
     id: 'vivid',
-    label: t.filterPresets.vivid,
+    get label() { return t.filterPresets.vivid },
     specs: [
       { type: 'contrast', value: 0.15 },
       { type: 'saturation', value: 0.45 },
     ],
-  },
-  {
+  }),
+  writableMetadata({
     id: 'warm',
-    label: t.filterPresets.warm,
+    get label() { return t.filterPresets.warm },
     specs: [
       { type: 'hue', value: -0.04 },
       { type: 'saturation', value: 0.2 },
       { type: 'brightness', value: 0.04 },
     ],
-  },
-  {
+  }),
+  writableMetadata({
     id: 'cool',
-    label: t.filterPresets.cool,
+    get label() { return t.filterPresets.cool },
     specs: [
       { type: 'hue', value: 0.08 },
       { type: 'saturation', value: -0.1 },
       { type: 'brightness', value: 0.02 },
     ],
-  },
-  { id: 'mono', label: t.filterPresets.mono, specs: [{ type: 'grayscale', value: 1 }] },
-  {
+  }),
+  writableMetadata({ id: 'mono', get label() { return t.filterPresets.mono }, specs: [{ type: 'grayscale', value: 1 }] }),
+  writableMetadata({
     id: 'noir',
-    label: t.filterPresets.noir,
+    get label() { return t.filterPresets.noir },
     specs: [
       { type: 'grayscale', value: 1 },
       { type: 'contrast', value: 0.35 },
       { type: 'vignette', value: 0.55 },
     ],
-  },
-  {
+  }),
+  writableMetadata({
     id: 'fade',
-    label: t.filterPresets.fade,
+    get label() { return t.filterPresets.fade },
     specs: [
       { type: 'contrast', value: -0.2 },
       { type: 'saturation', value: -0.25 },
       { type: 'brightness', value: 0.1 },
     ],
-  },
-  {
+  }),
+  writableMetadata({
     id: 'vintage',
-    label: t.filterPresets.vintage,
+    get label() { return t.filterPresets.vintage },
     specs: [
       { type: 'sepia', value: 1 },
       { type: 'contrast', value: 0.1 },
       { type: 'vignette', value: 0.4 },
     ],
-  },
-  {
+  }),
+  writableMetadata({
     id: 'dramatic',
-    label: t.filterPresets.dramatic,
+    get label() { return t.filterPresets.dramatic },
     specs: [
       { type: 'contrast', value: 0.4 },
       { type: 'saturation', value: -0.15 },
       { type: 'brightness', value: -0.05 },
       { type: 'vignette', value: 0.35 },
     ],
-  },
+  }),
 ]
 
 export function specValue(specs: readonly ImageFilterSpec[] | undefined, type: ImageFilterType): number {
