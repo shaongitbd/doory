@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useLocale } from '@/i18n/useLocale'
 import { commands, isCommandEnabled } from './commands'
 import { canFitKind } from './engine/api/arrange'
 import { useEditor, useEditorState } from './context'
@@ -20,10 +20,11 @@ function itemFor(editor: ReturnType<typeof useEditor>, id: string, label?: strin
 
 /** Right-click menu built from the command registry. */
 export function ContextMenuHost() {
+  useLocale()
   const editor = useEditor()
   const menu = useEditorState((s) => s.ui.contextMenu)
   const selection = useEditorState((s) => s.selection)
-  const items = useMemo<MenuItem[]>(() => {
+  const items: MenuItem[] = (() => {
     if (!menu) return []
     const sep = (id: string): MenuItem => ({ id, separator: true })
     const pick = (...ids: string[]): MenuItem[] => ids.map((id) => itemFor(editor, id)).filter((i): i is MenuItem => !!i)
@@ -41,7 +42,7 @@ export function ContextMenuHost() {
     else if (selection.ids.length === 1 && selection.kinds[0] === 'placeholder') list.push(sep('s3'), ...pick('image.replace'))
     else if (selection.ids.length === 1 && selection.kinds[0] === 'video') list.push(sep('s3'), ...pick('image.crop', 'video.split', 'video.replace', 'video.blurredBackground', 'video.detachAudio', 'video.background'))
     return list
-  }, [menu, selection, editor])
+  })()
 
   if (!menu) return null
   return <Menu label={t.context.copy} items={items} at={{ x: menu.x, y: menu.y }} onClose={() => editor.patchUi({ contextMenu: null })} />

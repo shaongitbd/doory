@@ -5,6 +5,7 @@
  */
 import { ChevronDown, Copy, FileAudio, Mic, Music, Pause, Play, Sparkles, Trash2, Volume2, VolumeX } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
+import { useLocale } from '@/i18n/useLocale'
 import type { AudioTrack, AudioTrackKind } from '@/types/document'
 import { useEditor, useEditorState } from '../context'
 import { formatSeconds } from '../animation/timelineMath'
@@ -221,10 +222,11 @@ function TrackSettings({ track, pages, readOnly, source, gone }: { track: AudioT
 
 /** "In this design": the tracks, or a hint when there are none. */
 export function AudioTracks({ readOnly }: { readOnly: boolean }) {
+  useLocale()
   const doc = useEditorState((s) => s.doc)
   const [openId, setOpenId] = useState<string | null>(null)
   const tracks = readTracks(doc)
-  const pages = useMemo<PageLabel[]>(() => doc.pages.map((p, i) => ({ id: p.id, label: t.audio.tracks.pageOption(i + 1, p.name) })), [doc.pages])
+  const pages: PageLabel[] = doc.pages.map((p, i) => ({ id: p.id, label: t.audio.tracks.pageOption(i + 1, p.name) }))
   const orphans = useMemo(() => orphanedTracks(tracks, new Set(doc.pages.map((p) => p.id))).length, [tracks, doc.pages])
   const editor = useEditor()
 

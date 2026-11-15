@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, type RouteObject } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { LocaleView } from '@/i18n/LocaleView'
 import { PageLoader } from './PageLoader'
 import { RouteErrorPage } from './RouteErrorPage'
 import { AuthLayout } from './layouts/AuthLayout'
@@ -34,52 +35,57 @@ const SettingsPage = lazy(() => import('@/pages/dashboard/SettingsPage'))
 
 const page = (element: React.ReactNode) => <Suspense fallback={<PageLoader />}>{element}</Suspense>
 
+/** Route elements are cached by the router. Re-render their UI on language changes without remounting it. */
+function localizedView(render: () => React.ReactNode) {
+  return <LocaleView render={render} />
+}
+
 export const routes: RouteObject[] = [
   {
-    element: <RootLayout />,
-    errorElement: <RouteErrorPage />,
+    element: localizedView(() => <RootLayout />),
+    errorElement: localizedView(() => <RouteErrorPage />),
     children: [
       {
-        element: <MarketingLayout />,
+        element: localizedView(() => <MarketingLayout />),
         children: [
-          { index: true, element: <LandingPage /> },
-          { path: 'templates', element: <TemplatesPage /> },
-          { path: 'templates/:slug', element: <TemplateDetailPage /> },
-          { path: 'features', element: <FeaturesPage /> },
-          { path: 'faq', element: <FaqPage /> },
-          { path: 'contact', element: <ContactPage /> },
-          { path: '*', element: <NotFoundPage /> },
+          { index: true, element: localizedView(() => <LandingPage />) },
+          { path: 'templates', element: localizedView(() => <TemplatesPage />) },
+          { path: 'templates/:slug', element: localizedView(() => <TemplateDetailPage />) },
+          { path: 'features', element: localizedView(() => <FeaturesPage />) },
+          { path: 'faq', element: localizedView(() => <FaqPage />) },
+          { path: 'contact', element: localizedView(() => <ContactPage />) },
+          { path: '*', element: localizedView(() => <NotFoundPage />) },
         ],
       },
       {
-        element: <AuthLayout />,
+        element: localizedView(() => <AuthLayout />),
         children: [
-          { path: 'login', element: <LoginPage /> },
-          { path: 'signup', element: <SignupPage /> },
-          { path: 'forgot-password', element: <ForgotPasswordPage /> },
-          { path: 'reset-password', element: <ResetPasswordPage /> },
-          { path: 'verify-email', element: <VerifyEmailPage /> },
+          { path: 'login', element: localizedView(() => <LoginPage />) },
+          { path: 'signup', element: localizedView(() => <SignupPage />) },
+          { path: 'forgot-password', element: localizedView(() => <ForgotPasswordPage />) },
+          { path: 'reset-password', element: localizedView(() => <ResetPasswordPage />) },
+          { path: 'verify-email', element: localizedView(() => <VerifyEmailPage />) },
         ],
       },
-      { path: 'create', element: page(<CreatePage />) },
-      { path: 'local/:localId', element: page(<LocalEditorPage />) },
-      { path: 's/:token', element: page(<SharedDesignPage />) },
-      { element: <RequireAuth keepOpenWhenSessionEnds />, children: [{ path: 'design/:id', element: page(<DesignEditorPage />) }] },
+      { path: 'create', element: localizedView(() => page(<CreatePage />)) },
+      { path: 'local/:localId', element: localizedView(() => page(<LocalEditorPage />)) },
+      { path: 's/:token', element: localizedView(() => page(<SharedDesignPage />)) },
+      { element: localizedView(() => <RequireAuth keepOpenWhenSessionEnds />), children: [{ path: 'design/:id', element: localizedView(() => page(<DesignEditorPage />)) }] },
       {
-        element: <RequireAuth />,
+        element: localizedView(() => <RequireAuth />),
         children: [
           {
-            element: page(<DashboardLayout />),
+            element: localizedView(() => page(<DashboardLayout />)),
             children: [
-              { path: 'dashboard', element: <DashboardHomePage /> },
-              { path: 'dashboard/designs', element: <DesignsPage /> },
-              { path: 'dashboard/designs/folder/:folderId', element: <DesignsPage /> },
-              { path: 'dashboard/starred', element: <DesignsPage starred /> },
-              { path: 'dashboard/templates', element: <DashboardTemplatesPage /> },
-              { path: 'dashboard/brand', element: <BrandPage /> },
-              { path: 'dashboard/uploads', element: <UploadsPage /> },
-              { path: 'dashboard/trash', element: <TrashPage /> },
-              { path: 'settings', element: <SettingsPage /> },
+              { path: 'dashboard', element: localizedView(() => <DashboardHomePage />) },
+              { path: 'dashboard/designs', element: localizedView(() => <DesignsPage />) },
+              { path: 'dashboard/designs/folder/:folderId', element: localizedView(() => <DesignsPage />) },
+              { path: 'dashboard/starred', element: localizedView(() => <DesignsPage starred />) },
+              { path: 'dashboard/templates', element: localizedView(() => <DashboardTemplatesPage />) },
+              { path: 'dashboard/brand', element: localizedView(() => <BrandPage />) },
+              { path: 'dashboard/uploads', element: localizedView(() => <UploadsPage />) },
+              { path: 'dashboard/trash', element: localizedView(() => <TrashPage />) },
+              { path: 'settings', element: localizedView(() => <SettingsPage />) },
             ],
           },
         ],

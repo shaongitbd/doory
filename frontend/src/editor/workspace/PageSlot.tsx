@@ -1,3 +1,4 @@
+import { useLocale } from '@/i18n/useLocale'
 import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from 'lucide-react'
 import { type CSSProperties, memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { DocPage } from '@/types/document'
@@ -47,6 +48,7 @@ function backgroundCss(page: DocPage): string | undefined {
 
 /** One page in the stack: header chrome, artboard, and either a live Fabric canvas or a cached bitmap. */
 export const PageSlot = memo(function PageSlot({ page, index, total, width, height, zoom, headerHeight, gap, live, near, active, registerArtboard }: PageSlotProps) {
+  useLocale()
   const editor = useEditor()
   const readOnly = useEditorState((s) => s.readOnly)
   const loading = useEditorState((s) => s.loadingPages.includes(page.id))

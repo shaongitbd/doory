@@ -8,6 +8,7 @@
  * Tracks of the whole design are drawn here too, where they reach this page: a piece of music that began on an earlier
  * page enters from the left edge, and a bar cut by the end of the page says so.
  */
+import { useLocale } from '@/i18n/useLocale'
 import { msg } from '@/i18n/catalog'
 import { Headphones, Layers, File, FileAudio, Mic, Music, Plus, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -60,6 +61,7 @@ interface BarProps {
 }
 
 const Bar = memo(function Bar({ item, pxPerMs, readOnly, dim, onStart, onMove, onEnd, onKey, pages }: BarProps) {
+  useLocale()
   const { track } = item
   const wave = useWaveform(track, { precise: false })
   const visStart = Math.max(0, item.startMs)

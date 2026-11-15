@@ -1,4 +1,5 @@
 /** One pin on the artboard: opens its thread, can be dragged (or nudged with Alt + arrows) by the people who may move it, and walks with the arrow keys. */
+import { useLocale } from '@/i18n/useLocale'
 import { Check } from 'lucide-react'
 import { type KeyboardEvent, type MouseEvent, type PointerEvent, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useEditor, useEditorState } from '../context'
@@ -38,6 +39,7 @@ function preview(body: string): string {
 }
 
 export const CommentPin = memo(function CommentPin({ thread, left, top, zoom, previewLeft, pageId, movable, tabStop, devicePixelRatio }: PinProps) {
+  useLocale()
   const editor = useEditor()
   const { actions, order, pageOf, scroller } = usePins()
   const { root } = thread
