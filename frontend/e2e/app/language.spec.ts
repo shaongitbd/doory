@@ -38,10 +38,9 @@ interface EditorWindow {
 }
 
 // These checks use the existing dev-only engine handle and Vite module URLs to change language while in the editor.
-test.skip(process.env.E2E_APP_PROD === 'true', 'Requires the development editor handle')
-
 for (const mode of ['guest', 'account'] as const) {
   test(`${mode}: language changes update the routed editor without replacing its state or saving`, async ({ browser }) => {
+    test.skip(process.env.E2E_APP_PROD === 'true', 'Requires the development editor handle')
     const account = mode === 'account' ? await createAccount('Language switch') : null
     const { page, problems } = await openContext(browser, account)
     await page.clock.install()
@@ -157,3 +156,43 @@ for (const mode of ['guest', 'account'] as const) {
     problems.assertNone()
   })
 }
+
+// Settings is a separate route: this checks the visible selector, not uninterrupted editor state preservation.
+test('Settings language selector updates labels, keeps the profile draft and persists across reloads', async ({ browser }) => {
+  const account = await createAccount('Language selector')
+  const { page, problems } = await openContext(browser, account)
+  await page.goto('/settings')
+  const language = page.getByRole('combobox', { name: 'Language / 语言 / 語言' })
+  await expect(language).toHaveValue('en')
+  await page.getByRole('textbox', { name: 'Display name' }).fill('Unsaved profile draft')
+  const writes: string[] = []
+  page.on('request', (request) => {
+    if (request.method() !== 'GET' && request.url().includes('/api/v1/')) writes.push(request.url())
+  })
+
+  await language.selectOption('zh-TW')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
+  await expect(language).toHaveValue('zh-TW')
+  await expect(page.getByRole('heading', { level: 1, name: zhTW['app.Settings'] })).toBeVisible()
+  await expect(page.getByRole('region', { name: zhTW['app.Accessibility'] })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: zhTW['app.Display name'] })).toHaveValue('Unsaved profile draft')
+  expect(await page.evaluate(() => localStorage.getItem('doory.locale'))).toBe('zh-TW')
+  await expect(page).toHaveURL(/\/settings$/)
+
+  await page.reload()
+  await expect(language).toHaveValue('zh-TW')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
+  await expect(page.getByRole('heading', { level: 1, name: zhTW['app.Settings'] })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: zhTW['app.Display name'] })).toHaveValue(account.name)
+
+  await language.selectOption('en')
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  expect(await page.evaluate(() => localStorage.getItem('doory.locale'))).toBe('en')
+  await page.reload()
+  await expect(language).toHaveValue('en')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+  expect(writes).toEqual([])
+  problems.assertNone()
+})
