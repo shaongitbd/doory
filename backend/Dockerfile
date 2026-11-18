@@ -71,8 +71,12 @@ RUN groupadd --system --gid 10001 doory \
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=optimizers /opt/optimizers/bin/ /usr/local/bin/
 
+# Playwright's bundled Node needs libatomic1 before it can install anything, and the slim base image no
+# longer ships it, so it goes in first.
 RUN if [ "$INSTALL_CHROMIUM" = "true" ]; then \
-        playwright install --with-deps chromium \
+        apt-get update \
+        && apt-get install -y --no-install-recommends libatomic1 \
+        && playwright install --with-deps chromium \
         && chmod -R a+rX /ms-playwright \
         && rm -rf /var/lib/apt/lists/*; \
     fi
