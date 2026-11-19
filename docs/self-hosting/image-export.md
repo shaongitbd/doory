@@ -57,6 +57,10 @@ The REST endpoint (a JSON body) and the MCP tool `export_design` take the same o
 | `file_names` | `EXPORT_FILENAME_STYLE` | `simple` or `detailed` (with platform, preset and size) names. The REST endpoint also takes `filename_style` and `filename_timestamp` |
 | `bleed_mm` | `0` | PDF only: bleed around every page, 0 to 10 mm (3 is usual for print) |
 | `crop_marks` | `false` | PDF only: crop marks in a margin around the bleed |
+| `layout` | `normal` | PDF only: `normal`, `booklet` (one folded set), or `book` (separate signatures) |
+| `signature_pages` | `4` | Book layout: pages per signature, in multiples of four from 4 to 32 |
+| `binding` | `left` | Folded PDF: `left` or `right` binding edge |
+| `print_sides` | `both` | Folded PDF: `both`, `front`, or `back` sheet sides for manual duplex printing |
 | `cmyk` | `false` | Not offered: PDFs are RGB, as on screen, and `true` is refused (`cmyk_unavailable`) |
 | `resolution`, `fps`, `fit`, `sound`, `loop`, `dither`, `page_seconds` | | Video only: see [Video](#video) |
 
@@ -83,14 +87,22 @@ These formats make the same files as the editor's Download:
 | `pdf-print` | One vector PDF for printing: text stays text, fonts are embedded, links work | Pages from the render page, through the print PDF pipeline |
 
 All pages are made in one browser, within `EXPORT_TIMEOUT_SECONDS` for each page. A PDF is then printed within
-another `EXPORT_TIMEOUT_SECONDS`. Both PDFs take `bleed_mm` and `crop_marks`, and their pages get TrimBox and
-BleedBox entries like the print PDF. A `pdf` page whose picture would have more than `EXPORT_IMAGE_MAX_PIXELS`
+another `EXPORT_TIMEOUT_SECONDS`. In normal layout, both PDFs take `bleed_mm` and `crop_marks`, and their pages get
+TrimBox and BleedBox entries like the print PDF. A `pdf` page whose picture would have more than `EXPORT_IMAGE_MAX_PIXELS`
 pixels at 300 dpi is drawn at a lower resolution, with a warning. An SVG page may be at most 50 MB and a
 `pdf-print` page 5 MB, and all pages of one export 200 MB together; a page over that is refused with
 `too_large` (400) before the next one is made. An SVG holds a copy of a picture for every time the design uses
 it, so a large picture used many times is the usual cause. The image options (from `quality` to
 `optimize`) don't apply to these formats. Each page after the first counts once more against the rates, as for
 images. There is no CMYK conversion.
+
+With `layout=booklet` or `layout=book`, two portrait pages of one size are placed on each side of a folded
+sheet. Missing pages at the end are left blank. A5 pages use an exact landscape A4 sheet; other page sizes
+use a sheet twice as wide as the page. Folded sheets do not take bleed or crop marks at this paper size,
+and their PDF pages describe whole sheets rather than individual leaves. Print an imposed PDF as ordinary
+pages, double-sided with short-edge flipping; do not apply a printer's booklet layout again. The editor's
+standard PDF and print-quality PDF offer the same layouts. `print_sides=front` and `print_sides=back` make
+separate PDFs for manual duplex printing. Check the printer's paper order before refeeding sheets.
 
 ## Video
 

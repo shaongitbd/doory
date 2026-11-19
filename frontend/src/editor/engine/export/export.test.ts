@@ -4,15 +4,15 @@ import { EditorEngine } from '../editor'
 import { DEFAULT_EXPORT_OPTIONS, exportFormats, pageFilename, parsePageRange, registerExportFormat, sanitizeFilename } from './registry'
 import { runExport, selectPages } from './exporter'
 
-async function engineWithShape(pages = 1) {
+async function engineWithShape(pages = 1, width = 200, height = 100) {
   const handle = createMemoryAdapter()
-  const engine = new EditorEngine({ adapter: handle.adapter, document: createBlankDocument(200, 100), meta: { id: 'x', title: 'My Design!', mode: 'guest' }, ephemeral: true })
+  const engine = new EditorEngine({ adapter: handle.adapter, document: createBlankDocument(width, height), meta: { id: 'x', title: 'My Design!', mode: 'guest' }, ephemeral: true })
   const host = document.createElement('div')
   document.body.appendChild(host)
   const id = engine.state.doc.pages[0].id
   engine.mountPage(id, host)
   const view = await engine.whenView(id)
-  view.setLayout(1, { x: 0, y: 0, width: 200, height: 100 })
+  view.setLayout(1, { x: 0, y: 0, width, height })
   await engine.insert.shape('rect')
   for (let i = 1; i < pages; i++) engine.pages.add()
   return { engine, handle }
@@ -104,6 +104,18 @@ describe('runExport', () => {
     const text = new TextDecoder('latin1').decode(await bytes(file.blob))
     expect(text.startsWith('%PDF-')).toBe(true)
     expect((text.match(/\/Type\s*\/Page[^s]/g) ?? []).length).toBe(2)
+    engine.dispose()
+  }, 30_000)
+
+  it('booklet PDF: five portrait pages become four two-page sheet sides', async () => {
+    const { engine } = await engineWithShape(5, 100, 180)
+    const options = { ...DEFAULT_EXPORT_OPTIONS, imposition: { layout: 'booklet' as const, signaturePages: 4, binding: 'left' as const } }
+    const [file] = await runExport(engine, { formatId: 'pdf', pages: { kind: 'all' }, options })
+    const text = new TextDecoder('latin1').decode(await bytes(file.blob))
+    expect(file.filename).toBe('My-Design-booklet.pdf')
+    expect((text.match(/\/Type\s*\/Page[^s]/g) ?? []).length).toBe(4)
+    const box = /\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/.exec(text)
+    expect(box?.slice(1).map(Number)).toEqual([150, 135])
     engine.dispose()
   }, 30_000)
 

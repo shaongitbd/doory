@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const WEB = Number(process.env.E2E_PRINT_PORT ?? 5430)
 const API = Number(process.env.E2E_PRINT_API_PORT ?? 8130)
+const RENDER = Number(process.env.E2E_PRINT_RENDER_PORT ?? 5431)
 // The helpers shared with the co-editing specs (e2e/collab/helpers.ts) read their web port from this variable.
 process.env.E2E_COLLAB_PORT = String(WEB)
 
@@ -39,10 +40,11 @@ export default defineConfig({
         E2E_COLLAB_API_PORT: String(API),
         E2E_COLLAB_PORT: String(WEB),
         SERVER_PDF_ENABLED: 'true',
+        EXPORT_RENDER_PAGE_URL: `http://localhost:${RENDER}/render.html`,
         EXPORT_CHROMIUM_PATH: CHROMIUM,
         // The sandbox needs more than a container running as root offers; the print worker is still process-isolated.
         EXPORT_CHROMIUM_NO_SANDBOX: 'true',
-        EXPORT_WORK_DIR: '/tmp/doory-print-e2e',
+        EXPORT_WORK_DIR: process.env.EXPORT_WORK_DIR ?? '/tmp/doory-print-e2e',
       },
     },
     {
@@ -51,6 +53,13 @@ export default defineConfig({
       timeout: 60_000,
       reuseExistingServer: false,
       env: { VITE_API_PROXY: `http://127.0.0.1:${API}`, VITE_E2E: 'true' },
+    },
+    {
+      // The render worker accepts the built /assets/ bundle, not Vite's development module URLs.
+      command: `npm run build && npx vite preview --port ${RENDER} --strictPort`,
+      url: `http://localhost:${RENDER}/render.html`,
+      timeout: 180_000,
+      reuseExistingServer: false,
     },
   ],
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } }],
