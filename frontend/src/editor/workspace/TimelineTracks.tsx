@@ -4,6 +4,7 @@
  * to each other, and every change goes through `editor.animation.patch`, so a drag is one undo step and reaches
  * collaborators as the property it is. All of it is also reachable by keyboard.
  */
+import { useLocale } from '@/i18n/useLocale'
 import { Folder, Image as ImageIcon, LayoutGrid, LogIn, LogOut, Minus, QrCode, Shapes, Sparkles, Square, Type } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useEditor } from '../context'
@@ -57,6 +58,7 @@ interface BarProps {
 }
 
 const Bar = memo(function Bar({ span, pxPerMs, late, selected, readOnly, loopEndMs, onStart, onMove, onEnd, onKey }: BarProps) {
+  useLocale()
   const left = timeToX(span.startMs, pxPerMs)
   const width = Math.max(MIN_BAR_PX, timeToX(span.anim.durationMs, pxPerMs))
   const Icon = SLOT_ICON[span.slot]

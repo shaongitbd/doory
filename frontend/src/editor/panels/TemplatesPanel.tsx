@@ -1,4 +1,5 @@
 import { FilePlus2, Files, Maximize2, Replace } from 'lucide-react'
+import { useLocale } from '@/i18n/useLocale'
 import { useMemo, useRef, useState } from 'react'
 import type { TemplateSummary } from '@/types/api'
 import { useEditor, useEditorState } from '../context'
@@ -30,6 +31,7 @@ const cardRatio = (tpl: Pick<TemplateSummary, 'width' | 'height'>): number => Ma
 
 /** Templates sidebar: search, categories, a grid of previews; a click puts the template on the page, replaces it or adds pages. */
 export function TemplatesPanel({ close }: { close: () => void }) {
+  useLocale()
   const editor = useEditor()
   const compact = useEditorState((s) => s.ui.compact)
   const [query, setQuery] = useState('')
@@ -62,7 +64,7 @@ export function TemplatesPanel({ close }: { close: () => void }) {
   const { loadMore } = list
   const sentinel = useSentinel(list.hasMore && !list.loading && !list.error && list.items.length > 0, loadMore)
 
-  const menu = useMemo(() => {
+  const menu = (() => {
     const byId = new Map<string, Filter>([['all', { type: 'all' }]])
     const entries: CategoryEntry[] = [{ kind: 'option', id: 'all', label: t.templates.all }]
     if (categories.items.length > 0) entries.push({ kind: 'group', id: 'g-cat', label: t.templates.categories })
@@ -78,7 +80,7 @@ export function TemplatesPanel({ close }: { close: () => void }) {
       entries.push({ kind: 'option', id: filterKey(f), label: t.templates.orientation[value] })
     }
     return { byId, entries }
-  }, [categories.items])
+  })()
 
   const label = filter.type === 'all' ? t.templates.all : filter.type === 'category' ? filter.name : t.templates.orientation[filter.value]
 

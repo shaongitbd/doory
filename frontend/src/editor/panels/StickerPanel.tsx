@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale } from '@/i18n/useLocale'
 import { safeGetItem, safeSetItem } from '@/lib/storage'
 import type { ElementItem, ElementKind, ElementPack } from '@/types/api'
 import { useEditor } from '../context'
@@ -28,6 +29,7 @@ function storedFilter(): { kind: Kind; pack: string } {
 
 /** Sticker library (docked sidebar): search, category menu, pack chips and an endless grid. */
 export function StickerPanel() {
+  useLocale()
   const editor = useEditor()
   const [query, setQuery] = useState('')
   const [stored] = useState(storedFilter)
@@ -62,7 +64,7 @@ export function StickerPanel() {
   const sentinel = useSentinel(list.hasMore && !list.loading && !list.error && list.items.length > 0, loadMore)
 
   const label = kind === 'all' ? t.stickers.all : t.stickers.kinds[kind]
-  const entries = useMemo<CategoryEntry[]>(() => [{ kind: 'option', id: 'all', label: t.stickers.all }, ...KINDS.map((k): CategoryEntry => ({ kind: 'option', id: k, label: t.stickers.kinds[k] }))], [])
+  const entries: CategoryEntry[] = [{ kind: 'option', id: 'all', label: t.stickers.all }, ...KINDS.map((k): CategoryEntry => ({ kind: 'option', id: k, label: t.stickers.kinds[k] }))]
   const selectKind = (id: string) => {
     const next: Kind = KINDS.includes(id as ElementKind) ? (id as ElementKind) : 'all'
     setKind(next)

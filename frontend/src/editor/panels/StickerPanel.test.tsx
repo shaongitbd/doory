@@ -1,6 +1,8 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { activateLocale } from '@/i18n/catalog'
+import { setLocale } from '@/i18n/locale'
 import type { EditorServices } from '@/types/adapter'
 import type { ElementItem, ElementKind, ElementPack, ElementQuery } from '@/types/api'
 import { setupEditor } from '../animation/testing'
@@ -66,8 +68,24 @@ const lastQuery = (elements: { list: ReturnType<typeof vi.fn> }) => elements.lis
 describe('StickerPanel packs', () => {
   beforeEach(() => window.localStorage.clear())
   afterEach(() => {
+    cleanup()
+    setLocale('en')
     engine?.dispose()
     engine = null
+  })
+
+  it('updates cached category labels in place when the language changes, keeping the search draft', async () => {
+    await open(fakeElements())
+    const search = screen.getByTestId('sticker-search')
+    await userEvent.type(search, 'Heart')
+    await userEvent.click(screen.getByTestId('sticker-category'))
+    expect(screen.getByRole('option', { name: 'Icons' })).toBeInTheDocument()
+
+    await act(() => activateLocale('zh-CN'))
+    expect(screen.getByTestId('sticker-search')).toBe(search)
+    expect(search).toHaveValue('Heart')
+    expect(screen.getByRole('option', { name: t.stickers.kinds.icon })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Icons' })).not.toBeInTheDocument()
   })
 
   it('shows only the packs of the chosen type and sends kind and pack together', async () => {
