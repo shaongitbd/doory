@@ -10,6 +10,7 @@ import { I } from './chrome/icons'
 import { useChrome, useOpenTool } from './chrome/ChromeContext'
 import { useEditor, useEditorState } from './context'
 import { commands, isCommandEnabled } from './commands'
+import { contextMenuItems } from './contextMenuItems'
 import { DEFAULT_EXPORT_OPTIONS, exportFormats } from './engine/export/registry'
 import { type ExportChoice, describeChoice, designPreset, loadLastExport, saveLastExport, suggestionFor } from './engine/export/choices'
 import { copyPageAsPng, downloadFiles, runExport } from './engine/export/exporter'
@@ -32,7 +33,7 @@ interface TopBarProps {
   onPresent: () => void
 }
 
-/** Below this bar width File and View become one menu and the title moves into the left-hand group. */
+/** Below this bar width File, Edit and View become one menu and the title moves into the left-hand group. */
 const NARROW_BAR = 760
 
 function TitleField({ onTitle }: { onTitle: (title: string) => void }) {
@@ -83,7 +84,7 @@ function EndTool({ panel, open, onToggle }: { panel: PanelDefinition; open: bool
   )
 }
 
-/** A text button in the bar that opens a menu (File, View). */
+/** A text button in the bar that opens a menu (File, Edit, View). */
 function MenuButton({ label, items, testId, icon, onOpen }: { label: string; items: MenuItem[]; testId: string; icon?: ReactNode; onOpen?: () => void }) {
   const [open, setOpen] = useState(false)
   const anchor = useRef<HTMLButtonElement>(null)
@@ -247,6 +248,7 @@ function useWidth(ref: React.RefObject<HTMLElement | null>): number {
 export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
   const editor = useEditor()
   const history = useEditorState((s) => s.history)
+  const selection = useEditorState((s) => s.selection)
   const readOnly = useEditorState((s) => s.readOnly)
   const mode = useEditorState((s) => s.mode)
   const ui = useEditorState((s) => s.ui)
@@ -297,6 +299,13 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
         { id: 'f3', separator: true },
         cmd('file.reset'),
       ]
+  const editItems: MenuItem[] = [
+    cmd('edit.undo'),
+    cmd('edit.redo'),
+    { id: 'edit-history-sep', separator: true },
+    ...contextMenuItems(editor, selection, false),
+    ...(selection.ids.length > 0 ? [{ id: 'edit-selection-sep', separator: true }, cmd('edit.selectAll'), cmd('edit.deselect')] : []),
+  ]
   const viewItems: MenuItem[] = [
     ...(readOnly
       ? []
@@ -324,6 +333,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
     { id: 'h-file', label: t.topbar.file, heading: true },
     ...fileItems,
     { id: 'c1', separator: true },
+    ...(!readOnly ? [{ id: 'h-edit', label: t.topbar.edit, heading: true }, ...editItems, { id: 'c-edit', separator: true }] : []),
     { id: 'h-view', label: t.topbar.view, heading: true },
     ...viewItems,
   ]
@@ -341,6 +351,7 @@ export function TopBar({ start, end, onTitle, onPresent }: TopBarProps) {
         ) : (
           <nav className={styles.menus} aria-label={t.topbar.menus}>
             <MenuButton label={t.topbar.file} items={fileItems} testId="ed-menu-file" onOpen={() => preloadDialog('download')} />
+            {!readOnly ? <MenuButton label={t.topbar.edit} items={editItems} testId="ed-menu-edit" /> : null}
             <MenuButton label={t.topbar.view} items={viewItems} testId="ed-menu-view" />
           </nav>
         )}

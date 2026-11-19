@@ -26,6 +26,7 @@ const english = {
 
   topbar: {
     file: 'File',
+    edit: 'Edit',
     view: 'View',
     menu: 'Menu',
     menus: 'Design menus',
