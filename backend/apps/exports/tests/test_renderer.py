@@ -1,5 +1,6 @@
 """The parent side of the print worker: process lifecycle, deadlines, error mapping (no real browser)."""
 
+import csv
 import json
 import os
 import subprocess
@@ -37,6 +38,23 @@ def use_worker(monkeypatch, tmp_path):
 
 def render(html="<p>x</p>"):
     return renderer.render_pdf(html, width_px=100, height_px=100)
+
+
+def process_alive(pid: int) -> bool:
+    if os.name == "nt":
+        # Windows does not implement os.kill(pid, 0) as an existence check.
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return any(len(row) > 1 and row[1] == str(pid) for row in csv.reader(result.stdout.splitlines()))
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
 
 
 def test_successful_worker_result_is_returned(use_worker):
@@ -143,9 +161,7 @@ def test_the_whole_process_group_is_killed(use_worker, settings, monkeypatch, tm
     child_pid = int(marker.read_text())
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
-        try:
-            os.kill(child_pid, 0)
-        except ProcessLookupError:
+        if not process_alive(child_pid):
             break
         time.sleep(0.05)
     else:
@@ -214,10 +230,18 @@ def test_worker_environment_does_not_leak_secrets(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pw@db/doory")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "aws-secret")
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")
+    monkeypatch.setenv("SYSTEMROOT", "C:\\Windows")
+    monkeypatch.setenv("WINDIR", "C:\\Windows")
     monkeypatch.setenv("TMPDIR", "/somewhere/else")
+    monkeypatch.setenv("TEMP", "/somewhere/else")
+    monkeypatch.setenv("TMP", "/somewhere/else")
     env = renderer._worker_env(Path("/work/dir"))
     assert env["PLAYWRIGHT_BROWSERS_PATH"] == "/opt/pw-browsers"
-    assert env["TMPDIR"] == "/work/dir"
+    assert env["SYSTEMROOT"] == "C:\\Windows"
+    assert env["WINDIR"] == "C:\\Windows"
+    assert env["TMPDIR"] == str(Path("/work/dir"))
+    if os.name == "nt":
+        assert env["TEMP"] == env["TMP"] == str(Path("/work/dir"))
     assert not {"DJANGO_SECRET_KEY", "DATABASE_URL", "AWS_SECRET_ACCESS_KEY"} & set(env)
 
 
@@ -338,9 +362,7 @@ def test_an_image_worker_that_hangs_is_killed_with_its_children(use_worker, sett
     child_pid = int(marker.read_text())
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
-        try:
-            os.kill(child_pid, 0)
-        except ProcessLookupError:
+        if not process_alive(child_pid):
             break
         time.sleep(0.05)
     else:

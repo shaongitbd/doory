@@ -693,6 +693,10 @@ export class EditorEngine implements PageCanvasHost {
     void this.insert.fillPlaceholder(pageId, id)
   }
 
+  onImageActivate(pageId: string): void {
+    if (pageId === this.state.activePageId) void this.crop.start()
+  }
+
   onImageGridCellActivate(pageId: string, gridId: string, gridCellId: string): void {
     void this.imageGrids.fillCell(pageId, gridId, gridCellId)
   }

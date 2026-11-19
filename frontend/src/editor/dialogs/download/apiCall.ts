@@ -37,6 +37,12 @@ export function exportArguments({ designId, formatId, options, pages, fileNames 
   if (DOCUMENT_FORMATS.has(format)) {
     if (format !== 'svg' && options.bleedMm > 0) args.bleed_mm = options.bleedMm
     if (format !== 'svg' && options.cropMarks) args.crop_marks = true
+    if (format !== 'svg' && options.imposition) {
+      args.layout = options.imposition.layout
+      args.signature_pages = options.imposition.signaturePages
+      args.binding = options.imposition.binding
+      if (options.imposition.sides && options.imposition.sides !== 'both') args.print_sides = options.imposition.sides
+    }
     if (fileNames === 'structured') args.file_names = 'detailed'
     return args
   }

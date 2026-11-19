@@ -303,6 +303,7 @@ export interface EditorAdapter {
     sizes?: { width: number; height: number }[]
     bleedMm?: number
     cropMarks?: boolean
+    imposition?: { layout: 'booklet' | 'book'; signaturePages: number; binding: 'left' | 'right'; sides?: 'both' | 'front' | 'back' }
     title?: string
     /** Language of the document (BCP 47), written into the PDF; the server assumes English without it. */
     lang?: string

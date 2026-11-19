@@ -82,6 +82,8 @@ export interface PageCanvasHost {
   onContextMenu(pageId: string, clientX: number, clientY: number): void
   onEditingChange(pageId: string, editing: boolean): void
   onPlaceholderActivate(pageId: string, id: string): void
+  /** The selected picture was double-clicked. */
+  onImageActivate(pageId: string): void
   onImageGridCellActivate(pageId: string, gridId: string, gridCellId: string): void
   onImageGridCellSwap(pageId: string, gridId: string, fromCellId: string, toCellId: string): void
   onImageGridImageDrop(pageId: string, sourceId: string, gridId: string, gridCellId: string, sourceFrame: CanvasImageFrame): void
@@ -954,6 +956,11 @@ export class PageCanvas {
       this.enterGridEditing(target)
       const hit = imageGridCellAtPoint(target, e.scenePoint)
       if (hit) this.host.onImageGridCellActivate(this.pageId, asDory(target).id ?? '', hit.gridCellId)
+      return
+    }
+    // Like Enter: a double-click on the selected picture crops it (`CropApi.start` turns away what it can't crop).
+    if (target instanceof FabricImage && this.canvas.getActiveObject() === target) {
+      this.host.onImageActivate(this.pageId)
       return
     }
     const lockedId = asDory(target).id

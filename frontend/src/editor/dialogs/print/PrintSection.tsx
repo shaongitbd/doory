@@ -18,12 +18,13 @@ interface PrintSectionProps {
   unit: DocUnit
   /** Made by the print server (vector) or by the browser (300 dpi pictures); said honestly under the options. */
   server: boolean
+  folded?: boolean
 }
 
 const PRESETS: readonly PrintPresetId[] = ['screen', 'standard', 'custom']
 
 /** Bleed, crop marks and a schematic of the result: the "Print" part of the Download dialog for PDF files. */
-export function PrintSection({ settings, onChange, sizes, unit, server }: PrintSectionProps) {
+export function PrintSection({ settings, onChange, sizes, unit, server, folded = false }: PrintSectionProps) {
   const inUnit = bleedInUnit(settings.bleedMm, unit)
   const bleedOn = settings.bleedMm > 0
   const bleedLabel = `${settings.bleedMm} mm`
@@ -34,6 +35,7 @@ export function PrintSection({ settings, onChange, sizes, unit, server }: PrintS
   return (
     <fieldset className={styles.section} data-testid="print-section">
       <legend>{t.print.section}</legend>
+      {folded ? <p className={styles.note}>Bleed and crop marks need a larger sheet and are unavailable for folded pages at this size.</p> : <>
       <div className={styles.chips} role="radiogroup" aria-label={t.print.preset}>
         {PRESETS.map((id) => (
           <label key={id} className={`${styles.chip} ${settings.preset === id ? styles.chipOn : ''}`}>
@@ -74,6 +76,7 @@ export function PrintSection({ settings, onChange, sizes, unit, server }: PrintS
 
         <PrintPreview size={sizes[0] ?? { width: 4, height: 3 }} bleed={bleedOn} marks={settings.cropMarks} bleedLabel={bleedLabel} />
       </div>
+      </>}
 
       <p className={styles.note}>{server ? t.print.engineServer : t.print.engineClient}</p>
       <p className={styles.note} data-testid="print-colour-note">
