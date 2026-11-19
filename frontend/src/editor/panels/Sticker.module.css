@@ -36,6 +36,7 @@
 }
 .search input:focus {
   outline: none;
+  box-shadow: none;
 }
 .search input::placeholder {
   color: var(--ed-text-dim);
