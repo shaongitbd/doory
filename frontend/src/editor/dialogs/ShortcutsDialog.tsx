@@ -1,5 +1,5 @@
+import { useLocale } from '@/i18n/useLocale'
 import { useState, useSyncExternalStore } from 'react'
-import { getLocale, subscribeLocale } from '@/i18n/locale'
 import { commands } from '../commands'
 import { useEditor } from '../context'
 import { formatShortcut } from '../shortcuts'
@@ -20,8 +20,8 @@ function compactKeys(keys: string[]): string[] {
 }
 
 export function ShortcutsDialog() {
+  useLocale()
   const editor = useEditor()
-  useSyncExternalStore(subscribeLocale, getLocale, () => 'en')
   const all = useSyncExternalStore(commands.subscribe, commands.getSnapshot)
   const [filter, setFilter] = useState('')
   const groups = (() => {

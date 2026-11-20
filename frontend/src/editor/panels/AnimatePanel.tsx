@@ -6,7 +6,7 @@
  */
 import { Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { getLocale, subscribeLocale } from '@/i18n/locale'
+import { useLocale } from '@/i18n/useLocale'
 import type { Anim, ObjectAnimation, PageTransition } from '@/types/document'
 import { useEditor, useEditorState, useSelection } from '../context'
 import { presetLabel } from '../animation/labels'
@@ -252,7 +252,7 @@ function PageView({ pageId, transition, animated }: { pageId: string; transition
  * ---------------------------------------------------------------------------------------------- */
 
 export function AnimatePanel() {
-  useSyncExternalStore(subscribeLocale, getLocale, () => 'en')
+  useLocale()
   const selection = useSelection()
   const pageId = useEditorState((s) => s.activePageId)
   const transition = useEditorState((s) => s.doc.pages.find((p) => p.id === s.activePageId)?.transition)

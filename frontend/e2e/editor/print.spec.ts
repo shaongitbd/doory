@@ -60,6 +60,48 @@ async function download(page: Page): Promise<Buffer> {
 }
 
 test.describe('[engine] print options', () => {
+  test('folded PDF controls fit desktop, tablet and mobile viewports', async ({ page }) => {
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 820, height: 1180 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport)
+      await openEditor(page, 'doc=blank&w=559&h=794')
+      for (let i = 1; i < 4; i++) await page.getByTestId('ed-pages-add').click()
+      await openDownloadDialog(page)
+      const dialog = page.getByRole('dialog', { name: 'Download' })
+      await dialog.getByRole('radio', { name: /^PDF/ }).check()
+      await dialog.getByRole('radio', { name: 'Booklet' }).check()
+      await expect(dialog.getByTestId('fold-preview')).toContainText('Sheet 1, front: Page 4 | Page 1')
+      await expect(dialog.getByLabel('PDF sheet sides')).toBeVisible()
+      await expect(dialog.getByRole('button', { name: 'Download', exact: true })).toBeEnabled()
+      expect(await dialog.evaluate((element) => element.scrollWidth > element.clientWidth + 1)).toBe(false)
+      const box = await dialog.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1)
+    }
+  })
+
+  test('a five-page booklet downloads four A4 sheet sides, or two backs for manual duplex', async ({ page }) => {
+    await openEditor(page, 'doc=blank&w=559&h=794')
+    for (let i = 1; i < 5; i++) await page.getByTestId('ed-pages-add').click()
+    await openDownloadDialog(page)
+    let dialog = page.getByRole('dialog', { name: 'Download' })
+    await dialog.getByRole('radio', { name: /^PDF/ }).check()
+    await dialog.getByRole('radio', { name: 'Booklet' }).check()
+    await expect(dialog.getByTestId('fold-preview')).toContainText('3 blanks')
+    const all = mediaBoxes(pdfText(await download(page)))
+    expect(all).toHaveLength(4)
+    for (const box of all) {
+      expect(box[0]).toBeCloseTo(297 * PX_PER_MM * PT, 0)
+      expect(box[1]).toBeCloseTo(210 * PX_PER_MM * PT, 0)
+    }
+    await openDownloadDialog(page)
+    dialog = page.getByRole('dialog', { name: 'Download' })
+    await dialog.getByRole('radio', { name: /^PDF/ }).check()
+    await dialog.getByRole('radio', { name: 'Booklet' }).check()
+    await dialog.getByLabel('PDF sheet sides').selectOption('back')
+    expect(mediaBoxes(pdfText(await download(page)))).toHaveLength(2)
+  })
+
   test('the print section belongs to the PDF; Standard print is 3 mm bleed and crop marks, and the preview follows', async ({ page }) => {
     await openEditor(page, 'doc=blank')
     await openDownloadDialog(page)
@@ -98,10 +140,11 @@ test.describe('[engine] print options', () => {
     await openDownloadDialog(page)
     const dialog = page.getByRole('dialog', { name: 'Download' })
     await dialog.getByRole('radio', { name: /^PDF/ }).check()
-    await expect(dialog.getByTestId('print-summary')).toHaveText('3 pages · 3 sizes: 800×600, A4, Business card')
+    await expect(dialog.getByTestId('print-summary')).toHaveText('3 pages · 3 sizes: 800×600, A4, Business Card')
+    await dialog.getByRole('button', { name: /More settings/ }).click()
     await dialog.getByRole('radio', { name: 'Select pages' }).check()
     await dialog.getByRole('textbox', { name: 'Select pages' }).fill('2-3')
-    await expect(dialog.getByTestId('print-summary')).toHaveText('2 pages · 2 sizes: A4, Business card')
+    await expect(dialog.getByTestId('print-summary')).toHaveText('2 pages · 2 sizes: A4, Business Card')
     await dialog.getByRole('textbox', { name: 'Select pages' }).fill('7')
     await expect(dialog.getByRole('alert')).toContainText('Enter page numbers')
     await expect(dialog.getByRole('button', { name: 'Download', exact: true })).toBeDisabled()

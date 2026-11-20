@@ -44,6 +44,19 @@ describe('exportsApi.pdf print options', () => {
     expect(form.has('lang')).toBe(false)
   })
 
+  it('sends booklet settings for the requested sheet sides', async () => {
+    const calls = captureFetch(pdf)
+    await exportsApi.pdf({
+      pages: one, width: 559, height: 794,
+      imposition: { layout: 'booklet', signaturePages: 4, binding: 'right', sides: 'front' },
+    })
+    const form = calls[0].body as FormData
+    expect(form.get('layout')).toBe('booklet')
+    expect(form.get('signature_pages')).toBe('4')
+    expect(form.get('binding')).toBe('right')
+    expect(form.get('print_sides')).toBe('front')
+  })
+
   it('stops the request when the signal aborts', async () => {
     const signals: (AbortSignal | null | undefined)[] = []
     vi.stubGlobal('fetch', (_input: RequestInfo | URL, init: RequestInit = {}) => {

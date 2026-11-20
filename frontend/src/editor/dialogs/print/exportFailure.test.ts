@@ -1,10 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '@/lib/api/client'
 import { describeExportFailure, isCancellation } from './exportFailure'
+import { activateLocale } from '@/i18n/catalog'
+import { setLocale } from '@/i18n/locale'
+import { t } from '../../strings'
+
+afterEach(() => setLocale('en'))
 
 const api = (status: number, code: string, message = 'Server words', extra: Partial<ConstructorParameters<typeof ApiError>[0]> = {}) => new ApiError({ status, code, message, ...extra })
 
 describe('what a failed download tells the user', () => {
+  it.each(['de', 'zh-CN', 'zh-TW'] as const)('localizes every folded-PDF server validation error in %s', async locale => {
+    await activateLocale(locale)
+    const f = t.print.fold.errors
+    for (const [source, message] of [
+      ['Choose pages, a folded layout and a binding direction.', f.choices],
+      ['Signature size must be a multiple of four from 4 to 32.', f.signature],
+      ['Choose both, front or back sheet sides.', f.sides],
+      ['Sheet sides require a folded layout.', f.foldedSides],
+      ['Folded sheets cannot use bleed or crop marks at this paper size.', f.marks],
+      ['Folded sheets need portrait pages of one size.', f.size],
+      ['Folded layout is available for PDFs only.', f.pdfOnly],
+    ]) {
+      expect(message).not.toBe(source)
+      expect(describeExportFailure(api(400, 'invalid_imposition', source))).toMatchObject({ kind: 'invalid', message, retryable: false })
+    }
+  })
   it('a busy print service: wait as long as it asked, then try again', () => {
     const failure = describeExportFailure(api(503, 'export_busy', 'busy', { retryAfter: 5 }))
     expect(failure).toMatchObject({ kind: 'busy', retryAfter: 5, retryable: true })

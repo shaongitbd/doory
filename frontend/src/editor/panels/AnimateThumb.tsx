@@ -3,6 +3,7 @@
  * animation half way through; while the tile is hovered or focused it plays, and when the system asks for reduced motion
  * it stays a still.
  */
+import { useLocale } from '@/i18n/useLocale'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import type { Anim, PageTransition } from '@/types/document'
 import { type ThumbColors, drawAnimationThumb, drawTransitionThumb, loopTime, stillTime } from '../animation/thumbnail'
@@ -30,6 +31,7 @@ interface ThumbProps {
 }
 
 export const AnimateThumb = memo(function AnimateThumb({ label, subject, selected, onPick, testId }: ThumbProps) {
+  useLocale()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const reduced = useReducedMotion()
   const subjectRef = useRef(subject)

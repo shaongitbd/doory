@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { addShape, getDoc, openDownloadDialog, openEditor, openTool, toClient, waitForObjectCount } from './helpers'
+import { readFileSync } from 'node:fs'
 
 async function activateLocale(page: Page, locale: 'en' | 'de') {
   await page.evaluate(async locale => {
@@ -9,7 +10,7 @@ async function activateLocale(page: Page, locale: 'en' | 'de') {
   }, locale)
 }
 
-for (const element of ['shortcuts', 'context menu', 'download'] as const) {
+for (const element of ['shortcuts', 'context menu', 'edit menu', 'download'] as const) {
   test(`refreshes the open ${element} English → German → English without losing state`, async ({ page }) => {
     await openEditor(page, 'doc=blank&saveDelay=60000')
     await addShape(page, 'rect')
@@ -23,6 +24,8 @@ for (const element of ['shortcuts', 'context menu', 'download'] as const) {
       await page.getByRole('button', { name: 'View', exact: true }).click()
       await page.getByRole('menuitem', { name: /Keyboard shortcuts/ }).click()
       await page.getByRole('searchbox').fill('S')
+    } else if (element === 'edit menu') {
+      await page.getByTestId('ed-menu-edit').click()
     } else if (element === 'context menu') {
       const point = await toClient(page, before.width / 2, before.height / 2)
       await page.mouse.click(point.x, point.y, { button: 'right' })
@@ -30,7 +33,7 @@ for (const element of ['shortcuts', 'context menu', 'download'] as const) {
       await openDownloadDialog(page)
       await page.locator('[data-purpose="graphic"]').click()
     }
-    const surface = page.getByRole(element === 'context menu' ? 'menu' : 'dialog')
+    const surface = page.getByRole(element === 'context menu' || element === 'edit menu' ? 'menu' : 'dialog')
     await expect(surface).toBeVisible()
     const mounted = await surface.elementHandle()
     for (const locale of ['en', 'de', 'en'] as const) {
@@ -38,8 +41,9 @@ for (const element of ['shortcuts', 'context menu', 'download'] as const) {
       if (element === 'shortcuts') {
         await expect(surface.locator('dt').filter({ hasText: locale === 'de' ? /^Jetzt speichern$/ : /^Save now$/ })).toBeVisible()
         await expect(surface.getByRole('searchbox')).toHaveValue('S')
-      } else if (element === 'context menu') {
+      } else if (element === 'context menu' || element === 'edit menu') {
         await expect(surface.getByRole('menuitem', { name: locale === 'de' ? /^Kopieren/ : /^Copy/ })).toBeVisible()
+        if (element === 'edit menu') await expect(page.getByTestId('ed-menu-edit')).toHaveText(locale === 'de' ? 'Bearbeiten' : 'Edit')
       } else {
         await expect(surface.getByRole('heading', { name: locale === 'de' ? 'Verwenden für' : 'What is it for?' })).toBeVisible()
         if (locale === 'de') await expect(surface.getByRole('button', { name: /Weitere Einstellungen/ })).toContainText('Alle Seiten')
@@ -129,7 +133,44 @@ for (const [slot, tab, preset, english, german] of [
   })
 }
 
-// Test the mounted editor independently of the app router's separate remount behavior.
+test('keeps folded-PDF choices across languages and downloads a German right-bound book PDF', async ({ page }) => {
+  await openEditor(page, 'doc=blank&w=559&h=794&saveDelay=60000')
+  for (let i = 1; i < 5; i++) await page.getByTestId('ed-pages-add').click()
+  await page.getByTestId('ed-topbar-title').fill('Folded User Title')
+  await page.keyboard.press('Enter')
+  const before = await getDoc(page)
+  await openDownloadDialog(page)
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio', { name: /^PDF/ }).check()
+  await dialog.getByRole('radio', { name: 'Book signatures' }).check()
+  await dialog.getByLabel('Binding edge').selectOption('right')
+  await dialog.getByLabel('Pages per signature').selectOption('8')
+  await dialog.getByLabel('PDF sheet sides').selectOption('back')
+  const mounted = await dialog.elementHandle()
+
+  for (const locale of ['de', 'en', 'de'] as const) {
+    await activateLocale(page, locale)
+    const german = locale === 'de'
+    await expect(dialog.getByRole('radio', { name: german ? 'Buch mit Falzlagen' : 'Book signatures' })).toBeChecked()
+    await expect(dialog.getByLabel(german ? 'Bindekante' : 'Binding edge')).toHaveValue('right')
+    await expect(dialog.getByLabel(german ? 'Seiten pro Falzlage' : 'Pages per signature')).toHaveValue('8')
+    await expect(dialog.getByLabel(german ? 'Druckbogenseiten im PDF' : 'PDF sheet sides')).toHaveValue('back')
+    await expect(dialog.getByTestId('fold-preview')).toContainText(german ? 'Druckbogen 1, Rückseite: Leerseite | Seite 2' : 'Sheet 1, back: Blank | Page 2')
+    await expect(dialog.getByTestId('fold-preview')).toContainText(german ? '5 Seiten · 2 Druckbögen · 3 Leerseiten' : '5 pages · 2 sheets · 3 blanks')
+    expect(await mounted!.evaluate(element => element.isConnected)).toBe(true)
+    expect(await getDoc(page)).toEqual(before)
+  }
+  const pending = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Herunterladen', exact: true }).click()
+  const file = await pending
+  expect(file.suggestedFilename()).toBe('Folded-User-Title-book-back.pdf')
+  const pdf = readFileSync((await file.path())!).toString('latin1')
+  expect(pdf.match(/\/Type\s*\/Page[^s]/g)).toHaveLength(2)
+  expect(pdf).toContain('/Title (Folded User Title)')
+  expect(pdf).toContain('/Lang (de)')
+})
+
+// Exercise the mounted editor independently of the routed state-preservation checks in e2e/app.
 test('changes English commands and tools to German without resetting the mounted editor', async ({ page }) => {
   await openEditor(page, 'doc=blank&saveDelay=60000')
   await addShape(page, 'rect')

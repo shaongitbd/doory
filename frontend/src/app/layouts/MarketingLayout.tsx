@@ -1,7 +1,8 @@
 import { msg, activateLocale } from '@/i18n/catalog'
-import { getLocale, subscribeLocale, type Locale } from '@/i18n/locale'
+import { type Locale } from '@/i18n/locale'
+import { useLocale } from '@/i18n/useLocale'
 import { GitBranch, Menu as MenuIcon, X } from 'lucide-react'
-import { Suspense, useState, useSyncExternalStore } from 'react'
+import { Suspense, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { PageLoader } from '@/app/PageLoader'
 import { AccountMenu } from '@/features/auth/AccountMenu'
@@ -35,7 +36,7 @@ function HeaderNav({ onNavigate, orientation }: { onNavigate?: () => void; orien
 
 export function MarketingHeader() {
   const { status } = useAuth()
-  const locale = useSyncExternalStore(subscribeLocale, getLocale, () => 'en')
+  const locale = useLocale()
   const location = useLocation()
   const place = `${location.pathname}${location.hash}`
   // The menu is "open for" the place it was opened on, so navigating anywhere closes it without an effect.

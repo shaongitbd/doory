@@ -224,6 +224,20 @@ def test_a_print_pdf_prints_the_sanitised_vector_pages_with_their_fonts(design, 
     assert bundle.options == {"format": "pdf-print", "bleed_mm": 2.0, "crop_marks": False, "cmyk": False}
 
 
+@pytest.mark.parametrize("format_id", ["pdf", "pdf-print"])
+def test_saved_design_exports_back_sides_of_a_booklet(user, drawn, printed, format_id):
+    design = make_design(user, title="Booklet", document=make_doc(pages=4, width=559, height=794))
+    bundle = services.export_images(
+        design, format=format_id, pages="all", layout="booklet", print_sides="back"
+    )
+    assert len(drawn.calls[0]["payload"]["pages"]) == 4
+    assert printed[0]["html"].count('<section class="page">') == 1
+    assert printed[0]["width_px"] == pytest.approx(297 * PX_PER_MM)
+    assert bundle.filename == "Booklet-booklet-back.pdf"
+    assert bundle.options["print_sides"] == "back"
+    assert bundle.options["layout"] == "booklet"
+
+
 def test_font_files_the_render_page_lists_are_checked_like_the_editors(design, drawn, printed):
     drawn.font_files = ({"family": "Evil", "url": "https://elsewhere.test/font.ttf", "weight": 400},)
     with pytest.raises(InvalidExport) as error:

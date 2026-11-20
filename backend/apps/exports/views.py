@@ -20,7 +20,7 @@ from apps.designs.models import Design
 
 from . import delivery
 from .exceptions import ExportDisabled, PayloadTooLarge
-from .filenames import FILE_NAMES, pdf_filename, unix_now
+from .filenames import FILE_NAMES, export_filename, pdf_filename, unix_now
 from .serializers import (
     MAX_PAGES,
     MAX_TOTAL_BYTES,
@@ -94,6 +94,10 @@ class PdfExportView(APIView):
                 sizes=data["sizes"],
                 bleed_mm=data["bleed_mm"],
                 crop_marks=data["crop_marks"],
+                layout=data["layout"],
+                signature_pages=data["signature_pages"],
+                binding=data["binding"],
+                print_sides=data["print_sides"],
                 title=data["title"],
                 lang=data["lang"],
                 fonts=data["fonts"],
@@ -101,7 +105,13 @@ class PdfExportView(APIView):
             )
         )
         response = HttpResponse(result.pdf, content_type="application/pdf")
-        response["Content-Disposition"] = content_disposition_header(True, pdf_filename(data["title"]))
+        name = pdf_filename(data["title"])
+        if data["layout"] != "normal":
+            suffix = data["layout"]
+            if data["print_sides"] != "both":
+                suffix += f"-{data['print_sides']}"
+            name = export_filename(data["title"] or "design", "pdf", suffix=f"-{suffix}")
+        response["Content-Disposition"] = content_disposition_header(True, name)
         response["Cache-Control"] = "no-store"
         response["X-Content-Type-Options"] = "nosniff"
         return response
@@ -183,6 +193,10 @@ class ImageExportView(APIView):
             optimize=data["optimize"],
             bleed_mm=data["bleed_mm"],
             crop_marks=data["crop_marks"],
+            layout=data["layout"],
+            signature_pages=data["signature_pages"],
+            binding=data["binding"],
+            print_sides=data["print_sides"],
             cmyk=data["cmyk"],
             resolution=data["resolution"],
             fps=data["fps"],

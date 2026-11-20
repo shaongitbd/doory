@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { type Account, createAccounts, createDesign, open } from '../collab/helpers'
+import { pngBuffer } from './helpers'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const backend = resolve(here, '../../../backend')
@@ -25,7 +26,7 @@ interface PdfFacts {
   title: string | null
   lang: string | null
   creator: string | null
-  pages: { media: number[]; trim: number[] | null; bleed: number[] | null; text: string; links: { uri: string; rect: number[] }[] }[]
+  pages: { media: number[]; trim: number[] | null; bleed: number[] | null; text: string; images: number; links: { uri: string; rect: number[] }[] }[]
 }
 
 const READER = `
@@ -41,7 +42,7 @@ for page in reader.pages:
         annotation = annotation.get_object()
         if annotation.get("/Subtype") == "/Link" and "/A" in annotation:
             links.append({"uri": str(annotation["/A"].get("/URI")), "rect": [float(v) for v in annotation["/Rect"]]})
-    pages.append({"media": rect(page, "/MediaBox"), "trim": rect(page, "/TrimBox"), "bleed": rect(page, "/BleedBox"), "text": page.extract_text(), "links": links})
+    pages.append({"media": rect(page, "/MediaBox"), "trim": rect(page, "/TrimBox"), "bleed": rect(page, "/BleedBox"), "text": page.extract_text(), "images": len(page.images), "links": links})
 meta = reader.metadata
 print(json.dumps({"title": meta.title if meta else None, "creator": meta.creator if meta else None, "lang": str(reader.trailer["/Root"].get("/Lang")), "pages": pages}))
 `
@@ -103,6 +104,101 @@ async function openDialog(page: Page) {
   await expect(dialog).toBeVisible()
   return dialog
 }
+
+/** Five A5 pages with text, vector graphics and a saved image layer on every page. */
+function graphicBooklet() {
+  const picture = `data:image/png;base64,${pngBuffer(320, 240, [30, 120, 200]).toString('base64')}`
+  const colors = ['#e11d48', '#2563eb', '#15803d', '#9333ea', '#ea580c']
+  return {
+    schemaVersion: 1,
+    width: 559,
+    height: 794,
+    unit: 'px',
+    pages: colors.map((color, index) => ({
+      id: `leaf-${index + 1}`,
+      background: { type: 'solid', color: '#fffaf0' },
+      objects: [
+        { id: `title-${index}`, type: 'textbox', left: 280, top: 72, width: 460, height: 66, text: `Leaf ${index + 1}`, fontSize: 48, fontFamily: 'Arial', fill: '#1c1517', textAlign: 'center', originX: 'center', originY: 'center', scaleX: 1, scaleY: 1, angle: 0 },
+        { id: `picture-${index}`, type: 'image', src: picture, left: 280, top: 320, width: 320, height: 240, originX: 'center', originY: 'center', scaleX: 1, scaleY: 1, angle: 0 },
+        ...Array.from({ length: 12 }, (_, item) => ({ id: `graphic-${index}-${item}`, type: 'rect', left: 75 + (item % 4) * 135, top: 540 + Math.floor(item / 4) * 68, width: 90, height: 42, fill: color, originX: 'center', originY: 'center', scaleX: 1, scaleY: 1, angle: 0 })),
+      ],
+    })),
+  }
+}
+
+test('a graphic-heavy A5 booklet exports through the print server at desktop, tablet and mobile sizes', async ({ browser }) => {
+  const owner = await open(browser, account, '/dashboard')
+  const id = await createDesign(owner, graphicBooklet() as never, 'Five-page booklet')
+  await owner.context.close()
+
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 820, height: 1180 },
+    { width: 390, height: 844 },
+    { width: 320, height: 568 },
+  ]) {
+    const { page, context } = await open(browser, account, `/design/${id}`, { viewport })
+    await page.waitForSelector('[data-artboard] .doory-canvas', { timeout: 30_000 })
+    const dialog = await openDialog(page)
+    await dialog.getByRole('radio', { name: /Print-quality PDF/ }).check()
+    await dialog.getByRole('radio', { name: 'Booklet' }).check()
+    await expect(dialog.getByTestId('fold-preview')).toContainText('3 blanks')
+    await expect(dialog.getByLabel('PDF sheet sides')).toBeVisible()
+    expect(await dialog.evaluate((element) => element.scrollWidth > element.clientWidth + 1)).toBe(false)
+    const bounds = await dialog.boundingBox()
+    expect(bounds).not.toBeNull()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width + 1)
+    if (shots) {
+      mkdirSync(shots, { recursive: true })
+      await page.screenshot({ path: join(shots, `booklet-dialog-${viewport.width}.png`) })
+    }
+
+    if (viewport.width === 820) {
+      await dialog.getByRole('radio', { name: 'Book signatures' }).check()
+      await dialog.getByLabel('Binding edge').selectOption('right')
+      await dialog.getByLabel('Pages per signature').selectOption('4')
+      await expect(dialog.getByTestId('fold-preview')).toContainText('Sheet 1, front: Page 1 | Page 4')
+    }
+    if (viewport.width === 390) await dialog.getByLabel('PDF sheet sides').selectOption('back')
+
+    const pending = page.waitForEvent('download', { timeout: 120_000 })
+    await dialog.getByRole('button', { name: 'Download', exact: true }).click()
+    const file = await pending
+    const bytes = readFileSync((await file.path()) as string)
+    const pdf = readPdf(bytes)
+    expect(pdf.pages).toHaveLength(viewport.width === 390 ? 2 : 4)
+    for (const side of pdf.pages) {
+      expect(side.media[2] - side.media[0]).toBeCloseTo(297 * PX_PER_MM * PT_PER_PX, 1)
+      expect(side.media[3] - side.media[1]).toBeCloseTo(210 * PX_PER_MM * PT_PER_PX, 1)
+    }
+    if (viewport.width === 1440) {
+      expect(pdf.pages[0].text).toContain('Leaf 1')
+      expect(pdf.pages[3].text).toContain('Leaf 5')
+      expect(pdf.pages[0].images).toBeGreaterThan(0)
+    }
+    if (shots) writeFileSync(join(shots, `booklet-${viewport.width}.pdf`), bytes)
+    await context.close()
+  }
+})
+
+test('the saved-design PDF API prints right-bound book fronts from the same illustrated pages', async ({ browser }) => {
+  const owner = await open(browser, account, '/dashboard')
+  const id = await createDesign(owner, graphicBooklet() as never, 'API book')
+  const csrf = (await owner.context.cookies()).find((cookie) => cookie.name === 'csrftoken')?.value ?? ''
+  const response = await owner.context.request.post(`/api/v1/designs/${id}/export/image/`, {
+    data: { format: 'pdf', pages: 'all', layout: 'book', signature_pages: 4, binding: 'right', print_sides: 'front' },
+    headers: { 'X-CSRFToken': csrf },
+    timeout: 120_000,
+  })
+  expect(response.status(), await response.text()).toBe(200)
+  const pdf = readPdf(Buffer.from(await response.body()))
+  expect(pdf.pages).toHaveLength(2)
+  expect(pdf.pages[0].media[2] - pdf.pages[0].media[0]).toBeCloseTo(297 * PX_PER_MM * PT_PER_PX, 1)
+  expect(pdf.pages[0].images).toBeGreaterThan(0)
+  await owner.context.close()
+})
 
 test('a design of three sizes prints with bleed and crop marks: every page has its own boxes, the link works', async ({ browser }) => {
   const { page, context } = await openDesign(browser)
@@ -237,6 +333,7 @@ test('a range of pages prints only those pages, each at its own size', async ({ 
   const { page, context } = await openDesign(browser)
   const dialog = await openDialog(page)
   await dialog.getByRole('radio', { name: /Print-quality PDF/ }).check()
+  await dialog.getByRole('button', { name: /More settings/ }).click()
   await dialog.getByRole('radio', { name: 'Select pages' }).check()
   await dialog.getByRole('textbox', { name: 'Select pages' }).fill('2-3')
   await expect(dialog.getByTestId('print-summary')).toHaveText('2 pages · 2 sizes: A4, 400×300')

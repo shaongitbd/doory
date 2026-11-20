@@ -63,6 +63,13 @@ describe('translation completeness', () => {
     const localizedFunctions = locale === 'de' ? deFunctions : locale === 'zh-CN' ? zhCNFunctions : zhTWFunctions
     expect(Object.keys(localizedFunctions).sort()).toEqual(Object.keys(functionInventory).sort())
   })
+  it.each([['de', de], ['zh-CN', zhCN], ['zh-TW', zhTW]] as const)('%s preserves static placeholders', (_locale, catalog) => {
+    const tokens = (text: string) => text.match(/\$?\{[^{}]+\}/g)?.sort() ?? []
+    for (const [key, source] of Object.entries(english)) {
+      const translated = catalog[key as keyof typeof catalog]
+      expect(tokens(translated), key).toEqual(tokens(source))
+    }
+  })
   it('keeps dynamic arguments and Chinese count without English plural endings', async () => {
     await loadLocale('zh-CN')
     setLocale('zh-CN')

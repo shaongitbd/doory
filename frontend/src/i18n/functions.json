@@ -891,6 +891,26 @@
     "source": "(value: string, unit: string) => `= ${value} ${unit}`",
     "file": "editor/dialogs/print/strings.ts"
   },
+  "print.fold.page": {
+    "source": "(number: number) => `Page ${number}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.fold.selectedSides": {
+    "source": "(side: string) => ` · ${side} sides selected`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.fold.sheetNote": {
+    "source": "(width: number, height: number) => `Two portrait pages are placed at full size on each ${width} × ${height} mm sheet side. Print double-sided, flipping on the short edge.`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.fold.sheetSide": {
+    "source": "(sheet: number, side: string, left: string, right: string) => `Sheet ${sheet}, ${side}: ${left} | ${right}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
+  "print.fold.summary": {
+    "source": "(pages: number, sheets: number, blanks: number) => `${pages} ${plural(pages, 'page', 'pages')} · ${sheets} ${plural(sheets, 'sheet', 'sheets')} · ${blanks} ${plural(blanks, 'blank', 'blanks')}`",
+    "file": "editor/dialogs/print/strings.ts"
+  },
   "print.previewAlt": {
     "source": "(bleed: string, marks: boolean) => `Page layout: trim line${bleed ? `, ${bleed} bleed around it` : ''}${marks ? ', crop marks in the margin' : ''}`",
     "file": "editor/dialogs/print/strings.ts"
@@ -969,6 +989,18 @@
   },
   "templates.use": {
     "source": "(title: string) => `Use template ${title}`",
+    "file": "editor/strings.ts"
+  },
+  "toolbar.addFontWeight": {
+    "source": "(name: string) => `Add ${name}`",
+    "file": "editor/strings.ts"
+  },
+  "toolbar.fontWeightAdjusted": {
+    "source": "(family: string, oldWeight: string, newWeight: string) => `${oldWeight} isn't available for ${family}. Changed to ${newWeight}.`",
+    "file": "editor/strings.ts"
+  },
+  "toolbar.mixedColors": {
+    "source": "(label: string) => `${label}: mixed colors`",
     "file": "editor/strings.ts"
   },
   "toolbar.multiple": {

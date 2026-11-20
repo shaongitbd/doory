@@ -1,3 +1,4 @@
+import { useLocale } from '@/i18n/useLocale'
 import { memo } from 'react'
 import type { DocPage } from '@/types/document'
 import { useEditor } from '../context'
@@ -29,6 +30,7 @@ const STRIP_BOX = { width: 96, height: 120 }
 const MIN_SIDE = 6
 
 export const PageThumb = memo(function PageThumb({ page, index, active, variant, dragOver, draggable, onSelect, onDragStart, onDragOver, onDrop, onDragEnd, onMove }: PageThumbProps) {
+  useLocale()
   const editor = useEditor()
   const size = editor.pageSizeOf(page.id)
   // Only the thumbnails that can be seen are drawn: a long design has a long strip, and each picture costs a page render.

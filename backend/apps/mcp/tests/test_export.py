@@ -423,6 +423,13 @@ def documents(monkeypatch) -> list[dict]:
             "crop_marks": False,
             "cmyk": False,
         }
+        if options["layout"] != "normal":
+            options_used.update(
+                layout=options["layout"],
+                signature_pages=options["signature_pages"],
+                binding=options["binding"],
+                print_sides=options["print_sides"],
+            )
         return services.ImageBundle(b"%PDF-1.7 fake", "pdf", mime, name, images, (name,), options_used)
 
     monkeypatch.setattr(services, "export_document", fake_export_document)
@@ -458,6 +465,45 @@ def test_the_print_pdf_takes_crop_marks_and_refuses_cmyk(as_caller, design, docu
     with pytest.raises(ToolError, match="no CMYK conversion"):
         export.export_design(str(design.pk), format="pdf-print", cmyk=True)
     assert len(documents) == 1
+
+
+@pytest.mark.parametrize("format_id", ["pdf", "pdf-print"])
+def test_folded_pdf_uses_every_page_and_reports_the_sheet_order(as_caller, user, documents, format_id):
+    design = make_design(user, title="Five leaves", document=make_doc(pages=5))
+    info = info_of(export.export_design(str(design.pk), format=format_id, layout="booklet"))
+    assert documents[0]["pages"] == "all"
+    assert info["options"]["layout"] == "booklet"
+    assert info["sheet_sides"] == [
+        {"sheet": 1, "signature": 1, "side": "front", "left_page": None, "right_page": 1},
+        {"sheet": 1, "signature": 1, "side": "back", "left_page": 2, "right_page": None},
+        {"sheet": 2, "signature": 1, "side": "front", "left_page": None, "right_page": 3},
+        {"sheet": 2, "signature": 1, "side": "back", "left_page": 4, "right_page": 5},
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_book_fronts_are_available_over_mcp(issued, user, documents):
+    design = make_design(user, document=make_doc(pages=5))
+    result = call(
+        issued.plaintext,
+        "export_design",
+        {
+            "design_id": str(design.pk),
+            "format": "pdf-print",
+            "layout": "book",
+            "signature_pages": 4,
+            "binding": "right",
+            "print_sides": "front",
+        },
+    )
+    assert result["isError"] is False
+    info = json.loads(result["content"][0]["text"])
+    assert documents[0]["pages"] == "all"
+    assert info["sheet_sides"] == [
+        {"sheet": 1, "signature": 1, "side": "front", "left_page": 1, "right_page": 4},
+        {"sheet": 2, "signature": 2, "side": "front", "left_page": 5, "right_page": None},
+    ]
+    assert info["url"].startswith("http://localhost:5173/")
 
 
 # ---- Video ---------------------------------------------------------------------------------------

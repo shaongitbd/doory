@@ -1,6 +1,7 @@
 import { CircleCheck, Code, Copy, Download, Info } from 'lucide-react'
 import { type ReactNode, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { getLocale, subscribeLocale } from '@/i18n/locale'
+import { useLocale } from '@/i18n/useLocale'
+import { getLocale } from '@/i18n/locale'
 import { useSizePresets } from '@/lib/sizePresets'
 import { usePersistedState } from '@/lib/usePersistedState'
 import { useEditor, useEditorState } from '../context'
@@ -22,6 +23,7 @@ import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
 import { ExportProblem } from './print/ExportProblem'
 import { PrintSection } from './print/PrintSection'
+import { FoldSection, type FoldChoice } from './print/FoldSection'
 import type { VideoFormat } from '../engine/export/video/options'
 import { LazyVideoSection } from './VideoSectionLoader'
 import { AudioCredits } from '../panels/AudioCredits'
@@ -63,7 +65,7 @@ function startingPoint(editor: ReturnType<typeof useEditor>, asked: unknown, pur
 
 export function DownloadDialog({ props }: { props?: Record<string, unknown> } = {}) {
   const editor = useEditor()
-  useSyncExternalStore(subscribeLocale, getLocale, () => 'en')
+  useLocale()
   const allFormats = useSyncExternalStore(exportFormats.subscribe, exportFormats.getSnapshot)
   const formats = allFormats.filter((f) => !f.available || f.available(editor))
   const doc = useEditorState((s) => s.doc)
@@ -76,6 +78,7 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
   const [options, setOptions] = useState<ExportOptions>(() => ({ optimizer: editor.adapter.imageOptimize?.default ?? editor.adapter.imageOptimize?.optimizers[0]?.id, ...start.options }))
   const [purpose, setPurpose] = useState<string | null>(start.purpose)
   const [print, setPrint] = useState<PrintSettings>(() => loadPrintSettings(editor.designId))
+  const [fold, setFold] = useState<FoldChoice>(() => ({ layout: start.options.imposition?.layout ?? 'normal', signaturePages: start.options.imposition?.signaturePages ?? 4, binding: start.options.imposition?.binding ?? 'left', sides: start.options.imposition?.sides ?? 'both' }))
   const [scope, setScope] = useState<Scope>('all')
   const [range, setRange] = useState('')
   const [progress, setProgress] = useState<number | null>(null)
@@ -113,8 +116,10 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
   const chosen = chosenPages.map(({ page }) => getPageSize(doc, page.id))
   const size = chosen[0] ?? editor.pageSizeOf(editor.state.activePageId)
   const mixed = chosen.some((s) => !sameSize(s, size))
+  const foldValid = fold.layout === 'normal' || (!mixed && size.width < size.height)
   const video = format?.controls.video === true
   const printing = format?.controls.print === true
+  const folded = printing && fold.layout !== 'normal'
   const raster = format?.controls.optimize ? (format.id as RasterFormat) : null
   const apiCallable = !!format && apiFormat(format.id) !== null
   const files = chosen.length
@@ -152,8 +157,8 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
     if (zipped) return zipFilename(title, naming)
     const first = chosenPages[0]
     const ctx = { document: doc, title, naming }
-    const suffix = format.server && printing ? 'print' : undefined
-    const simple = format.mime === 'application/pdf' || video ? `${sanitizeFilename(title) || 'design'}${suffix ? '-print' : ''}.${format.extension}` : pageFilename(title, format.extension, (first?.index ?? 0) + 1, chosenPages.length, total)
+    const suffix = folded ? `${fold.layout}${fold.sides === 'both' ? '' : `-${fold.sides}`}` : format.server && printing ? 'print' : undefined
+    const simple = format.mime === 'application/pdf' || video ? `${sanitizeFilename(title) || 'design'}${suffix ? `-${suffix}` : ''}.${format.extension}` : pageFilename(title, format.extension, (first?.index ?? 0) + 1, chosenPages.length, total)
     const perPageFile = format.mime !== 'application/pdf' && !video
     return exportFilename(ctx, simple, format.extension, size, perPageFile ? (first?.index ?? 0) : null, suffix)
   }
@@ -179,10 +184,10 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
     setFailure({ id: failures.current, value: describeExportFailure(error) })
   }
 
-  const effective: ExportOptions = printing ? { ...options, bleedMm: print.bleedMm, cropMarks: print.cropMarks } : { ...options, size: raster ? sizeText : options.size }
+  const effective: ExportOptions = printing ? { ...options, bleedMm: folded ? 0 : print.bleedMm, cropMarks: folded ? false : print.cropMarks, imposition: folded ? { layout: fold.layout as 'booklet' | 'book', signaturePages: fold.signaturePages, binding: fold.binding, sides: fold.sides } : undefined } : { ...options, size: raster ? sizeText : options.size }
 
   const download = async (): Promise<void> => {
-    if (!format || rangeInvalid || !sizeValid) return
+    if (!format || rangeInvalid || !sizeValid || !foldValid) return
     setFailure(null)
     setProgress(0)
     setStage(undefined)
@@ -277,7 +282,7 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
     if (format.mime === 'application/pdf') {
       return (
         <>
-          <b>1 PDF</b> · {t.dialog.downloadPdfSummary(files, printing && (print.bleedMm > 0 || print.cropMarks))}
+          <b>1 PDF</b> · {t.dialog.downloadPdfSummary(files, printing && !folded && (print.bleedMm > 0 || print.cropMarks))}
         </>
       )
     }
@@ -344,7 +349,7 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
                 {t.dialog.downloadCopy}
               </Button>
             )}
-            <Button variant="primary" icon={<Download size={16} />} onClick={() => void download()} disabled={busy || rangeInvalid || !format || !sizeValid}>
+            <Button variant="primary" icon={<Download size={16} />} onClick={() => void download()} disabled={busy || rangeInvalid || !format || !sizeValid || !foldValid}>
               {downloadLabel}
             </Button>
           </>
@@ -419,7 +424,8 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
             <small className={printStyles.summary} data-testid="print-summary">
               {describeSizes(chosen, doc.unit)}
             </small>
-            <PrintSection settings={print} onChange={changePrint} sizes={chosen} unit={doc.unit} server={format?.server === true} />
+            <FoldSection value={fold} onChange={setFold} pages={chosen.length} valid={foldValid} size={size} />
+            <PrintSection settings={print} onChange={changePrint} sizes={chosen} unit={doc.unit} server={format?.server === true} folded={folded} />
           </>
         ) : null}
 

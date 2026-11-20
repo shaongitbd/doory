@@ -98,6 +98,34 @@ def test_pages_are_printed_in_upload_order(client, render_calls):
     assert html.index("#111111") < html.index("#222222") < html.index("#333333")
 
 
+def test_booklet_upload_prints_two_pages_per_a4_sheet_side(client, render_calls):
+    pages = [svg_page(fill=f"#{number:06x}") for number in range(1, 5)]
+    response = post(client, pages=pages, width=559, height=794, layout="booklet")
+    assert response.status_code == 200
+    call = render_calls[0]
+    assert call["html"].count('<section class="page">') == 2
+    assert call["html"].index("#000004") < call["html"].index("#000001")
+    assert call["width_px"] == pytest.approx(297 * 96 / 25.4)
+
+
+def test_folded_upload_rejects_bleed(client, render_calls):
+    response = post(client, width=559, height=794, layout="booklet", bleed_mm=3)
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_imposition"
+    assert render_calls == []
+
+
+def test_front_only_upload_omits_back_sheet_sides(client, render_calls):
+    pages = [svg_page(fill=f"#{number:06x}") for number in range(1, 5)]
+    response = post(client, pages=pages, width=559, height=794, layout="booklet", print_sides="front")
+    assert response.status_code == 200
+    html = render_calls[0]["html"]
+    assert html.count('<section class="page">') == 1
+    assert "#000004" in html and "#000001" in html
+    assert "#000002" not in html and "#000003" not in html
+    assert 'filename="design-booklet-front.pdf"' in response["Content-Disposition"]
+
+
 def test_fonts_are_inlined_into_the_document(client, render_calls, db):
     name = default_storage.save("fonts/api-test.ttf", ContentFile(build_test_font()))
     try:

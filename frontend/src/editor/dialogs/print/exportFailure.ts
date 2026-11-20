@@ -33,6 +33,19 @@ export function describeExportFailure(error: unknown): ExportFailure {
   const p = t.print.problems
   if (error.isNetwork) return failure('offline', p.offline)
   switch (error.code) {
+    case 'invalid_imposition': {
+      const f = t.print.fold.errors
+      const messages: Record<string, string> = {
+        'Choose pages, a folded layout and a binding direction.': f.choices,
+        'Signature size must be a multiple of four from 4 to 32.': f.signature,
+        'Choose both, front or back sheet sides.': f.sides,
+        'Sheet sides require a folded layout.': f.foldedSides,
+        'Folded sheets cannot use bleed or crop marks at this paper size.': f.marks,
+        'Folded sheets need portrait pages of one size.': f.size,
+        'Folded layout is available for PDFs only.': f.pdfOnly,
+      }
+      return failure('invalid', messages[error.message] ?? p.invalid(error.message), undefined, null, false)
+    }
     case 'export_busy':
       return failure('busy', p.busy, p.busyHint, error.retryAfter ?? DEFAULT_BUSY_SECONDS)
     case 'export_timeout':

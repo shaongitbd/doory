@@ -1,3 +1,4 @@
+import { useLocale } from '@/i18n/useLocale'
 import { PencilLine } from 'lucide-react'
 import { type CSSProperties, memo } from 'react'
 import { textOn } from '../collab/colors'
@@ -59,6 +60,7 @@ function Outline({ peer, zoom }: { peer: Peer; zoom: number }) {
 
 /** Other people's pointers and selections on one page, drawn over the canvas in page coordinates (so they follow zoom, pan and scroll). */
 export const PresenceLayer = memo(function PresenceLayer({ pageId, zoom }: PresenceLayerProps) {
+  useLocale()
   const peers = usePresenceState((s) => s.peers)
   if (!peers || peers.length === 0) return null
   const outlined = peers.filter((p) => p.selection?.pageId === pageId)

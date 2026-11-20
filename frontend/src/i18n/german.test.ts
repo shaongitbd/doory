@@ -1,4 +1,6 @@
 import germanSource from './functions-de.ts?raw'
+import simplifiedSource from './functions-zh-CN.ts?raw'
+import traditionalSource from './functions-zh-TW.ts?raw'
 import ts from 'typescript'
 import english from './en.json'
 import de from './de.json'
@@ -55,14 +57,19 @@ function structure(code: string) {
   return { parameters: fn.parameters.map(print), returnType: fn.type && print(fn.type), conditions, interpolations: interpolations.sort() }
 }
 
-it('preserves every English function signature, condition and content interpolation', () => {
-  const file = ts.createSourceFile('de.ts', germanSource, ts.ScriptTarget.Latest, true)
+function translatedFunctions(source: string) {
+  const file = ts.createSourceFile('functions.ts', source, ts.ScriptTarget.Latest, true)
   const translated = new Map<string, string>()
   const visit = (node: ts.Node) => {
     if (ts.isPropertyAssignment(node) && ts.isStringLiteral(node.name)) translated.set(node.name.text, node.initializer.getText(file))
     ts.forEachChild(node, visit)
   }
   visit(file)
+  return translated
+}
+
+it('preserves every English function signature, condition and content interpolation', () => {
+  const translated = translatedFunctions(germanSource)
   for (const [key, { source }] of Object.entries(inventory)) {
     const original = structure(source)
     const german = structure(translated.get(key)!)
@@ -75,9 +82,19 @@ it('preserves every English function signature, condition and content interpolat
   }
 })
 
+it.each([['zh-CN', simplifiedSource], ['zh-TW', traditionalSource]])('%s preserves the new folded-PDF and toolbar function arguments', (_locale, source) => {
+  const translated = translatedFunctions(source)
+  const added = Object.entries(inventory).filter(([key]) => key.startsWith('print.fold.') || ['toolbar.addFontWeight', 'toolbar.fontWeightAdjusted', 'toolbar.mixedColors'].includes(key))
+  for (const [key, { source }] of added) {
+    expect(structure(translated.get(key)!), key).toEqual(structure(source))
+  }
+})
+
 const call = (key: string, ...args: unknown[]) => functions[key](...args as never[])
 
 it('uses German plurals, number formatting and conditional messages', () => {
+  expect(call('print.fold.summary', 1, 1, 1)).toBe('1 Seite · 1 Druckbogen · 1 Leerseite')
+  expect(call('print.fold.summary', 5, 2, 3)).toBe('5 Seiten · 2 Druckbögen · 3 Leerseiten')
   expect(call('audio.freesound.count', 1000)).toBe('1.000 Audiodateien')
   expect(call('bgRemoval.wait', 1)).toBe('in 1 Sekunde')
   expect(call('bgRemoval.wait', 120)).toBe('in 2 Minuten')

@@ -91,8 +91,8 @@ export function createAccountAdapter(designId: string, getRevision: () => number
   const exports = options.config?.exports
   if (exports) adapter.exportFilenames = { style: exports.filename_style === 'structured' ? 'structured' : 'simple', timestamp: exports.filename_timestamp === true }
   if (options.config?.features.server_pdf) {
-    adapter.exportPdf = ({ svgPages, width, height, sizes, bleedMm, cropMarks, title, lang, fonts, signal, onUploadProgress }) =>
-      exportsApi.pdf({ pages: svgPages.map((svg) => new Blob([svg], { type: 'image/svg+xml' })), width, height, sizes, bleedMm, cropMarks, title, lang, fonts, signal, onUploadProgress })
+    adapter.exportPdf = ({ svgPages, width, height, sizes, bleedMm, cropMarks, imposition, title, lang, fonts, signal, onUploadProgress }) =>
+      exportsApi.pdf({ pages: svgPages.map((svg) => new Blob([svg], { type: 'image/svg+xml' })), width, height, sizes, bleedMm, cropMarks, imposition, title, lang, fonts, signal, onUploadProgress })
   }
   const optimize = options.config?.features.image_optimize
   if (optimize) {
