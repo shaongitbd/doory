@@ -6,6 +6,7 @@
  */
 import { Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useLocale } from '@/i18n/useLocale'
 import type { Anim, ObjectAnimation, PageTransition } from '@/types/document'
 import { useEditor, useEditorState, useSelection } from '../context'
 import { presetLabel } from '../animation/labels'
@@ -41,12 +42,11 @@ interface Entry {
 function usePresetGroups(slot: AnimSlot): [string, Entry[]][] {
   const inOut = useSyncExternalStore(inOutPresets.subscribe, inOutPresets.getSnapshot)
   const emphasis = useSyncExternalStore(emphasisPresets.subscribe, emphasisPresets.getSnapshot)
-  return useMemo(() => {
-    if (slot === 'emphasis') return [['emphasis', emphasis.map((p) => ({ id: p.id, label: p.label, group: 'emphasis', defaults: p.defaults }))]]
-    const groups = new Map<string, Entry[]>()
-    for (const p of inOut) groups.set(p.group, [...(groups.get(p.group) ?? []), { id: p.id, label: p.label, group: p.group, defaults: p.defaults, directions: p.directions }])
-    return [...groups]
-  }, [slot, inOut, emphasis])
+  // The panel rerenders on locale changes; registry snapshots retain their identity, so read labels each time.
+  if (slot === 'emphasis') return [['emphasis', emphasis.map((p) => ({ id: p.id, label: p.label, group: 'emphasis', defaults: p.defaults }))]]
+  const groups = new Map<string, Entry[]>()
+  for (const p of inOut) groups.set(p.group, [...(groups.get(p.group) ?? []), { id: p.id, label: p.label, group: p.group, defaults: p.defaults, directions: p.directions }])
+  return [...groups]
 }
 
 /** Arrow keys move between the tiles of a grid (the tab key would otherwise walk through every one of them). */
@@ -252,6 +252,7 @@ function PageView({ pageId, transition, animated }: { pageId: string; transition
  * ---------------------------------------------------------------------------------------------- */
 
 export function AnimatePanel() {
+  useLocale()
   const selection = useSelection()
   const pageId = useEditorState((s) => s.activePageId)
   const transition = useEditorState((s) => s.doc.pages.find((p) => p.id === s.activePageId)?.transition)

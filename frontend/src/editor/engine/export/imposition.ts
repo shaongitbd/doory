@@ -1,3 +1,5 @@
+import { t } from '../../strings'
+
 /** The order in which folded sheets are printed. Page indexes refer to the selected pages, not the design. */
 export type FoldLayout = 'booklet' | 'book'
 export type Binding = 'left' | 'right'
@@ -21,11 +23,11 @@ export function foldedSheet(width: number, height: number): { width: number; hei
 
 /** Pair the outside of each signature first, then work inward toward its centre fold. */
 export function imposePages(pageCount: number, layout: FoldLayout, signaturePages: number, binding: Binding): SheetSide[] {
-  if (!Number.isSafeInteger(pageCount) || pageCount < 1) throw new Error('Select at least one page.')
-  if (layout !== 'booklet' && layout !== 'book') throw new Error('Choose a folded layout.')
-  if (binding !== 'left' && binding !== 'right') throw new Error('Choose a binding direction.')
+  if (!Number.isSafeInteger(pageCount) || pageCount < 1) throw new Error(t.print.fold.errors.pages)
+  if (layout !== 'booklet' && layout !== 'book') throw new Error(t.print.fold.errors.layout)
+  if (binding !== 'left' && binding !== 'right') throw new Error(t.print.fold.errors.binding)
   if (layout === 'book' && (!Number.isSafeInteger(signaturePages) || signaturePages < 4 || signaturePages > 32 || signaturePages % 4 !== 0)) {
-    throw new Error('A signature must contain 4 to 32 pages, in multiples of 4.')
+    throw new Error(t.print.fold.errors.signature)
   }
 
   const groupSize = layout === 'booklet' ? Math.ceil(pageCount / 4) * 4 : signaturePages

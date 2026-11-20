@@ -22,12 +22,12 @@ export function SsoSection() {
     return code ? ssoErrorMessage(code) : ''
   })
   const handled = useRef(false)
-  const label = config.oidc_button_label || 'Sign in with SSO'
+  const label = config.oidc_button_label || msg('Sign in with SSO')
 
   useEffect(() => {
     if (handled.current || (!params.has('sso') && !params.has('sso_error'))) return
     handled.current = true
-    if (params.get('sso') === 'connected') toast({ title: msg("Single sign-on connected"), description: `You can now log in with the “${label}” button.`, variant: 'success' })
+    if (params.get('sso') === 'connected') toast({ title: msg("Single sign-on connected"), description: msg('You can now log in with the “{label}” button.', { label }), variant: 'success' })
     const rest = new URLSearchParams(params)
     rest.delete('sso')
     rest.delete('sso_error')
@@ -53,7 +53,7 @@ export function SsoSection() {
 
   return (
     <>
-      <SettingsCard id="sso" title={msg("Single sign-on")} description={linked ? `You can log in with the “${label}” button.` : `Connect your account to log in with the “${label}” button.`}>
+      <SettingsCard id="sso" title={msg("Single sign-on")} description={linked ? msg('You can log in with the “{label}” button.', { label }) : msg('Connect your account to log in with the “{label}” button.', { label })}>
         {error ? (
           <p className={styles.error} role="alert">
             {error}

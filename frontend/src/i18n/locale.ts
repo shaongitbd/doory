@@ -1,4 +1,4 @@
-export type Locale = 'en' | 'zh-CN' | 'zh-TW'
+export type Locale = 'en' | 'de' | 'zh-CN' | 'zh-TW'
 export const LOCALE_KEY = 'doory.locale'
 
 export function detectLocale(languages: readonly string[]): Locale {
@@ -6,13 +6,14 @@ export function detectLocale(languages: readonly string[]): Locale {
     const tag = language.toLowerCase().replace(/_/g, '-')
     if (tag === 'zh' || tag.startsWith('zh-hans') || tag.startsWith('zh-cn') || tag.startsWith('zh-sg')) return 'zh-CN'
     if (tag.startsWith('zh-hant') || tag.startsWith('zh-tw') || tag.startsWith('zh-hk') || tag.startsWith('zh-mo')) return 'zh-TW'
+    if (tag === 'de' || tag.startsWith('de-')) return 'de'
     if (tag === 'en' || tag.startsWith('en-')) return 'en'
   }
   return 'en'
 }
 
 export function resolveLocale(saved: string | null, languages: readonly string[]): Locale {
-  if (saved === 'en' || saved === 'zh-CN' || saved === 'zh-TW') return saved
+  if (saved === 'en' || saved === 'de' || saved === 'zh-CN' || saved === 'zh-TW') return saved
   return detectLocale(languages)
 }
 

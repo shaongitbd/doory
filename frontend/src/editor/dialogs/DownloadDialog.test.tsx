@@ -1,6 +1,8 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { activateLocale } from '@/i18n/catalog'
+import { setLocale } from '@/i18n/locale'
 import { ApiError } from '@/lib/api/client'
 import { createBlankDocument } from '@/lib/document'
 import { type SizePresetCatalogue, buildCatalogue, setSizePresetsForTests } from '@/lib/sizePresets'
@@ -56,6 +58,17 @@ describe('Download dialog: print options', () => {
     engine?.dispose()
     engine = null
     vi.useRealTimers()
+    setLocale('en')
+  })
+
+  it('renders the German purpose heading and preserves capitalized page nouns in the summary', async () => {
+    await activateLocale('de')
+    const ctx = setup()
+    engine = ctx.engine
+    expect(screen.getByRole('heading', { name: 'Verwenden für' })).toBeInTheDocument()
+    const moreSettings = screen.getByRole('button', { name: /Weitere Einstellungen/ })
+    expect(moreSettings).toHaveTextContent('Alle Seiten')
+    expect(moreSettings).not.toHaveTextContent('alle seiten')
   })
 
   it('shows the print section for the PDF formats only', async () => {

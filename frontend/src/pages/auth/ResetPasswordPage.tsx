@@ -41,7 +41,7 @@ export default function ResetPasswordPage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!evaluatePassword(password).acceptable) {
-      setError('Use at least 8 characters, and not only numbers.')
+      setError(msg('Use at least 8 characters, and not only numbers.'))
       return
     }
     setError('')
@@ -54,7 +54,7 @@ export default function ResetPasswordPage() {
     } catch (failure) {
       const described = describeFormError(failure, ['new_password', 'password'])
       setError(described.fields.new_password ?? described.fields.password ?? '')
-      setFormError(described.message || (described.fields.new_password || described.fields.password ? '' : 'This link has expired or was already used. Request a new one.'))
+      setFormError(described.message || (described.fields.new_password || described.fields.password ? '' : msg('This link has expired or was already used. Request a new one.')))
       setBusy(false)
     }
   }

@@ -32,11 +32,11 @@ export function ProfileSection() {
     if (!file) return
     setPhotoError('')
     if (!AVATAR_TYPES.includes(file.type)) {
-      setPhotoError('Choose a PNG, JPG or WebP image.')
+      setPhotoError(msg('Choose a PNG, JPG or WebP image.'))
       return
     }
     if (file.size > config.limits.max_upload_bytes) {
-      setPhotoError(`That photo is ${formatBytes(file.size)}. The limit is ${formatBytes(config.limits.max_upload_bytes)}.`)
+      setPhotoError(msg('That photo is {size}. The limit is {limit}.', { size: formatBytes(file.size), limit: formatBytes(config.limits.max_upload_bytes) }))
       return
     }
     setPending(file)
@@ -76,7 +76,7 @@ export function ProfileSection() {
     event.preventDefault()
     const next = name.trim()
     if (!next) {
-      setNameError('Enter the name you’d like to use.')
+      setNameError(msg('Enter the name you’d like to use.'))
       return
     }
     setNameError('')
@@ -109,7 +109,7 @@ export function ProfileSection() {
             ) : (
               <>
                 <Button size="sm" variant="secondary" leftIcon={<Camera size={14} />} onClick={() => picker.current?.click()}>
-                  {user.avatar_url ? 'Change photo' : 'Upload photo'}
+                  {user.avatar_url ? msg('Change photo') : msg('Upload photo')}
                 </Button>
                 {user.avatar_url ? (
                   <Button size="sm" variant="ghost" leftIcon={<Trash2 size={14} />} loading={photoBusy} onClick={() => void removePhoto()}>

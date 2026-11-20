@@ -22,7 +22,7 @@ export default function SettingsPage() {
     <div className={styles.page}>
       <header className={styles.heading}>
         <h1 className={styles.title}>{msg("Settings")}</h1>
-        <p className={styles.lead}>{mcp ? 'Manage your profile, email, security and AI assistant access.' : 'Manage your profile, email and security.'}</p>
+        <p className={styles.lead}>{mcp ? msg('Manage your profile, email, security and AI assistant access.') : msg('Manage your profile, email and security.')}</p>
       </header>
       <div className={settingsStyles.stack}>
         <ProfileSection />

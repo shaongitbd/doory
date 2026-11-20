@@ -76,7 +76,7 @@ export function AudioTransport() {
       ) : null}
       {state.error ? (
         <p className={styles.warn} role="alert">
-          {state.error}
+          {t.audio.transport.failed}
         </p>
       ) : null}
       {state.failed.length > 0 ? (

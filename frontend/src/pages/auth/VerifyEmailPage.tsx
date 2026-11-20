@@ -56,7 +56,7 @@ export default function VerifyEmailPage() {
         <p className={styles.lead}>{msg("Thanks! Your address is confirmed.")}</p>
         <div className={styles.actions}>
           <LinkButton to={status === 'authenticated' ? '/dashboard' : '/login'} size="lg">
-            {status === 'authenticated' ? 'Go to your dashboard' : 'Log in'}
+            {status === 'authenticated' ? msg('Go to your dashboard') : msg('Log in')}
           </LinkButton>
         </div>
       </div>
@@ -67,8 +67,8 @@ export default function VerifyEmailPage() {
       <div className={styles.stateIcon} aria-hidden="true">
         <CircleAlert size={28} />
       </div>
-      <h1 className={styles.title}>{state === 'invalid' ? 'This link isn’t valid' : 'We couldn’t verify that link'}</h1>
-      <p className={styles.lead}>{state === 'invalid' ? 'The verification link is incomplete.' : message || 'It may have expired or already been used.'} {msg("Log in and use “Resend verification email” to get a fresh one.")}</p>
+      <h1 className={styles.title}>{state === 'invalid' ? msg('This link isn’t valid') : msg('We couldn’t verify that link')}</h1>
+      <p className={styles.lead}>{state === 'invalid' ? msg('The verification link is incomplete.') : message || msg('It may have expired or already been used.')} {msg("Log in and use “Resend verification email” to get a fresh one.")}</p>
       <div className={styles.actions}>
         <Link to="/login">{msg("Go to log in")}</Link>
       </div>

@@ -26,7 +26,7 @@ export function AccountMenu() {
       label={msg("Account")}
       placement="bottom-end"
       trigger={
-        <button type="button" className={styles.trigger} aria-label={`Account menu for ${name}`}>
+        <button type="button" className={styles.trigger} aria-label={msg('Account menu for {name}', { name })}>
           <Avatar name={name} src={user.avatar_url} size={36} />
         </button>
       }

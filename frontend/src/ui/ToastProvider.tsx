@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { AlertCircle, CheckCircle2, Info, TriangleAlert, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Portal } from './Portal'
@@ -45,7 +46,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <Portal>
-        <div className={styles.region} role="region" aria-label="Notifications">
+        <div className={styles.region} role="region" aria-label={msg("Notifications")}>
           {items.map((item) => (
             <ToastView key={item.id} item={item} onDismiss={dismiss} />
           ))}
@@ -101,7 +102,7 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss(id: number)
           {item.action.label}
         </button>
       ) : null}
-      <IconButton label="Dismiss notification" size="sm" icon={<X size={16} />} onClick={() => onDismiss(item.id)} />
+      <IconButton label={msg("Dismiss notification")} size="sm" icon={<X size={16} />} onClick={() => onDismiss(item.id)} />
     </div>
   )
 }

@@ -15,7 +15,7 @@ export function formatRelative(value: number | string | Date, now: number = Date
   if (!Number.isFinite(then)) return ''
   const seconds = Math.round((then - now) / 1000)
   const abs = Math.abs(seconds)
-  if (abs < 45) return { en: 'just now', 'zh-CN': '刚刚', 'zh-TW': '剛剛' }[getLocale()]
+  if (abs < 45) return { en: 'just now', de: 'gerade eben', 'zh-CN': '刚刚', 'zh-TW': '剛剛' }[getLocale()]
   const formatter = new Intl.RelativeTimeFormat(getLocale(), { numeric: 'auto' })
   for (const [unit, size] of UNITS) {
     if (abs >= size) return formatter.format(Math.round(seconds / size), unit)

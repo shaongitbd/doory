@@ -1,5 +1,6 @@
 import zhCN from '../../src/i18n/zh-CN.json' with { type: 'json' }
 import zhTW from '../../src/i18n/zh-TW.json' with { type: 'json' }
+import de from '../../src/i18n/de.json' with { type: 'json' }
 import type { Request } from '@playwright/test'
 import { expect, test, createAccount, openContext } from './support/stack'
 import { editorReady } from './support/editor'
@@ -54,7 +55,7 @@ for (const mode of ['guest', 'account'] as const) {
     await page.evaluate(async () => {
       const path = '/src/i18n/catalog.ts'
       const { loadLocale } = await import(/* @vite-ignore */ path)
-      await Promise.all([loadLocale('zh-CN'), loadLocale('zh-TW')])
+      await Promise.all([loadLocale('de'), loadLocale('zh-CN'), loadLocale('zh-TW')])
       const { engine } = (window as unknown as EditorWindow).__doory_collab
       await engine.insert.shape('rect')
       await engine.persistence.saveNow()
@@ -109,7 +110,7 @@ for (const mode of ['guest', 'account'] as const) {
     }
     page.on('request', onRequest)
 
-    for (const [locale, catalog] of [['zh-CN', zhCN], ['zh-TW', zhTW], ['en', null]] as const) {
+    for (const [locale, catalog] of [['de', de], ['zh-CN', zhCN], ['zh-TW', zhTW], ['en', null]] as const) {
       await page.evaluate(async (choice) => {
         const path = '/src/i18n/catalog.ts'
         const { activateLocale } = await import(/* @vite-ignore */ path)
@@ -137,9 +138,10 @@ for (const mode of ['guest', 'account'] as const) {
         }
       })).toEqual({ engine: true, document: true, title: true, selection: true, history: true, view: true, root: true, canvas: true, filter: true, dirty: true, session: true, collab: true, presence: true, url: true, state })
       await expect(page.getByTestId('ed-menu-file')).toHaveText(catalog?.['topbar.file'] ?? 'File')
+      await expect(page.getByTestId('ed-menu-edit')).toHaveText(catalog?.['topbar.edit'] ?? 'Edit')
       await expect(page.getByRole('searchbox', { name: catalog?.['dialog.shortcutsFilter'] ?? 'Filter shortcuts' })).toHaveValue('z')
       await expect(page.getByRole('dialog', { name: catalog?.['dialog.shortcutsTitle'] ?? 'Keyboard shortcuts' })).toBeVisible()
-      await expect(page.getByRole('img', { name: locale === 'en' ? 'Design canvas, page 1' : locale === 'zh-CN' ? '设计画布，页 1' : '設計畫布，頁 1' })).toBeAttached()
+      await expect(page.getByRole('img', { name: locale === 'en' ? 'Design canvas, page 1' : locale === 'de' ? 'Zeichenfläche, Seite 1' : locale === 'zh-CN' ? '设计画布，页 1' : '設計畫布，頁 1' })).toBeAttached()
       expect(await before.evaluate(snapshot => snapshot.changes)).toEqual({ documents: 0, saves: 0, stops: 0, updates: 0 })
       expect(writes).toEqual([])
     }

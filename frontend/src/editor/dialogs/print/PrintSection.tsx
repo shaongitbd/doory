@@ -35,7 +35,7 @@ export function PrintSection({ settings, onChange, sizes, unit, server, folded =
   return (
     <fieldset className={styles.section} data-testid="print-section">
       <legend>{t.print.section}</legend>
-      {folded ? <p className={styles.note}>Bleed and crop marks need a larger sheet and are unavailable for folded pages at this size.</p> : <>
+      {folded ? <p className={styles.note}>{t.print.fold.noMarks}</p> : <>
       <div className={styles.chips} role="radiogroup" aria-label={t.print.preset}>
         {PRESETS.map((id) => (
           <label key={id} className={`${styles.chip} ${settings.preset === id ? styles.chipOn : ''}`}>

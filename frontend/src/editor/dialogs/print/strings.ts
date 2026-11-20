@@ -2,6 +2,37 @@
 const plural = (n: number, one: string, many: string): string => (n === 1 ? one : many)
 
 export const print = {
+  fold: {
+    section: 'Page layout',
+    layouts: { normal: 'Normal pages', booklet: 'Booklet', book: 'Book signatures' },
+    blank: 'Blank',
+    page: (number: number) => `Page ${number}`,
+    sheetNote: (width: number, height: number) => `Two portrait pages are placed at full size on each ${width} × ${height} mm sheet side. Print double-sided, flipping on the short edge.`,
+    invalid: 'Choose portrait pages of the same size for folded sheets.',
+    binding: 'Binding edge',
+    bindings: { left: 'Left', right: 'Right' },
+    signaturePages: 'Pages per signature',
+    sheetSides: 'PDF sheet sides',
+    sideChoices: { both: 'Front and back', front: 'Front only', back: 'Back only' },
+    sides: { front: 'front', back: 'back' },
+    manualDuplex: "For manual duplex printing, export the other side separately. Check your printer's paper order before refeeding sheets.",
+    summary: (pages: number, sheets: number, blanks: number) => `${pages} ${plural(pages, 'page', 'pages')} · ${sheets} ${plural(sheets, 'sheet', 'sheets')} · ${blanks} ${plural(blanks, 'blank', 'blanks')}`,
+    selectedSides: (side: string) => ` · ${side} sides selected`,
+    sheetSide: (sheet: number, side: string, left: string, right: string) => `Sheet ${sheet}, ${side}: ${left} | ${right}`,
+    noMarks: 'Bleed and crop marks need a larger sheet and are unavailable for folded pages at this size.',
+    errors: {
+      pages: 'Select at least one page.',
+      layout: 'Choose a folded layout.',
+      binding: 'Choose a binding direction.',
+      signature: 'A signature must contain 4 to 32 pages, in multiples of 4.',
+      marks: 'Folded sheets cannot use bleed or crop marks at this paper size.',
+      size: 'Folded sheets need portrait pages of one size.',
+      choices: 'Choose pages, a folded layout and a binding direction.',
+      sides: 'Choose both, front or back sheet sides.',
+      foldedSides: 'Sheet sides require a folded layout.',
+      pdfOnly: 'Folded layout is available for PDFs only.',
+    },
+  },
   section: 'Print',
   preset: 'Print setup',
   presets: {

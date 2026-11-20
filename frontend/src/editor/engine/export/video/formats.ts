@@ -3,6 +3,7 @@
  * through `runExport` like every other format. Nothing heavy is imported here: the pipeline, the muxers and the GIF
  * encoder load (with `import()`) when a file is actually made.
  */
+import { writableMetadata } from '@/i18n/metadata'
 import { t } from '../../../strings'
 import type { EditorEngine } from '../../editor'
 import { pageSize } from '../../docOps'
@@ -31,9 +32,9 @@ async function runVideo(format: VideoFormat, ctx: ExportContext): Promise<Export
 }
 
 export function registerVideoExportFormats(): void {
-  registerExportFormat({ id: 'mp4', label: 'MP4', description: t.exportFormats.mp4, extension: 'mp4', mime: 'video/mp4', order: 50, controls: { video: true }, run: (ctx) => runVideo('mp4', ctx) })
-  registerExportFormat({ id: 'webm', label: 'WebM', description: t.exportFormats.webm, extension: 'webm', mime: 'video/webm', order: 51, controls: { video: true }, run: (ctx) => runVideo('webm', ctx) })
-  registerExportFormat({ id: 'gif', label: 'GIF', description: t.exportFormats.gif, extension: 'gif', mime: 'image/gif', order: 52, controls: { video: true }, run: (ctx) => runVideo('gif', ctx) })
+  registerExportFormat(writableMetadata({ id: 'mp4', label: 'MP4', get description() { return t.exportFormats.mp4 }, extension: 'mp4', mime: 'video/mp4', order: 50, controls: { video: true }, run: (ctx) => runVideo('mp4', ctx) }))
+  registerExportFormat(writableMetadata({ id: 'webm', label: 'WebM', get description() { return t.exportFormats.webm }, extension: 'webm', mime: 'video/webm', order: 51, controls: { video: true }, run: (ctx) => runVideo('webm', ctx) }))
+  registerExportFormat(writableMetadata({ id: 'gif', label: 'GIF', get description() { return t.exportFormats.gif }, extension: 'gif', mime: 'image/gif', order: 52, controls: { video: true }, run: (ctx) => runVideo('gif', ctx) }))
 }
 
 registerVideoExportFormats()

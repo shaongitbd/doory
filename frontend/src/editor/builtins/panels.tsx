@@ -1,3 +1,4 @@
+import { writableMetadata } from '@/i18n/metadata'
 import { Clapperboard, Images, LayoutTemplate, Layers, Music, PaintBucket, Palette, Shapes, Sparkles, Sticker, Type } from 'lucide-react'
 import { ImageDrawer } from '../drawers/ImageDrawer'
 import { ShapesDrawer } from '../drawers/ShapesDrawer'
@@ -30,20 +31,20 @@ const icon = (Glyph: typeof Type) => <Glyph size={20} strokeWidth={1.8} aria-hid
  */
 export function registerBuiltinPanels(): void {
   const editable = ({ state }: { state: { readOnly: boolean } }): boolean => !state.readOnly
-  registerPanel({ id: 'templates', label: t.rail.templates, icon: icon(LayoutTemplate), order: 5, placement: 'sidebar', component: TemplatesPanel, preload: TemplatesPanel.preload, requires: editable })
-  registerPanel({ id: 'text', label: t.rail.text, icon: icon(Type), order: 10, placement: 'drawer', component: TextDrawer, requires: editable, shortcut: 'T' })
-  registerPanel({ id: 'shapes', label: t.rail.shapes, icon: icon(Shapes), order: 20, placement: 'drawer', component: ShapesDrawer, requires: editable })
-  registerPanel({ id: 'elements', label: t.rail.elements, title: t.stickers.title, icon: icon(Sticker), order: 30, placement: 'sidebar', component: StickerPanel, requires: editable })
-  registerPanel({ id: 'image', label: t.rail.image, icon: icon(Images), order: 40, placement: 'drawer', component: ImageDrawer, requires: editable })
-  registerPanel({ id: 'videos', label: t.rail.videos, icon: icon(Clapperboard), order: 45, placement: 'drawer', component: VideosPanel, preload: VideosPanel.preload, requires: editable })
-  registerPanel({ id: 'background', label: t.rail.background, icon: icon(PaintBucket), order: 60, placement: 'drawer', component: BackgroundPanel, requires: editable })
-  registerPanel({ id: 'brand', label: t.rail.brand, icon: icon(Palette), order: 70, placement: 'sidebar', component: BrandPanel, preload: BrandPanel.preload, requires: ({ state }) => !state.readOnly && state.mode !== 'shared-edit' })
-  registerPanel({ id: 'animate', label: t.rail.animate, title: t.animation.panel.title, icon: icon(Sparkles), order: 75, placement: 'sidebar', component: AnimatePanel, preload: AnimatePanel.preload, requires: editable })
-  registerPanel({ id: 'audio', label: t.rail.audio, title: t.audio.title, icon: icon(Music), order: 76, placement: 'sidebar', component: AudioPanel, preload: AudioPanel.preload, readOnly: true })
-  registerPanel({ id: 'layers', label: t.rail.layers, icon: icon(Layers), order: 80, placement: 'sidebar', component: LayersPanel, readOnly: true })
-  registerPanel({
+  registerPanel(writableMetadata({ id: 'templates', get label() { return t.rail.templates }, icon: icon(LayoutTemplate), order: 5, placement: 'sidebar', component: TemplatesPanel, preload: TemplatesPanel.preload, requires: editable }))
+  registerPanel(writableMetadata({ id: 'text', get label() { return t.rail.text }, icon: icon(Type), order: 10, placement: 'drawer', component: TextDrawer, requires: editable, shortcut: 'T' }))
+  registerPanel(writableMetadata({ id: 'shapes', get label() { return t.rail.shapes }, icon: icon(Shapes), order: 20, placement: 'drawer', component: ShapesDrawer, requires: editable }))
+  registerPanel(writableMetadata({ id: 'elements', get label() { return t.rail.elements }, get title() { return t.stickers.title }, icon: icon(Sticker), order: 30, placement: 'sidebar', component: StickerPanel, requires: editable }))
+  registerPanel(writableMetadata({ id: 'image', get label() { return t.rail.image }, icon: icon(Images), order: 40, placement: 'drawer', component: ImageDrawer, requires: editable }))
+  registerPanel(writableMetadata({ id: 'videos', get label() { return t.rail.videos }, icon: icon(Clapperboard), order: 45, placement: 'drawer', component: VideosPanel, preload: VideosPanel.preload, requires: editable }))
+  registerPanel(writableMetadata({ id: 'background', get label() { return t.rail.background }, icon: icon(PaintBucket), order: 60, placement: 'drawer', component: BackgroundPanel, requires: editable }))
+  registerPanel(writableMetadata({ id: 'brand', get label() { return t.rail.brand }, icon: icon(Palette), order: 70, placement: 'sidebar', component: BrandPanel, preload: BrandPanel.preload, requires: ({ state }) => !state.readOnly && state.mode !== 'shared-edit' }))
+  registerPanel(writableMetadata({ id: 'animate', get label() { return t.rail.animate }, get title() { return t.animation.panel.title }, icon: icon(Sparkles), order: 75, placement: 'sidebar', component: AnimatePanel, preload: AnimatePanel.preload, requires: editable }))
+  registerPanel(writableMetadata({ id: 'audio', get label() { return t.rail.audio }, get title() { return t.audio.title }, icon: icon(Music), order: 76, placement: 'sidebar', component: AudioPanel, preload: AudioPanel.preload, readOnly: true }))
+  registerPanel(writableMetadata({ id: 'layers', get label() { return t.rail.layers }, icon: icon(Layers), order: 80, placement: 'sidebar', component: LayersPanel, readOnly: true }))
+  registerPanel(writableMetadata({
     id: 'comments',
-    label: t.rail.comments,
+    get label() { return t.rail.comments },
     icon: <CommentsButtonIcon />,
     order: 90,
     placement: 'sidebar',
@@ -54,7 +55,7 @@ export function registerBuiltinPanels(): void {
     // Only where someone can actually comment: an account with the comments service, or a comment link. A guest's design has
     // no Comments button (it would only lead to the sign-up dialog); signing up brings it.
     requires: ({ editor, state }) => state.mode !== 'shared-view' && (!!editor.adapter.services.comments || state.mode === 'shared-comment'),
-  })
+  }))
 }
 
 registerBuiltinPanels()

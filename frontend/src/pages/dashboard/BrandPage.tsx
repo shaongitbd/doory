@@ -37,7 +37,7 @@ export default function BrandPage() {
       {
         onSuccess: () => {
           setEditing(undefined)
-          toast({ title: editing ? 'Brand kit saved' : 'Brand kit created', variant: 'success' })
+          toast({ title: editing ? msg('Brand kit saved') : msg('Brand kit created'), variant: 'success' })
         },
         onError: (error) => setSaveError(errorMessage(error)),
       },
@@ -78,7 +78,7 @@ export default function BrandPage() {
           <EmptyState
             icon={<Palette size={28} />}
             title={msg("Create your first brand kit")}
-            description={`Add up to ${MAX_BRAND_COLORS} colours, pick your fonts and attach your logos. Then apply them in the editor with one click.`}
+            description={msg('Add up to {count} colours, pick your fonts and attach your logos. Then apply them in the editor with one click.', { count: MAX_BRAND_COLORS })}
             action={<Button leftIcon={<Plus size={16} />} onClick={() => { setSaveError(''); setEditing(null) }}>{msg("New brand kit")}</Button>}
           />
         ) : (
@@ -90,7 +90,7 @@ export default function BrandPage() {
                     <h2 className={brandStyles.name}>{kit.name}</h2>
                     {kit.is_default ? <Badge tone="brand">{msg("Default")}</Badge> : null}
                   </div>
-                  <ul className={brandStyles.swatches} aria-label={`${kit.name} colours`}>
+                  <ul className={brandStyles.swatches} aria-label={msg('{name} colours', { name: kit.name })}>
                     {kit.colors.length === 0 ? <li className={brandStyles.none}>{msg("No colours yet")}</li> : null}
                     {kit.colors.slice(0, 10).map((color) => (
                       <li key={color.id}>
@@ -99,9 +99,9 @@ export default function BrandPage() {
                     ))}
                   </ul>
                   <p className={brandStyles.meta}>
-                    {kit.fonts.length > 0 ? kit.fonts.map((font) => font.family).filter((family, index, all) => all.indexOf(family) === index).join(' · ') : 'Default fonts'}
+                    {kit.fonts.length > 0 ? kit.fonts.map((font) => font.family).filter((family, index, all) => all.indexOf(family) === index).join(' · ') : msg('Default fonts')}
                     {' · '}
-                    {kit.logos.length} {kit.logos.length === 1 ? 'logo' : 'logos'}
+                    {kit.logos.length} {kit.logos.length === 1 ? msg('Logo') : msg('Logos')}
                   </p>
                   <div className={brandStyles.actions}>
                     <Button size="sm" variant="secondary" leftIcon={<Pencil size={14} />} onClick={() => { setSaveError(''); setEditing(kit) }}>
@@ -115,7 +115,7 @@ export default function BrandPage() {
                         onClick={() =>
                           save.mutate(
                             { id: kit.id, input: toInput(kit, { is_default: true }) },
-                            { onSuccess: () => toast({ title: `“${kit.name}” is now your default kit`, variant: 'success' }), onError: (error) => toast({ title: msg("Couldn’t change the default"), description: errorMessage(error), variant: 'error' }) },
+                            { onSuccess: () => toast({ title: msg('“{name}” is now your default kit', { name: kit.name }), variant: 'success' }), onError: (error) => toast({ title: msg("Couldn’t change the default"), description: errorMessage(error), variant: 'error' }) },
                           )
                         }
                       >
@@ -136,9 +136,9 @@ export default function BrandPage() {
       <BrandKitEditor kit={editing} busy={save.isPending} error={saveError} onClose={() => setEditing(undefined)} onSave={submit} />
       <ConfirmDialog
         open={deleting !== null}
-        title={`Delete “${deleting?.name ?? ''}”?`}
+        title={msg('Delete “{title}”?', { title: deleting?.name ?? '' })}
         description={msg("Designs keep the colours and fonts they already use. Only the saved kit is removed.")}
-        confirmLabel="Delete kit"
+        confirmLabel={msg("Delete kit")}
         tone="danger"
         loading={remove.isPending}
         onCancel={() => setDeleting(null)}

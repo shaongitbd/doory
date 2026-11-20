@@ -1,5 +1,7 @@
 import { CircleCheck, Code, Copy, Download, Info } from 'lucide-react'
 import { type ReactNode, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useLocale } from '@/i18n/useLocale'
+import { getLocale } from '@/i18n/locale'
 import { useSizePresets } from '@/lib/sizePresets'
 import { usePersistedState } from '@/lib/usePersistedState'
 import { useEditor, useEditorState } from '../context'
@@ -63,12 +65,13 @@ function startingPoint(editor: ReturnType<typeof useEditor>, asked: unknown, pur
 
 export function DownloadDialog({ props }: { props?: Record<string, unknown> } = {}) {
   const editor = useEditor()
+  useLocale()
   const allFormats = useSyncExternalStore(exportFormats.subscribe, exportFormats.getSnapshot)
   const formats = allFormats.filter((f) => !f.available || f.available(editor))
   const doc = useEditorState((s) => s.doc)
   const catalogue = useSizePresets()
   const preset = useMemo(() => designPreset(editor), [editor, catalogue, doc]) // eslint-disable-line react-hooks/exhaustive-deps
-  const purposes = useMemo(() => purposesFor(editor, preset), [editor, preset])
+  const purposes = purposesFor(editor, preset)
   // `openDialog('download', { format: 'mp4' })` starts on that format (the Share menu's "Video").
   const [start] = useState(() => startingPoint(editor, props?.format, purposes))
   const [formatId, setFormatId] = useState(() => (formats.some((f) => f.id === start.formatId) ? start.formatId : (formats[0]?.id ?? 'png')))
@@ -254,8 +257,9 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
 
   const tag = raster && format ? `${format.label}${isLossy(raster) ? ` ${quality}` : options.pngColors === 256 ? ' 256' : ''}${perPage !== undefined ? ` · ${formatBytes(perPage)}` : ''}` : null
   const optimizeOffered = !!raster && serverConverts(editor.adapter, raster) && optimizers.length > 0
-  const moreSummary = [scope === 'all' ? t.dialog.downloadAllPages.toLowerCase() : scope === 'current' ? t.dialog.downloadCurrentPage.toLowerCase() : range || t.dialog.downloadRange.toLowerCase(), nameStyle === 'simple' ? t.dialog.downloadNamesSimple.toLowerCase() : t.dialog.downloadNamesStructured.toLowerCase()]
-  if (raster && options.transparent && hasAlpha(raster)) moreSummary.push(t.dialog.downloadTransparent.toLowerCase())
+  const summaryLabel = (label: string): string => getLocale() === 'de' ? label : label.toLowerCase()
+  const moreSummary = [scope === 'all' ? summaryLabel(t.dialog.downloadAllPages) : scope === 'current' ? summaryLabel(t.dialog.downloadCurrentPage) : range || summaryLabel(t.dialog.downloadRange), nameStyle === 'simple' ? summaryLabel(t.dialog.downloadNamesSimple) : summaryLabel(t.dialog.downloadNamesStructured)]
+  if (raster && options.transparent && hasAlpha(raster)) moreSummary.push(summaryLabel(t.dialog.downloadTransparent))
 
   const summary = (): ReactNode => {
     if (!format) return null

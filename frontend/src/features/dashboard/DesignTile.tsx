@@ -10,7 +10,7 @@ import styles from './DesignTile.module.css'
 
 /** Compact, read-only design link used on the dashboard home. */
 export function DesignTile({ design }: { design: DesignSummary }) {
-  const title = design.title || 'Untitled design'
+  const title = design.title || msg('Untitled design')
   const catalogue = useSizePresets()
   return (
     <Link to={`/design/${design.id}`} className={styles.tile}>

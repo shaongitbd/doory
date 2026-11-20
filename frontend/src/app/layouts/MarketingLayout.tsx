@@ -1,7 +1,8 @@
 import { msg, activateLocale } from '@/i18n/catalog'
-import { getLocale, subscribeLocale, type Locale } from '@/i18n/locale'
+import { type Locale } from '@/i18n/locale'
+import { useLocale } from '@/i18n/useLocale'
 import { GitBranch, Menu as MenuIcon, X } from 'lucide-react'
-import { Suspense, useState, useSyncExternalStore } from 'react'
+import { Suspense, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { PageLoader } from '@/app/PageLoader'
 import { AccountMenu } from '@/features/auth/AccountMenu'
@@ -35,7 +36,7 @@ function HeaderNav({ onNavigate, orientation }: { onNavigate?: () => void; orien
 
 export function MarketingHeader() {
   const { status } = useAuth()
-  const locale = useSyncExternalStore(subscribeLocale, getLocale, () => 'en')
+  const locale = useLocale()
   const location = useLocation()
   const place = `${location.pathname}${location.hash}`
   // The menu is "open for" the place it was opened on, so navigating anywhere closes it without an effect.
@@ -55,6 +56,7 @@ export function MarketingHeader() {
         <div className={styles.actions}>
           <select aria-label={msg("Language")} className={styles.language} value={locale} onChange={event => { void activateLocale(event.target.value as Locale) }}>
             <option value="en">{msg("English")}</option>
+            <option value="de">Deutsch</option>
             <option value="zh-CN">简体中文</option>
             <option value="zh-TW">繁體中文</option>
           </select>
@@ -74,7 +76,7 @@ export function MarketingHeader() {
           )}
           <IconButton
             className={styles.menuButton}
-            label={open ? 'Close menu' : 'Open menu'}
+            label={open ? msg('Close menu') : msg('Open menu')}
             icon={open ? <X size={20} /> : <MenuIcon size={20} />}
             aria-expanded={open}
             aria-controls="mobile-nav"

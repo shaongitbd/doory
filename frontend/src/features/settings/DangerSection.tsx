@@ -93,7 +93,7 @@ function DeleteForm({ hasPassword, email, onCancel, onDeleted }: { hasPassword: 
           {error}
         </p>
       ) : null}
-      <Input label={hasPassword ? `Type ${DELETE_PHRASE} to confirm` : 'Type your email address to confirm'} value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" spellCheck={false} autoFocus />
+      <Input label={hasPassword ? msg('Type {token} to confirm', { token: DELETE_PHRASE }) : msg('Type your email address to confirm')} value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" spellCheck={false} autoFocus />
       {hasPassword ? <PasswordInput label={msg("Your password")} name="current-password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /> : null}
       <div className={styles.dialogFooter}>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>

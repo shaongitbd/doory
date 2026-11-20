@@ -12,6 +12,7 @@ import { type RecorderState, VoiceRecorder, browserDeps, formatClock } from '../
 import { audioRuntime, usePreview } from '../audio/runtime'
 import { decodeBytes } from '../audio/sources'
 import { t } from '../strings'
+import { audioErrorMessage, recordingErrorMessage } from '../audio/messages'
 import { Button } from '../ui/Button'
 import { AudioWaveform } from './AudioWaveform'
 import styles from './Audio.module.css'
@@ -74,7 +75,7 @@ function Take({ state, recorder }: { state: Extract<RecorderState, { status: 're
       editor.toast(t.audio.record.saved, 'success')
       recorder.reset()
     } catch (error) {
-      setProblem(error instanceof Error && error.message ? error.message : t.audio.errors.recordSave)
+      setProblem(audioErrorMessage(error, t.audio.errors.recordSave))
       setSaving(false)
     }
   }
@@ -200,7 +201,7 @@ export function AudioRecordTab() {
 
       {state.status === 'error' ? (
         <div className={styles.problem} role="alert" data-testid="audio-record-error" data-reason={state.reason}>
-          <p>{state.message}</p>
+          <p>{recordingErrorMessage(state.reason)}</p>
           <Button size="sm" variant="soft" onClick={() => void recorder.begin()} data-testid="audio-record-retry">
             {t.audio.record.tryAgain}
           </Button>

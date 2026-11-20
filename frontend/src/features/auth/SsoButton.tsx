@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/catalog'
 import { KeyRound } from 'lucide-react'
 import { useId } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -24,7 +25,7 @@ export function SsoButton({ next, note }: { next?: string; note?: string }) {
       leftIcon={icon ? <img src={icon} width={16} height={16} alt="" /> : <KeyRound size={16} aria-hidden="true" />}
       aria-describedby={note ? noteId : undefined}
     >
-      {config.oidc_button_label || 'Sign in with SSO'}
+      {config.oidc_button_label || msg('Sign in with SSO')}
     </AnchorButton>
   )
   if (!note) return button

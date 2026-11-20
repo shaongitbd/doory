@@ -1,4 +1,5 @@
 /** Built-in export formats, registered through the public registry. */
+import { writableMetadata } from '@/i18n/metadata'
 import { fontsInObjects, pageSize } from '../docOps'
 import { renderPageToCanvas, renderPageToSvg } from '../render'
 import { mmToPx } from '../units'
@@ -84,11 +85,11 @@ async function pdfFile(ctx: ExportContext): Promise<ExportFile[]> {
   const orientation = (w: number, h: number): 'p' | 'l' => (w > h ? 'l' : 'p')
   const { bleedMm, cropMarks } = ctx.options
   if (ctx.options.imposition) {
-    if (bleedMm > 0 || cropMarks) throw new Error('Folded sheets cannot use bleed or crop marks at this paper size.')
+    if (bleedMm > 0 || cropMarks) throw new Error(t.print.fold.errors.marks)
     const sizes = ctx.pages.map(({ page }) => pageSize(ctx.document, page))
     const first = sizes[0]
     if (first.width >= first.height || sizes.some((size) => size.width !== first.width || size.height !== first.height)) {
-      throw new Error('Folded sheets need portrait pages of one size.')
+      throw new Error(t.print.fold.errors.size)
     }
     const { layout, signaturePages, binding, sides: selectedSides = 'both' } = ctx.options.imposition
     const sides = imposePages(ctx.pages.length, layout, signaturePages, binding)
@@ -184,30 +185,30 @@ async function serverPdfFile(ctx: ExportContext): Promise<ExportFile[]> {
 }
 
 export function registerBuiltinExportFormats(): void {
-  registerExportFormat({
+  registerExportFormat(writableMetadata({
     id: 'png',
     label: 'PNG',
-    description: t.exportFormats.png,
+    get description() { return t.exportFormats.png },
     extension: 'png',
     mime: 'image/png',
     order: 0,
     controls: { scale: true, transparent: true, optimize: true },
     run: (ctx) => rasterFiles(ctx, 'png'),
-  })
-  registerExportFormat({
+  }))
+  registerExportFormat(writableMetadata({
     id: 'jpg',
     label: 'JPG',
-    description: t.exportFormats.jpg,
+    get description() { return t.exportFormats.jpg },
     extension: 'jpg',
     mime: 'image/jpeg',
     order: 10,
     controls: { scale: true, quality: true, optimize: true },
     run: (ctx) => rasterFiles(ctx, 'jpg'),
-  })
-  registerExportFormat({
+  }))
+  registerExportFormat(writableMetadata({
     id: 'webp',
     label: 'WebP',
-    description: t.exportFormats.webp,
+    get description() { return t.exportFormats.webp },
     extension: 'webp',
     mime: 'image/webp',
     order: 12,
@@ -215,42 +216,42 @@ export function registerBuiltinExportFormats(): void {
     // Safari can't make WebP from a canvas: there it takes the server.
     available: (engine) => browserEncodes('webp') || serverConverts(engine.adapter, 'webp'),
     run: (ctx) => rasterFiles(ctx, 'webp'),
-  })
-  registerExportFormat({
+  }))
+  registerExportFormat(writableMetadata({
     id: 'avif',
     label: 'AVIF',
-    description: t.exportFormats.avif,
+    get description() { return t.exportFormats.avif },
     extension: 'avif',
     mime: 'image/avif',
     order: 14,
     controls: { scale: true, quality: true, transparent: true, optimize: true },
     available: (engine) => serverConverts(engine.adapter, 'avif'),
     run: (ctx) => rasterFiles(ctx, 'avif'),
-  })
-  registerExportFormat({
+  }))
+  registerExportFormat(writableMetadata({
     id: 'pdf',
     label: 'PDF',
-    description: t.exportFormats.pdf,
+    get description() { return t.exportFormats.pdf },
     extension: 'pdf',
     mime: 'application/pdf',
     order: 20,
     controls: { print: true },
     run: pdfFile,
-  })
-  registerExportFormat({
+  }))
+  registerExportFormat(writableMetadata({
     id: 'svg',
     label: 'SVG',
-    description: t.exportFormats.svg,
+    get description() { return t.exportFormats.svg },
     extension: 'svg',
     mime: 'image/svg+xml',
     order: 30,
     controls: {},
     run: svgFiles,
-  })
-  registerExportFormat({
+  }))
+  registerExportFormat(writableMetadata({
     id: 'pdf-server',
-    label: t.exportFormats.pdfServerLabel,
-    description: t.exportFormats.pdfServer,
+    get label() { return t.exportFormats.pdfServerLabel },
+    get description() { return t.exportFormats.pdfServer },
     extension: 'pdf',
     mime: 'application/pdf',
     order: 40,
@@ -258,7 +259,7 @@ export function registerBuiltinExportFormats(): void {
     controls: { print: true },
     available: (engine) => typeof engine.adapter.exportPdf === 'function' && engine.state.mode !== 'guest',
     run: serverPdfFile,
-  })
+  }))
 }
 
 registerBuiltinExportFormats()

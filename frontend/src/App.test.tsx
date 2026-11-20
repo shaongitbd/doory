@@ -5,6 +5,7 @@ import { activateLocale } from '@/i18n/catalog'
 import { LOCALE_KEY, setLocale } from '@/i18n/locale'
 import zhCN from '@/i18n/zh-CN.json'
 import zhTW from '@/i18n/zh-TW.json'
+import de from '@/i18n/de.json'
 import { resetClientState } from '@/lib/api'
 import { makeConfig, makeUser } from '@/test/factories'
 import { server } from '@/test/msw'
@@ -55,7 +56,7 @@ it('updates routed settings and layout labels without losing an unsaved profile 
   fireEvent.change(input, { target: { value: 'Unsaved profile name' } })
   input.focus()
 
-  for (const [locale, catalog] of [['zh-CN', zhCN], ['zh-TW', zhTW]] as const) {
+  for (const [locale, catalog] of [['de', de], ['zh-CN', zhCN], ['zh-TW', zhTW]] as const) {
     await act(() => activateLocale(locale))
     expect(screen.getByLabelText(catalog['app.Display name'])).toBe(input)
     expect(input).toHaveValue('Unsaved profile name')
@@ -76,9 +77,11 @@ it('updates a nested auth route without resetting its draft or navigating', asyn
   const input = await screen.findByRole('textbox', { name: /Email/ })
   fireEvent.change(input, { target: { value: 'draft@example.test' } })
 
-  await act(() => activateLocale('zh-CN'))
-  expect(screen.getByRole('textbox', { name: new RegExp(zhCN['app.Email']) })).toBe(input)
-  expect(input).toHaveValue('draft@example.test')
-  expect(screen.getByRole('heading', { name: zhCN['app.Welcome back'] })).toBeInTheDocument()
-  expect(window.location.pathname + window.location.search).toBe('/login?next=%2Fdashboard')
+  for (const [locale, catalog] of [['de', de], ['zh-CN', zhCN], ['zh-TW', zhTW]] as const) {
+    await act(() => activateLocale(locale))
+    expect(screen.getByRole('textbox', { name: new RegExp(catalog['app.Email']) })).toBe(input)
+    expect(input).toHaveValue('draft@example.test')
+    expect(screen.getByRole('heading', { name: catalog['app.Welcome back'] })).toBeInTheDocument()
+    expect(window.location.pathname + window.location.search).toBe('/login?next=%2Fdashboard')
+  }
 })

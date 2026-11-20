@@ -34,10 +34,10 @@ export function SignupForm({ onSuccess, autoFocus = true, showName = true, ssoNe
   async function submit(event: FormEvent) {
     event.preventDefault()
     const errors: Record<string, string> = {}
-    if (!email.trim()) errors.email = 'Enter your email address.'
-    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = 'That doesn’t look like an email address.'
-    if (!password) errors.password = 'Choose a password.'
-    else if (!evaluatePassword(password).acceptable) errors.password = 'Use at least 8 characters, and not only numbers.'
+    if (!email.trim()) errors.email = msg('Enter your email address.')
+    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = msg('That doesn’t look like an email address.')
+    if (!password) errors.password = msg('Choose a password.')
+    else if (!evaluatePassword(password).acceptable) errors.password = msg('Use at least 8 characters, and not only numbers.')
     setFieldErrors(errors)
     setFormError('')
     if (Object.keys(errors).length > 0) return

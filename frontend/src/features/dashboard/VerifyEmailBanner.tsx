@@ -21,9 +21,9 @@ export function VerifyEmailBanner() {
     try {
       await authApi.resendVerification()
       setSent(true)
-      toast({ title: msg("Verification email sent"), description: `Check ${user?.email} for the link.`, variant: 'success' })
+      toast({ title: msg("Verification email sent"), description: msg('Check {email} for the link.', { email: user?.email ?? '' }), variant: 'success' })
     } catch (error) {
-      toast({ title: msg("Couldn’t send the email"), description: isApiError(error) && error.isRateLimited ? rateLimitMessage(error.retryAfter) : 'Please try again shortly.', variant: 'error' })
+      toast({ title: msg("Couldn’t send the email"), description: isApiError(error) && error.isRateLimited ? rateLimitMessage(error.retryAfter) : msg('Please try again shortly.'), variant: 'error' })
     } finally {
       setBusy(false)
     }
@@ -35,7 +35,7 @@ export function VerifyEmailBanner() {
       <p className={styles.text}>
         <strong>{msg("Verify your email.")}</strong> {msg("We sent a link to ")}{user.email}{msg(". Confirm it to keep your account recoverable.")}</p>
       <Button size="sm" variant="secondary" loading={busy} disabled={sent} onClick={() => void resend()}>
-        {sent ? 'Email sent' : 'Resend email'}
+        {sent ? msg('Email sent') : msg('Resend email')}
       </Button>
     </div>
   )
