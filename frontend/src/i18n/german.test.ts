@@ -135,6 +135,10 @@ it.each([false, true])('preserves sentinel content across optional branches (ena
 })
 
 it('keeps translated font-role capitalization and context-specific nouns', () => {
+  expect(de['app.Dashboard']).toBe('Dashboard')
+  expect(de['app.Dashboard sections']).toBe('Bereiche des Dashboards')
+  expect(de['app.Doory dashboard']).toBe('Doory-Dashboard')
+  expect(de['app.Go to your dashboard']).toBe('Zu Deinem Dashboard')
   expect(call('brand.chooseFont', 'Fließtext')).toBe('Schrift für Fließtext wählen')
   expect(de['basicShapes.star']).toBe('Stern')
   expect(de['masks.star']).toBe('Stern')

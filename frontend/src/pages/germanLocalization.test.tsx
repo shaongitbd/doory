@@ -58,6 +58,9 @@ it('renders German settings actions and preserves password request fields and va
     }),
   ] })
   await screen.findByRole('heading', { name: 'Einstellungen' })
+  expect(screen.getByRole('navigation', { name: 'Dashboard' })).toBeInTheDocument()
+  expect(screen.getByRole('navigation', { name: 'Bereiche des Dashboards' })).toBeInTheDocument()
+  for (const link of screen.getAllByRole('link', { name: 'Doory-Dashboard' })) expect(link).toHaveAttribute('href', '/dashboard')
   expect(screen.getByText('Verwalte Dein Profil, Deine E-Mail-Adresse und Deine Sicherheitseinstellungen.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Foto hochladen' })).toBeInTheDocument()
   const change = screen.getByRole('button', { name: 'Passwort ändern' })
