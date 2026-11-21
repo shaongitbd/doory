@@ -59,9 +59,10 @@ export function Workspace({ stripOpen, onToggleStrip }: WorkspaceProps) {
   const widest = useEditorState((s) => widestPage(s.doc))
   /** Changes whenever a page changes size, so the live windows are laid out again. */
   const sizesKey = useEditorState((s) => pageSizes(s.doc).map((z) => `${z.width}x${z.height}`).join(','))
+  const selectionVersion = useEditorState((s) => s.selection.version)
   const scrollRef = useRef<HTMLDivElement>(null)
   const artboards = useRef(new Map<string, HTMLDivElement>())
-  const windows = useRef(new Map<string, { zoom: number; win: CanvasWindow; w: number; h: number }>())
+  const windows = useRef(new Map<string, { zoom: number; win: CanvasWindow; w: number; h: number; bleed: number }>())
   const [live, setLive] = useState<ReadonlySet<string>>(() => new Set([doc.pages[0].id]))
   /** Pages within a couple of screens: the ones whose picture is prepared while they have no live canvas (a long design must not render all of them at once). */
   const [near, setNear] = useState<ReadonlySet<string>>(() => new Set([doc.pages[0].id]))
@@ -114,17 +115,20 @@ export function Workspace({ stripOpen, onToggleStrip }: WorkspaceProps) {
       const visible = { x: rect.left - a.left, y: rect.top - a.top, width: rect.width, height: rect.height }
       const last = windows.current.get(id)
       const inner = { x: visible.x - 40, y: visible.y - 40, width: visible.width + 80, height: visible.height + 80 }
-      if (last && last.zoom === z && last.w === size.width && last.h === size.height) {
+      // A selection that hangs past the page widens the window, so its handles can still be grabbed. Whole steps of
+      // BLEED, so a drag resizes the canvas every 56 px instead of every frame.
+      const bleed = BLEED * (1 + Math.ceil((view.selectionOverhang * z) / BLEED))
+      if (last && last.zoom === z && last.w === size.width && last.h === size.height && last.bleed === bleed) {
         const clipped = {
-          x: Math.max(inner.x, -BLEED),
-          y: Math.max(inner.y, -BLEED),
-          width: Math.min(inner.x + inner.width, art.width + BLEED) - Math.max(inner.x, -BLEED),
-          height: Math.min(inner.y + inner.height, art.height + BLEED) - Math.max(inner.y, -BLEED),
+          x: Math.max(inner.x, -bleed),
+          y: Math.max(inner.y, -bleed),
+          width: Math.min(inner.x + inner.width, art.width + bleed) - Math.max(inner.x, -bleed),
+          height: Math.min(inner.y + inner.height, art.height + bleed) - Math.max(inner.y, -bleed),
         }
         if (clipped.width <= 0 || clipped.height <= 0 || windowContains(last.win, clipped)) continue
       }
-      const win = computeCanvasWindow(art, visible, OVERSCAN, BLEED)
-      windows.current.set(id, { zoom: z, win, w: size.width, h: size.height })
+      const win = computeCanvasWindow(art, visible, OVERSCAN, bleed)
+      windows.current.set(id, { zoom: z, win, w: size.width, h: size.height, bleed })
       editor.layoutPage(id, z, win)
     }
   }, [editor, zoomRef])
@@ -256,6 +260,11 @@ export function Workspace({ stripOpen, onToggleStrip }: WorkspaceProps) {
     windows.current.clear()
     updateLive()
   }, [sizesKey, updateLive])
+
+  // The selection moved, grew or changed: the window of its page may need to reach further (or less far).
+  useEffect(() => {
+    relayout()
+  }, [selectionVersion, relayout])
 
   useEffect(() => {
     const ids = new Set(pageIds)

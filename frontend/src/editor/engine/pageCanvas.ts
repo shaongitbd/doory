@@ -201,6 +201,8 @@ export class PageCanvas {
       uniformScaling: true,
       selectionKey: 'shiftKey',
       containerClass: 'doory-canvas',
+      // Handles are drawn after the page clip, so the ones that hang past the page stay visible.
+      controlsAboveOverlay: true,
     })
     this.dragCache = new DragLayerCache(this.canvas)
     const wrapper = this.canvas.wrapperEl
@@ -243,6 +245,14 @@ export class PageCanvas {
 
   get pageSize(): PageSize {
     return this.size
+  }
+
+  /** How far (page px) the selected object reaches past the page on its farthest side; 0 when it stays inside. */
+  get selectionOverhang(): number {
+    const active = this.canvas.getActiveObject()
+    if (!active) return 0
+    const r = active.getBoundingRect()
+    return Math.max(0, -r.left, -r.top, r.left + r.width - this.size.width, r.top + r.height - this.size.height)
   }
 
   /** Marks the canvas for repaint of editor-only decorations (guides, grid). */
