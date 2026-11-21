@@ -33,6 +33,8 @@
   padding-inline: 64px;
   width: max-content;
   min-width: 100%;
+  /* A canvas window widened around a selection past the page must not grow the scroll area (and change a fit zoom). */
+  overflow: clip;
 }
 
 .hand,

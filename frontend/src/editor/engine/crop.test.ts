@@ -189,4 +189,18 @@ describe('crop session', () => {
     expect(engine.state.ui.cropping).toBeNull()
     engine.dispose()
   })
+
+  it('measures how far the selected picture reaches past the page, so the canvas can show its handles', async () => {
+    const { engine, view, img } = await mountImage()
+    expect(view.selectionOverhang).toBe(0)
+    img.set({ left: img.left - (img.getBoundingRect().left + 150) })
+    img.setCoords()
+    expect(view.selectionOverhang).toBeCloseTo(150)
+    await engine.crop.start()
+    expect(view.selectionOverhang).toBeGreaterThanOrEqual(150) // the crop frame (its stroke adds a pixel), while cropping
+    engine.crop.cancel()
+    view.canvas.discardActiveObject()
+    expect(view.selectionOverhang).toBe(0)
+    engine.dispose()
+  })
 })
