@@ -20,15 +20,25 @@ function readBytes(blob: Blob): Promise<Uint8Array> {
 }
 
 /** A name that is safe inside an archive: no folders, no leading dots, unique among `taken`. */
-function entryName(filename: string, taken: Set<string>): string {
+function entryName(filename: string, taken: Set<string>, key = (name: string): string => name): string {
   const flat = filename.replace(/[\\/]+/g, '_').replace(/^\.+/, '')
   const dot = flat.lastIndexOf('.')
   const stem = dot > 0 ? flat.slice(0, dot) : flat || 'file'
   const ext = dot > 0 ? flat.slice(dot) : ''
   let name = `${stem}${ext}`
-  for (let n = 2; taken.has(name); n++) name = `${stem}-${n}${ext}`
-  taken.add(name)
+  for (let n = 2; taken.has(key(name)); n++) name = `${stem}-${n}${ext}`
+  taken.add(key(name))
   return name
+}
+
+/** Page titles can differ only by case, which would collide on common extraction filesystems. */
+export function uniquePageFiles(files: ExportFile[], naming = SIMPLE_NAMING): ExportFile[] {
+  if (files.length < 2 || naming.style !== 'simple') return files
+  const taken = new Set<string>()
+  return files.map((file) => {
+    const filename = entryName(file.filename, taken, (name) => name.toLowerCase())
+    return filename === file.filename ? file : { ...file, filename }
+  })
 }
 
 /** The archive's name: `<title>.zip`, or with structured names `<title>[_<unix>].zip` (the files' timestamp). */
