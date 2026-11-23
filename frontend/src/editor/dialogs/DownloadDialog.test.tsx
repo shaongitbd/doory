@@ -459,11 +459,27 @@ describe('Download dialog: file names', () => {
 
   const story = (): DoryDocument => ({ ...createBlankDocument(1080, 1920), meta: { presetId: 'instagram-story' } })
 
-  it('starts simple, shows the name, and remembers a switch to detailed names with a timestamp', async () => {
-    ;({ engine } = setup({ doc: story() }))
+  it('uses the selected page name for the preview and the JPG download', async () => {
+    const doc = mixed()
+    doc.pages[3].name = 'Café menu 猫'
+    ;({ engine } = setup({ doc }))
+    await pick(/^JPG/)
+    await more()
+    await pick(t.dialog.downloadRange)
+    await userEvent.type(screen.getByRole('textbox', { name: t.dialog.downloadRange }), '4')
+    expect(screen.getByTestId('download-filename')).toHaveTextContent('Café menu 猫.jpg')
+    await download()
+    await waitFor(() => expect(downloadFiles).toHaveBeenCalled())
+    expect(vi.mocked(downloadFiles).mock.calls[0][0][0].filename).toBe('Café menu 猫.jpg')
+  })
+
+  it('remembers a switch to detailed design names with a timestamp even when the page has a name', async () => {
+    const doc = story()
+    doc.pages[0].name = 'Cover'
+    ;({ engine } = setup({ doc }))
     await pick(/^PNG/)
     await more()
-    expect(screen.getByTestId('download-filename')).toHaveTextContent('Menu.png')
+    expect(screen.getByTestId('download-filename')).toHaveTextContent('Cover.png')
     expect(within(dialog()).queryByRole('switch', { name: t.dialog.downloadNamesTimestamp })).toBeNull()
     await userEvent.click(within(dialog()).getByRole('radio', { name: t.dialog.downloadNamesStructured }))
     expect(screen.getByTestId('download-filename')).toHaveTextContent('menu_instagram_instagram-story_1080x1920.png')

@@ -71,6 +71,25 @@ describe('exports of a design with pages of different sizes', () => {
     engine.dispose()
   }, 30_000)
 
+  it('keeps every page in the ZIP when sanitized names collide or are empty', async () => {
+    const doc = mixedDocument()
+    doc.pages[0].name = 'Café 猫'
+    doc.pages[1].name = 'CAFÉ / 猫'
+    doc.pages[2].name = '../<>?'
+    const { engine } = makeEngine(doc)
+    try {
+      const [zip] = await runExport(engine, { formatId: 'png', pages: { kind: 'all' }, options: DEFAULT_EXPORT_OPTIONS })
+      expect(zip.filename).toBe('Launch-Kit.zip')
+      const entries = unzipSync(await bytes(zip.blob))
+      expect(Object.keys(entries)).toEqual(['Café 猫.png', 'CAFÉ 猫-2.png', 'Launch-Kit-03.png'])
+      expect(pngSize(entries['Café 猫.png'])).toEqual({ width: 1080, height: 1920 })
+      expect(pngSize(entries['CAFÉ 猫-2.png'])).toEqual({ width: 794, height: 1123 })
+      expect(pngSize(entries['Launch-Kit-03.png'])).toEqual({ width: 336, height: 192 })
+    } finally {
+      engine.dispose()
+    }
+  }, 30_000)
+
   it('a single chosen page is one plain file, not an archive', async () => {
     const { engine } = makeEngine()
     const files = await runExport(engine, { formatId: 'png', pages: { kind: 'pages', pages: [3] }, options: DEFAULT_EXPORT_OPTIONS })
@@ -86,14 +105,16 @@ describe('exports of a design with pages of different sizes', () => {
     engine.dispose()
   }, 30_000)
 
-  it('SVG: each page file carries its own width, height and viewBox', async () => {
-    const { engine } = makeEngine()
+  it('SVG: each page file carries its own width, height and viewBox with page names when set', async () => {
+    const doc = mixedDocument()
+    doc.pages[1].name = 'Event flyer'
+    const { engine } = makeEngine(doc)
     const [zip] = await runExport(engine, { formatId: 'svg', pages: { kind: 'all' }, options: DEFAULT_EXPORT_OPTIONS })
     const entries = unzipSync(await bytes(zip.blob))
     const root = (name: string): string => new TextDecoder().decode(entries[name]).match(/<svg[^>]*>/)?.[0] ?? ''
     expect(root('Launch-Kit-01.svg')).toMatch(/width="1080"[^>]*height="1920"|height="1920"[^>]*width="1080"/)
     expect(root('Launch-Kit-01.svg')).toContain('viewBox="0 0 1080 1920"')
-    expect(root('Launch-Kit-02.svg')).toContain('viewBox="0 0 794 1123"')
+    expect(root('Event flyer.svg')).toContain('viewBox="0 0 794 1123"')
     expect(root('Launch-Kit-03.svg')).toContain('viewBox="0 0 336 192"')
     expect(root('Launch-Kit-03.svg')).toMatch(/width="336"/)
     engine.dispose()
