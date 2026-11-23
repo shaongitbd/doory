@@ -4,12 +4,12 @@ import { useSizePresets } from '@/lib/sizePresets'
 import { usePersistedState } from '@/lib/usePersistedState'
 import { useEditor, useEditorState } from '../context'
 import { safeMultiplier } from '../engine/render'
-import { DEFAULT_EXPORT_OPTIONS, type ExportOptions, type ExportStage, type QualityPreset, exportFilename, exportFormats, pageFilename, parsePageRange, sanitizeFilename } from '../engine/export/registry'
+import { DEFAULT_EXPORT_OPTIONS, type ExportOptions, type ExportStage, type QualityPreset, exportFilename, exportFormats, exportPageFilename, pageFilename, parsePageRange, sanitizeFilename } from '../engine/export/registry'
 import { type PageSelection, copyPageAsPng, downloadFiles, pickPages, runExport } from '../engine/export/exporter'
 import { designPreset, loadLastExport, optimizesByDefault, saveLastExport } from '../engine/export/choices'
 import { FILENAME_STYLES, type FilenameStyle, unixNow } from '../engine/export/filenames'
 import { pageMultiplier } from '../engine/export/formats'
-import { type RasterFormat, hasAlpha, isLossy, serverConverts } from '../engine/export/raster'
+import { RASTER_MIME, type RasterFormat, hasAlpha, isLossy, serverConverts } from '../engine/export/raster'
 import { parseSize } from '../engine/export/size'
 import { formatBytes } from '../engine/export/video/estimate'
 import { zipFilename } from '../engine/export/zip'
@@ -154,6 +154,9 @@ export function DownloadDialog({ props }: { props?: Record<string, unknown> } = 
     if (zipped) return zipFilename(title, naming)
     const first = chosenPages[0]
     const ctx = { document: doc, title, naming }
+    if (format.id === 'svg' || Object.hasOwn(RASTER_MIME, format.id)) {
+      return exportPageFilename(ctx, format.extension, size, first?.index, chosenPages.length)
+    }
     const suffix = folded ? `${fold.layout}${fold.sides === 'both' ? '' : `-${fold.sides}`}` : format.server && printing ? 'print' : undefined
     const simple = format.mime === 'application/pdf' || video ? `${sanitizeFilename(title) || 'design'}${suffix ? `-${suffix}` : ''}.${format.extension}` : pageFilename(title, format.extension, (first?.index ?? 0) + 1, chosenPages.length, total)
     const perPageFile = format.mime !== 'application/pdf' && !video

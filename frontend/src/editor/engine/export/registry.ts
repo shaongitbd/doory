@@ -136,6 +136,33 @@ export function exportFilename(
   return documentFilename(ctx.document, ctx.title, extension, size, page, naming, (id) => getSizePresets().byId.get(id), suffix)
 }
 
+/** Simple page downloads keep the title readable while remaining safe to extract on Windows. */
+function pageTitleStem(name: string): string {
+  const clean = name
+    .normalize('NFC')
+    .replace(/[\p{Cc}<>:"/\\|?*]/gu, '')
+    .replace(/[\p{Z}\s]+/gu, ' ')
+    .replace(/^[. ]+|[. ]+$/g, '')
+  // Leave room for the extension and a duplicate suffix, even with four-byte Unicode characters.
+  const stem = Array.from(clean).slice(0, 60).join('').replace(/[. ]+$/g, '')
+  return /^(?:con|prn|aux|nul|(?:com|lpt)[1-9¹²³]) *(?:\.|$)/i.test(stem) ? `_${stem}` : stem
+}
+
+export function exportPageFilename(
+  ctx: Pick<ExportContext, 'document' | 'title' | 'naming'>,
+  extension: string,
+  size: { width: number; height: number },
+  page: number | undefined,
+  selectedPages: number,
+): string {
+  const index = page ?? 0
+  const fallback = pageFilename(ctx.title, extension, index + 1, selectedPages, ctx.document.pages.length)
+  if (ctx.naming?.style === 'structured') return exportFilename(ctx, fallback, extension, size, index)
+  const name = page === undefined ? undefined : ctx.document.pages[page]?.name
+  const stem = name ? pageTitleStem(name) : ''
+  return stem ? `${stem}.${extension}` : fallback
+}
+
 export function sanitizeFilename(name: string): string {
   return name
     .normalize('NFKD')

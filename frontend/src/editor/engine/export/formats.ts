@@ -9,13 +9,14 @@ import {
   type ExportContext,
   type ExportFile,
   exportFilename,
-  pageFilename,
+  exportPageFilename,
   registerExportFormat,
   sanitizeFilename,
 } from './registry'
 import { type RasterFormat, browserEncodes, hasAlpha, serverConverts } from './raster'
 import { MAX_SCALE, MIN_SCALE, sizeScale } from './size'
 import { embedFontFaces } from './svgFonts'
+import { uniquePageFiles } from './zip'
 import { t } from '../../strings'
 
 const PDF_DPI = 300
@@ -53,10 +54,10 @@ async function rasterFiles(ctx: ExportContext, format: RasterFormat): Promise<Ex
     }
     // A PNG stands in when neither the browser nor the server could make the format: its name says so.
     const extension = result.format
-    files.push({ blob: result.blob, filename: exportFilename(ctx, pageFilename(ctx.title, extension, index + 1, total, ctx.document.pages.length), extension, size, index) })
+    files.push({ blob: result.blob, filename: exportPageFilename(ctx, extension, size, index, total) })
     ctx.onProgress((i + 1) / total)
   }
-  return files
+  return uniquePageFiles(files, ctx.naming)
 }
 
 async function svgFiles(ctx: ExportContext): Promise<ExportFile[]> {
@@ -68,10 +69,10 @@ async function svgFiles(ctx: ExportContext): Promise<ExportFile[]> {
     const size = pageSize(ctx.document, page)
     const svg = await renderPageToSvg(page, size, ctx.engine.loadContext)
     const withFonts = await embedFontFaces(svg, page.objects, (family) => ctx.engine.fonts.lookup(family))
-    files.push({ blob: new Blob([withFonts], { type: 'image/svg+xml' }), filename: exportFilename(ctx, pageFilename(ctx.title, 'svg', index + 1, total, ctx.document.pages.length), 'svg', size, index) })
+    files.push({ blob: new Blob([withFonts], { type: 'image/svg+xml' }), filename: exportPageFilename(ctx, 'svg', size, index, total) })
     ctx.onProgress((i + 1) / total)
   }
-  return files
+  return uniquePageFiles(files, ctx.naming)
 }
 
 /**
