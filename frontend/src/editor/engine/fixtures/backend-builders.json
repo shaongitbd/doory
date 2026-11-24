@@ -2090,5 +2090,209 @@
     "expect": {
       "shadow": true
     }
+  },
+  {
+    "name": "stroked quadratic path placed inside a padded view box",
+    "kind": "shape",
+    "object": {
+      "id": "case-41",
+      "type": "path",
+      "shapeKind": "path",
+      "originX": "center",
+      "originY": "center",
+      "left": 180.0,
+      "top": 230.0,
+      "width": 80.0,
+      "height": 40.0,
+      "path": [
+        [
+          "M",
+          20.0,
+          120.0
+        ],
+        [
+          "C",
+          46.66666666666667,
+          66.66666666666666,
+          73.33333333333333,
+          66.66666666666666,
+          100.0,
+          120.0
+        ]
+      ],
+      "fill": null,
+      "fillRule": "nonzero",
+      "stroke": "#0c4a6e",
+      "strokeWidth": 6.0,
+      "strokeUniform": true,
+      "name": "Ribbon arch"
+    },
+    "vectorPaths": [
+      {
+        "name": "Ribbon arch",
+        "move": [
+          140,
+          250
+        ],
+        "bounds": {
+          "left": 137,
+          "top": 207,
+          "width": 86,
+          "height": 46
+        },
+        "fill": null,
+        "stroke": "#0c4a6e",
+        "strokeWidth": 6,
+        "fillRule": "nonzero"
+      }
+    ]
+  },
+  {
+    "name": "layered vector paths keep their colors, order and shared view box",
+    "kind": "group",
+    "object": {
+      "id": "case-42",
+      "type": "group",
+      "originX": "center",
+      "originY": "center",
+      "left": 440.0,
+      "top": 160.0,
+      "width": 140.0,
+      "height": 120.0,
+      "strokeWidth": 0,
+      "layoutManager": {
+        "type": "layoutManager",
+        "strategy": "fit-content"
+      },
+      "interactive": false,
+      "subTargetCheck": false,
+      "objects": [
+        {
+          "id": "vector-path-1",
+          "type": "path",
+          "shapeKind": "path",
+          "originX": "center",
+          "originY": "center",
+          "left": -30.0,
+          "top": 20.0,
+          "width": 80.0,
+          "height": 80.0,
+          "path": [
+            [
+              "M",
+              20.0,
+              40.0
+            ],
+            [
+              "L",
+              100.0,
+              40.0
+            ],
+            [
+              "L",
+              100.0,
+              120.0
+            ],
+            [
+              "L",
+              20.0,
+              120.0
+            ],
+            [
+              "Z"
+            ]
+          ],
+          "fill": "#f59e0b",
+          "fillRule": "nonzero",
+          "stroke": null,
+          "strokeWidth": 0,
+          "strokeUniform": true,
+          "name": "Amber base"
+        },
+        {
+          "id": "vector-path-2",
+          "type": "path",
+          "shapeKind": "path",
+          "originX": "center",
+          "originY": "center",
+          "left": 20.0,
+          "top": -10.0,
+          "width": 100.0,
+          "height": 100.0,
+          "path": [
+            [
+              "M",
+              60.0,
+              60.0
+            ],
+            [
+              "C",
+              80.0,
+              -20.0,
+              140.0,
+              -20.0,
+              160.0,
+              60.0
+            ],
+            [
+              "L",
+              160.0,
+              100.0
+            ],
+            [
+              "L",
+              60.0,
+              100.0
+            ],
+            [
+              "Z"
+            ]
+          ],
+          "fill": "#2563eb",
+          "fillRule": "evenodd",
+          "stroke": null,
+          "strokeWidth": 0,
+          "strokeUniform": true,
+          "name": "Blue crest"
+        }
+      ],
+      "name": "Two-color mark"
+    },
+    "vectorPaths": [
+      {
+        "name": "Amber base",
+        "move": [
+          370,
+          140
+        ],
+        "bounds": {
+          "left": 370,
+          "top": 140,
+          "width": 80,
+          "height": 80
+        },
+        "fill": "#f59e0b",
+        "stroke": null,
+        "strokeWidth": 0,
+        "fillRule": "nonzero"
+      },
+      {
+        "name": "Blue crest",
+        "move": [
+          410,
+          160
+        ],
+        "bounds": {
+          "left": 410,
+          "top": 100,
+          "width": 100,
+          "height": 100
+        },
+        "fill": "#2563eb",
+        "stroke": null,
+        "strokeWidth": 0,
+        "fillRule": "evenodd"
+      }
+    ]
   }
 ]

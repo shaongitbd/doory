@@ -14,8 +14,9 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import cast
 
-from . import builders, groups
+from . import builders, groups, ops
 from .builders import Page
 
 FIXTURE = Path(__file__).resolve().parents[4] / "frontend/src/editor/engine/fixtures/backend-builders.json"
@@ -322,6 +323,89 @@ def _cases() -> list[dict]:
             ),
             "expect": {"shadow": True},
         },
+        {
+            "name": "stroked quadratic path placed inside a padded view box",
+            "kind": "shape",
+            "object": _vector(
+                name="Ribbon arch",
+                view_box=[-20, -10, 100, 80],
+                x=120,
+                y=130,
+                width=200,
+                paths=[
+                    {
+                        "name": "Ribbon arch",
+                        "commands": [["M", -10, 50], ["Q", 10, 10, 30, 50]],
+                        "fill": None,
+                        "stroke": "#0c4a6e",
+                        "stroke_width": 3,
+                    }
+                ],
+            ),
+            # At 2x the quadratic's centerline spans (140, 210) to (220, 250); the stroke adds 3 px per side.
+            "vectorPaths": [
+                {
+                    "name": "Ribbon arch",
+                    "move": [140, 250],
+                    "bounds": {"left": 137, "top": 207, "width": 86, "height": 46},
+                    "fill": None,
+                    "stroke": "#0c4a6e",
+                    "strokeWidth": 6,
+                    "fillRule": "nonzero",
+                }
+            ],
+        },
+        {
+            "name": "layered vector paths keep their colors, order and shared view box",
+            "kind": "group",
+            "object": _vector(
+                name="Two-color mark",
+                view_box=[10, -20, 100, 100],
+                x=350,
+                y=100,
+                width=200,
+                paths=[
+                    {
+                        "name": "Amber base",
+                        "commands": [["M", 20, 0], ["L", 60, 0], ["L", 60, 40], ["L", 20, 40], ["Z"]],
+                        "fill": "#f59e0b",
+                    },
+                    {
+                        "name": "Blue crest",
+                        "commands": [
+                            ["M", 40, 10],
+                            ["C", 50, -30, 80, -30, 90, 10],
+                            ["L", 90, 30],
+                            ["L", 40, 30],
+                            ["Z"],
+                        ],
+                        "fill": "#2563eb",
+                        "fill_rule": "evenodd",
+                    },
+                ],
+            ),
+            # The cubic reaches y=-20 halfway through, at the top of the shared view box.
+            "vectorPaths": [
+                {
+                    "name": "Amber base",
+                    "move": [370, 140],
+                    "bounds": {"left": 370, "top": 140, "width": 80, "height": 80},
+                    "fill": "#f59e0b",
+                    "stroke": None,
+                    "strokeWidth": 0,
+                    "fillRule": "nonzero",
+                },
+                {
+                    "name": "Blue crest",
+                    "move": [410, 160],
+                    "bounds": {"left": 410, "top": 100, "width": 100, "height": 100},
+                    "fill": "#2563eb",
+                    "stroke": None,
+                    "strokeWidth": 0,
+                    "fillRule": "evenodd",
+                },
+            ],
+        },
     ]
 
 
@@ -350,6 +434,17 @@ def _transformed_group() -> dict:
     grouped = groups.group([_rect(), _circle()], "group")
     grouped.update(angle=45, scaleX=1.5, scaleY=1.5)
     return grouped
+
+
+def _vector(**fields) -> dict:
+    doc = {"width": PAGE.width, "height": PAGE.height, "pages": [{"id": "fixture-page", "objects": []}]}
+    operation = ops.AddVector.model_validate({"op": "add_vector", **fields})
+    # A vector edit only uses inline geometry, so there are no resources for a resolver to look up.
+    obj = ops.apply_ops(doc, [operation], cast(ops.Resolver, None)).document["pages"][0]["objects"][0]
+    if obj["type"] == "group":
+        for index, child in enumerate(obj["objects"], start=1):
+            child["id"] = f"vector-path-{index}"
+    return obj
 
 
 def _with_effects(obj: dict, effects: dict, *, text: bool) -> dict:
