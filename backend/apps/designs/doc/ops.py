@@ -15,7 +15,7 @@ from typing import Annotated, Any, Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 
-from . import builders, groups
+from . import builders, groups, vectors
 from .builders import Page
 from .fields import KIND_TYPES, FieldTag, TextFit, duplicate_keys, read_fit
 from .kinds import contains_image_grid, object_kind
@@ -23,6 +23,9 @@ from .kinds import contains_image_grid, object_kind
 MAX_OPS = 200
 MAX_PAGES = 100  # the default; callers pass the server's `MAX_DESIGN_PAGES`
 MAX_TEXT_LENGTH = 20_000
+MAX_VECTOR_PATHS = 64
+MAX_COMMANDS_PER_PATH = 512
+MAX_VECTOR_COMMANDS = 2_048
 COLOR_PATTERN = r"^(#[0-9a-fA-F]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s]+\)|[a-zA-Z]{3,30}|transparent)$"
 
 Color = Annotated[str, StringConstraints(pattern=COLOR_PATTERN, max_length=64)]
@@ -179,6 +182,59 @@ class AddShape(_Add):
     star_tips: Annotated[int, Field(ge=3, le=24)] = Field(5, description="star only.")
     inner_ratio: Annotated[float, Field(ge=0.1, le=0.95)] = Field(0.45, description="star only.")
     shadow: ShadowEffect | None = None
+
+
+VectorCoordinate = Annotated[float, Field(strict=True, ge=-100_000, le=100_000)]
+VectorLength = Annotated[float, Field(strict=True, ge=0.001, le=100_000)]
+VectorColor = Annotated[
+    str, StringConstraints(pattern=r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+]
+VectorCommand = (
+    tuple[Literal["M", "L"], VectorCoordinate, VectorCoordinate]
+    | tuple[Literal["Q"], VectorCoordinate, VectorCoordinate, VectorCoordinate, VectorCoordinate]
+    | tuple[
+        Literal["C"],
+        VectorCoordinate,
+        VectorCoordinate,
+        VectorCoordinate,
+        VectorCoordinate,
+        VectorCoordinate,
+        VectorCoordinate,
+    ]
+    | tuple[Literal["Z"]]
+)
+
+
+class VectorLayer(_Op):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    commands: list[VectorCommand] = Field(
+        min_length=2,
+        max_length=MAX_COMMANDS_PER_PATH,
+        description="Absolute SVG commands as arrays: M x y, L x y, Q cx cy x y, C cx1 cy1 cx2 cy2 x y, Z.",
+    )
+    fill: VectorColor | None = Field("#000000", description="Solid hex fill, or null for no fill.")
+    stroke: VectorColor | None = Field(None, description="Solid hex stroke, or null for no stroke.")
+    stroke_width: Annotated[float, Field(strict=True, ge=0, le=1_000)] = Field(
+        1, description="Stroke width in source units, scaled with the artwork. Used only when stroke is set."
+    )
+    fill_rule: Literal["nonzero", "evenodd"] = "nonzero"
+
+
+class AddVector(_Add):
+    """Add original vector artwork. Use custom paths for logos and illustrations."""
+
+    op: Literal["add_vector"]
+    view_box: tuple[VectorCoordinate, VectorCoordinate, VectorLength, VectorLength] = Field(
+        description="Shared source canvas [minX, minY, width, height], including any transparent padding."
+    )
+    x: VectorCoordinate = Field(description="Page x of the view box's top-left corner.")
+    y: VectorCoordinate = Field(description="Page y of the view box's top-left corner.")
+    width: VectorLength = Field(description="View box width in page pixels. Height follows its proportions.")
+    paths: list[VectorLayer] = Field(
+        min_length=1,
+        max_length=MAX_VECTOR_PATHS,
+        description=f"Layers from bottom to top. At most {MAX_VECTOR_COMMANDS} commands across all paths.",
+    )
 
 
 class AddLine(_Add):
@@ -401,6 +457,7 @@ class SetNotes(_Op):
 Operation = Annotated[
     AddText
     | AddShape
+    | AddVector
     | AddLine
     | AddImage
     | ReplaceImage
@@ -607,6 +664,31 @@ class _Editor:
         if op.shadow:
             builders.apply_effects(obj, Effects(shadow=op.shadow).document(), text=False)
         return self.insert(op, obj)
+
+    def add_vector(self, op: AddVector) -> dict:
+        if sum(len(path.commands) for path in op.paths) > MAX_VECTOR_COMMANDS:
+            raise self.fail(f"A vector can have at most {MAX_VECTOR_COMMANDS} commands across all paths.")
+        paths = [
+            vectors.VectorPath(
+                commands=layer.commands,
+                name=layer.name,
+                fill=layer.fill,
+                stroke=layer.stroke,
+                stroke_width=layer.stroke_width,
+                fill_rule=layer.fill_rule,
+            )
+            for layer in op.paths
+        ]
+        try:
+            obj = vectors.build_vector(paths, op.view_box, x=op.x, y=op.y, width=op.width)
+        except ValueError as exc:
+            raise self.fail(str(exc)) from exc
+        result = self.insert(op, obj)
+        return result | {
+            "paths": [
+                {"name": child["name"], "object_id": child["id"]} for child in obj.get("objects", [obj])
+            ]
+        }
 
     def add_line(self, op: AddLine) -> dict:
         obj = builders.build_line(

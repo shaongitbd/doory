@@ -25,6 +25,10 @@ exactly as in the editor). Coordinates are page pixels from the top-left corner;
 object's x, y is the top-left corner of its box. Text wraps at its box width and its height follows the text;
 heights the server reports for new or changed text are estimates until the design is opened in the editor.
 
+For custom logos and illustrations, use add_vector in edit_design. Draw named paths with SVG-style
+commands and solid colors in one shared view box. The tool returns the artwork and path IDs. Check the
+result with export_design when available, and use format svg for a scalable copy.
+
 Pictures must be in the user's uploads (list_assets, import_stock_photo) or the element catalogue
 (search_elements) before they can be placed. Backgrounds of pictures are removed with remove_asset_background,
 the remove_background option of import_stock_photo and upload_image_from_url, or the remove_background
