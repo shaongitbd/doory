@@ -61,8 +61,8 @@ Assistants can work with designs and their contents:
 
 - **Designs:** list, read, create, rename, duplicate and edit them; star them, organise them in folders, trash
   and restore them.
-- **On the page:** add text (with effects), shapes, lines, pictures, QR codes and pages; group objects; set
-  backgrounds and speaker notes.
+- **On the page:** add text (with effects), shapes, custom vectors, lines, pictures, QR codes and pages;
+  group objects; set backgrounds and speaker notes.
 - **Search:** templates, elements, fonts and stock photos.
 
 They can also handle comments, brand kits, share links and earlier versions, and export pages as PNG, JPG,
@@ -74,6 +74,41 @@ backup; `import_project_backup` restores a base64-encoded backup with new design
 both **Edit designs** and **Add uploads**, and the encoded file must fit `MCP_MAX_REQUEST_BYTES`; larger local
 backups can be restored in the editor. Designs are also available as MCP resources
 (`doory://designs/{id}`), and the server offers two prompts.
+
+For an original logo or illustration, use `add_vector` in `edit_design`. For example, this places a two-color
+sailboat on the first page:
+
+```json
+{
+  "design_id": "<design-id>",
+  "operations": [
+    {
+      "op": "add_vector",
+      "page": 1,
+      "name": "Sailboat",
+      "view_box": [0, 0, 100, 100],
+      "x": 40,
+      "y": 60,
+      "width": 200,
+      "paths": [
+        {"name": "Hull", "commands": [["M", 12, 72], ["L", 90, 72], ["Q", 76, 92, 36, 92], ["Z"]], "fill": "#16324F"},
+        {"name": "Sail", "commands": [["M", 48, 10], ["Q", 71, 37, 82, 66], ["L", 48, 66], ["Z"]], "fill": "#1B998B"}
+      ]
+    }
+  ]
+}
+```
+
+`x` and `y` place the top-left of the shared source view box in page pixels. The requested `width` scales all
+paths together, preserving proportions and padding. Commands are absolute `M` (move), `L` (line), `Q`
+(quadratic curve), `C` (cubic curve), and `Z` (close). Paths are painted from bottom to top. Each can use a
+solid hex fill (black by default, or `null` for no fill), an optional hex stroke with width in source units,
+and a `nonzero` or `evenodd` fill rule.
+
+The result includes the artwork's `object_id` and a `paths` list with each layer's name and object ID.
+Several paths are grouped so they can be moved or resized together. Use `ungroup` before editing a grouped
+child by ID through MCP. When server rendering is available, use `export_design` to review the page as a
+PNG or download it as an SVG.
 
 For a folded PDF, call `export_design` with the design id and booklet options, for example:
 
