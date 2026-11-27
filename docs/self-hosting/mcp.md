@@ -110,6 +110,8 @@ Several paths are grouped so they can be moved or resized together. Use `ungroup
 child by ID through MCP. When server rendering is available, use `export_design` to review the page as a
 PNG or download it as an SVG.
 
+See the results in the [vector artwork samples](../integrations/vector-artwork-samples.md).
+
 For a folded PDF, call `export_design` with the design id and booklet options, for example:
 
 ```json
