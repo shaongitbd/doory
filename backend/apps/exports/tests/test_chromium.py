@@ -1,5 +1,6 @@
 """End-to-end tests with the real headless Chromium (skipped when no browser is installed)."""
 
+import base64
 import io
 import json
 import re
@@ -8,6 +9,7 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pypdf
 import pytest
@@ -15,12 +17,15 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from PIL import Image
 
+from apps.apitokens import services as tokens
+from apps.apitokens.scopes import DESIGNS_READ, DESIGNS_WRITE
 from apps.exports import services
 from apps.exports.exceptions import ExportTimeout, ExportUnavailable
 from apps.exports.layout import PX_PER_MM
 from apps.exports.renderer import render_image, render_pdf
 from apps.exports.services import ExportRequest, export_image, export_images
 from apps.fonts.models import FontFamily, FontVariant
+from apps.mcp.tests.test_http import call
 
 from .conftest import requires_chromium
 from .helpers import PNG_RED_10X10, RenderSite, build_test_font, payload, svg_page
@@ -807,6 +812,92 @@ def design_of(owner, *objects, width=200, height=100, color="#00ff00"):
 
 def pixel(data: bytes, x: int, y: int) -> tuple:
     return Image.open(io.BytesIO(data)).convert("RGBA").getpixel((x, y))
+
+
+@requires_dist
+@pytest.mark.django_db(transaction=True)  # MCP tools access the database on worker threads.
+def test_mcp_vector_artwork_previews_and_exports_as_svg(render_site, settings, user, anon):
+    settings.MCP_ENABLED = True
+    token = tokens.issue_token(
+        user, name="Vector export test", scopes=[DESIGNS_READ, DESIGNS_WRITE], expires_in_days=1
+    )
+    design = design_of(user, width=240, height=150)
+    target = {"design_id": str(design.pk), "page": 1}
+    edited = call(
+        token.plaintext,
+        "edit_design",
+        {
+            "design_id": target["design_id"],
+            "operations": [
+                {
+                    "op": "add_vector",
+                    "page": 1,
+                    "name": "Two-color mark",
+                    "view_box": [-10, -10, 100, 60],
+                    "x": 20,
+                    "y": 10,
+                    "width": 200,
+                    "paths": [
+                        {
+                            "name": "Base",
+                            "commands": [
+                                ["M", 0, 0],
+                                ["L", 48, 0],
+                                ["L", 48, 24],
+                                ["Q", 24, 36, 0, 24],
+                                ["Z"],
+                            ],
+                            "fill": "#D94E36",
+                            "stroke": "#1D3557",
+                            "stroke_width": 4,
+                        },
+                        {
+                            "name": "Top",
+                            "commands": [
+                                ["M", 30, 8],
+                                ["C", 18, 8, 18, 34, 30, 34],
+                                ["L", 70, 34],
+                                ["L", 70, 8],
+                                ["Z"],
+                            ],
+                            "fill": "#2A9D8F",
+                            "fill_rule": "evenodd",
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+    assert edited["isError"] is False, edited
+
+    preview = call(token.plaintext, "export_design", {**target, "format": "png", "transparent": True})
+    assert preview["isError"] is False, preview
+    image = preview["content"][0]
+    assert (image["type"], image["mimeType"]) == ("image", "image/png")
+    with Image.open(io.BytesIO(base64.b64decode(image["data"]))) as png:
+        assert png.size == (240, 150)
+        pixels = png.convert("RGBA")
+        # The 2x scale and negative view-box origin place the first move at (40, 30).
+        assert pixels.getpixel((24, 14))[3] == 0
+        assert pixels.getpixel((65, 30)) == (29, 53, 87, 255)
+        assert pixels.getpixel((65, 65)) == (217, 78, 54, 255)
+        assert pixels.getpixel((116, 60)) == (42, 157, 143, 255)  # The top layer covers the base here.
+
+    exported = call(token.plaintext, "export_design", {**target, "format": "svg"})
+    assert exported["isError"] is False, exported
+    info = json.loads(exported["content"][0]["text"])
+    assert info["format"] == "svg"
+    download = anon.get(info["url"])
+    assert download.status_code == 200 and download["Content-Type"] == "image/svg+xml"
+    svg = ElementTree.fromstring(b"".join(download.streaming_content))
+    assert svg.attrib["viewBox"] == "0 0 240 150"
+    base, top = svg.findall(".//{http://www.w3.org/2000/svg}path")
+    assert all(re.search(r"\bC\s", path.attrib["d"]) for path in (base, top))  # Fabric stores Q as C.
+    assert "fill: rgb(217,78,54)" in base.attrib["style"]
+    assert "stroke: rgb(29,53,87)" in base.attrib["style"]
+    assert "stroke-width: 8;" in base.attrib["style"]
+    assert "fill: rgb(42,157,143)" in top.attrib["style"]
+    assert "fill-rule: evenodd" in top.attrib["style"]
 
 
 @requires_dist
