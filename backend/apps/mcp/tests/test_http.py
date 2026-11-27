@@ -10,7 +10,7 @@ from asgiref.sync import async_to_sync
 
 from apps.apitokens import services as tokens
 from apps.apitokens.scopes import DESIGNS_READ
-from apps.designs.models import Design
+from apps.designs.models import Design, DesignVersion
 from apps.designs.tests.helpers import make_doc
 from apps.mcp.server import build_app
 
@@ -84,7 +84,7 @@ def test_tools_are_listed_with_schemas(issued):
     } <= set(tools)
     assert tools["list_designs"]["annotations"]["readOnlyHint"] is True
     ops = json.dumps(tools["edit_design"]["inputSchema"])
-    assert "add_text" in ops and "set_background" in ops
+    assert all(name in ops for name in ("add_text", "add_vector", "set_background"))
 
 
 def test_designs_are_resources_and_prompts_are_listed(issued, user):
@@ -116,6 +116,110 @@ def test_a_tool_call_creates_and_edits_a_design(issued, user):
     assert edited["structuredContent"]["revision"] == 2
     design = Design.objects.get(pk=design_id)
     assert design.owner == user and design.document["pages"][0]["objects"][0]["text"] == "Hello"
+
+
+def _vector(**overrides):
+    return {
+        "op": "add_vector",
+        "id": "boat",
+        "name": "Sailboat",
+        "view_box": [-10, -20, 100, 100],
+        "x": 40,
+        "y": 60,
+        "width": 200,
+        "paths": [
+            {"name": "Hull", "commands": [["M", 12, 50], ["L", 72, 50], ["Q", 60, 70, 20, 70], ["Z"]]},
+            {
+                "name": "Sail",
+                "commands": [["M", 32, 40], ["C", 50, 10, 60, 10, 52, 40], ["Z"]],
+                "fill": "#1B998B",
+            },
+        ],
+    } | overrides
+
+
+def test_mcp_adds_editable_vector_paths_and_returns_their_ids(issued, user):
+    original = make_doc(width=800, height=600)
+    design = Design.objects.create(owner=user, title="Logos", width=800, height=600, document=original)
+    edited = call(issued.plaintext, "edit_design", {"design_id": str(design.pk), "operations": [_vector()]})
+    assert edited["isError"] is False, edited
+    result = edited["structuredContent"]["results"][0]
+    design.refresh_from_db()
+    (group,) = design.document["pages"][0]["objects"]
+    assert (group["type"], group["name"], result["object_id"]) == ("group", "Sailboat", "boat")
+    assert [path["type"] for path in group["objects"]] == ["path", "path"]
+    assert result["paths"] == [{"name": path["name"], "object_id": path["id"]} for path in group["objects"]]
+    assert [path["fill"] for path in group["objects"]] == ["#000000", "#1B998B"]
+    assert DesignVersion.objects.filter(design=design).exists()
+
+    sail = result["paths"][1]["object_id"]
+    edited = call(
+        issued.plaintext,
+        "edit_design",
+        {
+            "design_id": str(design.pk),
+            "operations": [
+                {
+                    "op": "update_object",
+                    "object_id": "boat",
+                    "width": group["width"] * 1.25,
+                    "height": group["height"] * 1.25,
+                },
+                {"op": "ungroup", "object_id": "boat"},
+                {"op": "update_object", "object_id": sail, "color": "#E0842C"},
+            ],
+        },
+    )
+    assert edited["isError"] is False, edited
+    design.refresh_from_db()
+    resized_sail = design.document["pages"][0]["objects"][1]
+    assert resized_sail["id"] == sail
+    assert resized_sail["fill"] == "#E0842C"
+    assert resized_sail["scaleX"] == resized_sail["scaleY"] == 1.25
+
+
+@pytest.mark.parametrize(
+    ("layer", "error"),
+    [
+        ({"commands": [["M", 0, 0], ["Q", 1, 2]]}, "commands"),
+        ({"commands": [["M", 0, 0], ["L", True, 2]]}, "commands"),
+        ({"commands": [["L", 2, 2], ["L", 4, 5]]}, "Sail"),
+        ({"fill": "red"}, "fill"),
+    ],
+)
+def test_mcp_rejects_bad_vector_paths_without_applying_earlier_operations(issued, user, layer, error):
+    document = make_doc(width=800, height=600)
+    design = Design.objects.create(owner=user, title="Logos", width=800, height=600, document=document)
+    operation = _vector()
+    operation["paths"][1].update(layer)
+    edited = call(
+        issued.plaintext,
+        "edit_design",
+        {"design_id": str(design.pk), "operations": [{"op": "add_shape", "shape": "rect"}, operation]},
+    )
+    assert edited["isError"] is True and error in edited["content"][0]["text"], edited
+    design.refresh_from_db()
+    assert design.document == document and design.revision == 1
+    assert not DesignVersion.objects.filter(design=design).exists()
+
+
+def test_mcp_refuses_a_vector_over_the_total_command_budget(issued, user):
+    from apps.designs.doc.ops import MAX_COMMANDS_PER_PATH, MAX_VECTOR_COMMANDS
+
+    design = Design.objects.create(owner=user, title="Logos", document=make_doc())
+    commands = [["M", 0, 0]] + [["L", 1, 1]] * (MAX_COMMANDS_PER_PATH - 1)
+    paths = [
+        {"name": f"Path {index}", "commands": commands}
+        for index in range(MAX_VECTOR_COMMANDS // MAX_COMMANDS_PER_PATH + 1)
+    ]
+    edited = call(
+        issued.plaintext,
+        "edit_design",
+        {"design_id": str(design.pk), "operations": [_vector(paths=paths)]},
+    )
+    assert edited["isError"] is True and "commands across all paths" in edited["content"][0]["text"], edited
+    design.refresh_from_db()
+    assert design.revision == 1
 
 
 def test_scopes_are_enforced(user):

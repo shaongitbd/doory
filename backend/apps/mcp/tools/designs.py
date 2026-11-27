@@ -203,14 +203,17 @@ def edit_design(
     ] = None,
 ) -> dict[str, Any]:
     """Change a design with a list of operations, applied in order and all or nothing: add text, shapes
-    (basic ones, or catalogue shapes such as heart, arrow-right, speech, cloud with shape `path`), lines,
-    pictures and QR codes; update, arrange, group, ungroup or delete objects; add, move or delete pages; set
-    backgrounds and speaker notes; remove backgrounds from pictures (remove_background). Read the design first
+    (basic ones, or catalogue shapes such as heart, arrow-right, speech, cloud with shape `path`), custom
+    vectors (`add_vector`), lines, pictures and QR codes; update, arrange, group, ungroup or delete objects;
+    add, move or delete pages; set backgrounds and speaker notes; remove backgrounds from pictures
+    (remove_background). Read the design first
     (get_design) to know page and object ids.
 
     Coordinates are page pixels from the top-left corner; x, y place the top-left corner of an object's box.
     Text boxes wrap at their width and their height follows the text; the server estimates text height
-    (the editor measures it exactly when the design is opened). If the design is open in someone's editor,
+    (the editor measures it exactly when the design is opened). For original logos or illustrations, use
+    `add_vector` with named, colored paths in a shared view box. The result includes their object IDs; for
+    individual MCP edits to paths in a group, ungroup it first. If the design is open in someone's editor,
     the change appears there live."""
     caller = current()
     design = _design(design_id, document=False)
