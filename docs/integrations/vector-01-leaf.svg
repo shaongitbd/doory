@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="640" height="640" viewBox="0 0 640 640" xml:space="preserve">
+<desc>Created with Fabric.js 7.4.0</desc>
+<defs>
+<clipPath id="CLIPPATH_0" >
+	<rect transform="matrix(1 0 0 1 320 320)" x="-320" y="-320" rx="0" ry="0" width="640" height="640" />
+</clipPath>
+</defs>
+<g clip-path="url(#CLIPPATH_0)" >
+<g transform="matrix(1 0 0 1 320 320)"  >
+<rect style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-opacity: 0; fill-rule: nonzero; opacity: 1;"  x="-320" y="-320" rx="0" ry="0" width="640" height="640" />
+</g>
+<g transform="matrix(1 0 0 1 322.6 322.6)" id="561b96b5-d60f-4f21-9b12-3e35cd9dd0b5"  >
+<path style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(19,121,91); fill-rule: evenodd; opacity: 1;" vector-effect="non-scaling-stroke"  transform=" translate(-262.6, -262.6)" d="M 88.4 436.8 C 116.1333 405.6 147.3333 377.8667 182 353.6 C 88.4 332.8 93.6 254.8 150.8 202.8 C 208 145.6 312 145.6 436.8 72.8 C 421.2 171.6 431.6 275.6 358.8 343.2 C 312 390 244.4 395.2 202.8 369.2 C 164.6667 386.5333 131.7333 414.2667 104 452.4 Z M 182 322.4 C 223.6 270.4 296.4 228.8 369.2 176.8 C 327.6 234 244.4 280.8 197.6 332.8 C 190.6667 336.2667 185.4667 332.8 182 322.4 Z" stroke-linecap="round" />
+</g>
+</g>
+</svg>
