@@ -32,6 +32,11 @@
   outline: 0;
 }
 
+.search input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .hidden {
   position: absolute;
   width: 1px;

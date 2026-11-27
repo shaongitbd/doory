@@ -51,6 +51,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .suffix {
   color: var(--color-text-subtle);
   font: 500 var(--text-xs) / 1 var(--font-sans);
